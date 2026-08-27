@@ -1,0 +1,198 @@
+/* Mini Shopping Mall — UI shell.
+   Palette mirrors assets/logo/BRAND.md so the game and the icon agree. */
+
+:root {
+  --sky-1:#7CD9FF;  --sky-2:#2A6FD6;
+  --gold:#FFC53D;   --gold-d:#DC961A;
+  --pink:#FF7BA6;   --pink-d:#D9457A;
+  --green:#5FE08D;  --green-d:#2CA85C;
+  --ink:#16295C;    --ink-soft:#42538C;
+  --panel:#FFFFFF;  --panel-2:#F1F5FB;
+  --locked:#98A6C4;
+  --font: 'Baloo 2','Fredoka','Nunito','Segoe UI',system-ui,-apple-system,sans-serif;
+  --dock-h: 74px;
+}
+
+* { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+/* Must beat the class rules below: `.sheet{display:flex}` would otherwise
+   win over the UA stylesheet's [hidden]{display:none} and never hide. */
+[hidden] { display:none !important; }
+html,body { height:100%; margin:0; overflow:hidden; overscroll-behavior:none; }
+body {
+  font-family:var(--font); font-weight:700; color:var(--ink);
+  background:#0d1730; display:flex; justify-content:center; align-items:stretch;
+  user-select:none;
+}
+
+#app {
+  position:relative; width:100%; max-width:520px; height:100%;
+  background:linear-gradient(180deg,var(--sky-1),var(--sky-2));
+  overflow:hidden; box-shadow:0 0 60px #0008;
+}
+#scene { position:absolute; inset:0; width:100%; height:100%; display:block; touch-action:none; }
+
+/* ------------------------------------------------------------------ HUD */
+.hud {
+  position:absolute; inset:0 0 auto 0; z-index:5;
+  padding:calc(10px + env(safe-area-inset-top)) 10px 0;
+  display:flex; align-items:flex-start; gap:8px; pointer-events:none;
+}
+.hud > * { pointer-events:auto; }
+.hud-left, .hud-right { display:flex; flex-direction:column; gap:7px; }
+.hud-right { margin-left:auto; align-items:flex-end; }
+
+.icon-btn {
+  width:42px; height:42px; border:0; border-radius:14px; cursor:pointer;
+  background:#fff; color:var(--ink); font-size:19px; font-family:var(--font);
+  box-shadow:0 3px 0 #c3cfe4, 0 6px 12px #0b1c3d33;
+  display:grid; place-items:center; transition:transform .08s;
+}
+.icon-btn:active { transform:translateY(3px); box-shadow:0 0 0 #c3cfe4, 0 3px 8px #0b1c3d33; }
+.icon-btn.ghost { background:var(--panel-2); box-shadow:none; }
+
+.pill {
+  display:flex; align-items:center; gap:6px; height:34px; padding:0 12px 0 8px;
+  border-radius:17px; background:#ffffffee; font-size:15px; letter-spacing:.2px;
+  box-shadow:0 3px 0 #c3cfe4, 0 6px 12px #0b1c3d2b; min-width:96px;
+  justify-content:flex-end;
+}
+.pill-ico { font-size:15px; }
+.pill-cash { color:var(--green-d); }
+.pill-gem  { color:#7C4DFF; }
+
+.level-bar { display:flex; align-items:center; gap:0; margin:0 auto; position:relative; }
+.level-star {
+  width:42px; height:42px; z-index:2; display:grid; place-items:center;
+  background:var(--gold); color:var(--ink); border-radius:50%; font-size:16px;
+  box-shadow:0 3px 0 var(--gold-d), 0 6px 12px #0b1c3d33; margin-right:-14px;
+}
+.level-track {
+  width:132px; height:26px; border-radius:13px; background:#123a72cc;
+  padding:4px; box-shadow:inset 0 2px 4px #0006;
+}
+.level-fill {
+  height:100%; width:0%; border-radius:9px;
+  background:linear-gradient(180deg,#8CF0A8,var(--green-d)); transition:width .3s;
+}
+.level-text {
+  position:absolute; left:36px; right:0; text-align:center; font-size:12px;
+  color:#fff; text-shadow:0 1px 2px #0009; pointer-events:none; line-height:26px;
+}
+
+/* --------------------------------------------------------------- boost */
+.boost-banner {
+  position:absolute; top:112px; left:50%; transform:translateX(-50%); z-index:5;
+  display:flex; gap:10px; align-items:center; padding:6px 14px; border-radius:16px;
+  background:var(--gold); color:var(--ink); font-size:14px;
+  box-shadow:0 3px 0 var(--gold-d), 0 8px 16px #0b1c3d40;
+  animation:pop .3s ease-out;
+}
+
+/* ---------------------------------------------------------------- dock */
+.dock {
+  position:absolute; left:0; right:0; bottom:0; z-index:5; height:var(--dock-h);
+  padding:8px 10px calc(8px + env(safe-area-inset-bottom));
+  display:flex; gap:8px; background:linear-gradient(180deg,#ffffff00,#0b1c3d55);
+}
+.dock-btn {
+  position:relative; flex:1; border:0; border-radius:18px; cursor:pointer;
+  background:#fff; font-family:var(--font); font-weight:800; color:var(--ink);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px;
+  box-shadow:0 4px 0 #c3cfe4, 0 8px 16px #0b1c3d33; transition:transform .08s;
+}
+.dock-btn:active { transform:translateY(4px); box-shadow:0 0 0 #c3cfe4; }
+.dock-ico { font-size:20px; line-height:1; }
+.dock-label { font-size:11px; letter-spacing:.4px; text-transform:uppercase; color:var(--ink-soft); }
+.badge {
+  position:absolute; top:-5px; right:-4px; min-width:20px; height:20px; padding:0 5px;
+  border-radius:10px; background:#FF4D6D; color:#fff; font-size:11px; line-height:20px;
+  box-shadow:0 2px 0 #c72b48;
+}
+
+/* --------------------------------------------------------------- sheet */
+.scrim { position:absolute; inset:0; z-index:8; background:#0b1c3d66; animation:fade .2s; }
+.sheet {
+  position:absolute; left:0; right:0; bottom:0; z-index:9; max-height:76%;
+  display:flex; flex-direction:column;
+  background:var(--panel-2); border-radius:26px 26px 0 0;
+  box-shadow:0 -8px 30px #0b1c3d55; animation:rise .22s ease-out;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+.sheet-grip { width:44px; height:5px; border-radius:3px; background:#c8d3e6; margin:9px auto 2px; }
+.sheet-head { display:flex; align-items:center; padding:4px 14px 8px; }
+.sheet-head h2 { margin:0; font-size:19px; flex:1; }
+.sheet-body {
+  overflow-y:auto; padding:0 12px 14px; -webkit-overflow-scrolling:touch;
+  touch-action:pan-y; overscroll-behavior:contain;
+}
+
+/* ------------------------------------------------------------ shop row */
+.row {
+  display:flex; align-items:center; gap:11px; padding:11px;
+  background:var(--panel); border-radius:18px; margin-bottom:9px;
+  box-shadow:0 2px 0 #dbe3f0;
+}
+.row.locked { opacity:.72; }
+.row-ico {
+  width:50px; height:50px; border-radius:15px; display:grid; place-items:center;
+  font-size:25px; flex:none; box-shadow:inset 0 -3px 0 #00000018;
+}
+.row-main { flex:1; min-width:0; }
+.row-name { font-size:15px; line-height:1.15; }
+.row-sub  { font-size:12px; color:var(--ink-soft); font-weight:700; }
+.row-prog { height:6px; border-radius:3px; background:#e3e9f4; margin-top:5px; overflow:hidden; }
+.row-prog i { display:block; height:100%; background:var(--green); width:0; }
+
+.btn {
+  border:0; cursor:pointer; font-family:var(--font); font-weight:800; color:#fff;
+  border-radius:15px; padding:9px 13px; font-size:14px; line-height:1.1; min-width:96px;
+  background:var(--green); box-shadow:0 4px 0 var(--green-d); transition:transform .08s;
+  display:flex; flex-direction:column; align-items:center; gap:1px;
+}
+.btn small { font-size:11px; opacity:.9; font-weight:700; }
+.btn:active { transform:translateY(4px); box-shadow:0 0 0 var(--green-d); }
+.btn.gold  { background:var(--gold);  box-shadow:0 4px 0 var(--gold-d); color:var(--ink); }
+.btn.pink  { background:var(--pink);  box-shadow:0 4px 0 var(--pink-d); }
+.btn.gem   { background:#8B62FF;      box-shadow:0 4px 0 #6134DB; }
+.btn[disabled] { background:var(--locked); box-shadow:0 4px 0 #7c89a5; cursor:not-allowed; opacity:.75; }
+
+.seg { display:flex; gap:6px; margin:0 0 10px; }
+.seg button {
+  flex:1; border:0; cursor:pointer; font-family:var(--font); font-weight:800; font-size:13px;
+  padding:8px; border-radius:13px; background:#dfe6f2; color:var(--ink-soft);
+}
+.seg button.on { background:var(--ink); color:#fff; }
+
+.empty { text-align:center; color:var(--ink-soft); font-size:13px; padding:22px 10px; }
+.hint  { font-size:12px; color:var(--ink-soft); text-align:center; margin:2px 0 10px; font-weight:700; }
+
+/* --------------------------------------------------------------- toast */
+.toasts {
+  position:absolute; left:0; right:0; top:120px; z-index:7;
+  display:flex; flex-direction:column; align-items:center; gap:6px; pointer-events:none;
+}
+.toast {
+  background:#fff; color:var(--ink); padding:8px 15px; border-radius:15px; font-size:14px;
+  box-shadow:0 4px 0 #c3cfe4, 0 8px 16px #0b1c3d33; animation:pop .25s ease-out;
+}
+
+@keyframes pop  { from { transform:scale(.7); opacity:0 } to { transform:scale(1); opacity:1 } }
+@keyframes fade { from { opacity:0 } to { opacity:1 } }
+@keyframes rise { from { transform:translateY(100%) } to { transform:translateY(0) } }
+
+@media (max-height:620px) { :root { --dock-h:64px; } .level-track { width:104px; } }
+
+/* what the character is carrying, under the HUD */
+.carry {
+  position:absolute; top:112px; left:50%; transform:translateX(-50%); z-index:5;
+  padding:6px 14px; border-radius:16px; background:#ffffffee; font-size:15px;
+  box-shadow:0 3px 0 #c3cfe4, 0 8px 16px #0b1c3d33;
+}
+
+/* current store name, under the settings gear */
+.store-tag {
+  padding:5px 11px; border-radius:13px; background:#ffffffe8; font-size:12px;
+  color:var(--ink); box-shadow:0 2px 0 #c3cfe4, 0 5px 10px #0b1c3d26;
+  white-space:nowrap; max-width:140px; overflow:hidden; text-overflow:ellipsis;
+}
+.dock-label { font-size:10px; }

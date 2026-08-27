@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#2A6FD6">
+<title>Mini Shopping Mall</title>
+<link rel="icon" href="assets/logo/favicon-64.png">
+<link rel="apple-touch-icon" href="assets/logo/icon-180.png">
+<link rel="stylesheet" href="src/styles.css">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+
+<div id="app">
+  <canvas id="scene"></canvas>
+
+  <!-- ------------------------------------------------------------- HUD -->
+  <header class="hud">
+    <div class="hud-left">
+      <button class="icon-btn" id="btn-settings" aria-label="Settings">⚙</button>
+      <div class="store-tag" id="store-name">Grocery Store</div>
+    </div>
+
+    <div class="level-bar" id="level-bar">
+      <div class="level-star"><span id="level-num">1</span></div>
+      <div class="level-track"><div class="level-fill" id="level-fill"></div></div>
+      <span class="level-text" id="level-text">0/10</span>
+    </div>
+
+    <div class="hud-right">
+      <div class="pill pill-cash"><span class="pill-ico">💵</span><span id="cash">0</span></div>
+      <div class="pill pill-gem"><span class="pill-ico">💎</span><span id="gems">0</span></div>
+    </div>
+  </header>
+
+  <!-- boost banner -->
+  <div class="boost-banner" id="boost-banner" hidden>
+    <span>⚡ x2 INCOME</span><span id="boost-time">60s</span>
+  </div>
+
+  <!-- what the character is carrying -->
+  <div class="carry" id="carry" hidden></div>
+
+  <!-- ------------------------------------------------------- bottom bar -->
+  <nav class="dock">
+    <button class="dock-btn" id="btn-products">
+      <span class="dock-ico">🛒</span><span class="dock-label">Products</span>
+      <span class="badge" id="badge-products" hidden></span>
+    </button>
+    <button class="dock-btn" id="btn-staff">
+      <span class="dock-ico">🧑‍💼</span><span class="dock-label">Staff</span>
+      <span class="badge" id="badge-staff" hidden></span>
+    </button>
+    <button class="dock-btn" id="btn-map">
+      <span class="dock-ico">🗺️</span><span class="dock-label">Map</span>
+      <span class="badge" id="badge-map" hidden></span>
+    </button>
+    <button class="dock-btn" id="btn-boost">
+      <span class="dock-ico">⚡</span><span class="dock-label">Boost</span>
+    </button>
+  </nav>
+
+  <!-- ------------------------------------------------------------ sheet -->
+  <div class="scrim" id="scrim" hidden></div>
+
+  <section class="sheet" id="sheet" hidden aria-modal="true" role="dialog">
+    <div class="sheet-grip"></div>
+    <header class="sheet-head">
+      <h2 id="sheet-title">Shops</h2>
+      <button class="icon-btn ghost" id="sheet-close" aria-label="Close">✕</button>
+    </header>
+    <div class="sheet-body" id="sheet-body"></div>
+  </section>
+
+  <!-- ----------------------------------------------------------- toasts -->
+  <div class="toasts" id="toasts"></div>
+</div>
+
+<script src="src/config.js"></script>
+<script src="src/art.js"></script>
+<script src="src/iso.js"></script>
+<script src="src/state.js"></script>
+<script src="src/world.js"></script>
+<script src="src/entities.js"></script>
+<script src="src/render.js"></script>
+<script src="src/backup.js"></script>
+<script src="src/drive-config.js"></script>
+<script src="src/drive.js"></script>
+<script src="src/ui.js"></script>
+<script src="src/game.js"></script>
+</body>
+</html>

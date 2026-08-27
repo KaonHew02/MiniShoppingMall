@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Mini Shopping Mall">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="34%" r="78%">
+      <stop offset="0" stop-color="#7CD9FF"/><stop offset="1" stop-color="#2A6FD6"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity=".38"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="squircle"><rect width="512" height="512" rx="114"/></clipPath>
+  </defs>
+  <g clip-path="url(#squircle)">
+    <rect width="512" height="512" fill="url(#bg)"/>
+    
+    <circle cx="256" cy="248" r="188" fill="url(#glow)"/>
+    <ellipse cx="256" cy="374" rx="178" ry="52" fill="#16295C" opacity=".13"/>
+    <polygon points="79.2,227.04 256,315.44 256,366.4 79.2,278" fill="#D7E2F1"/><polygon points="256,315.44 432.8,227.04 432.8,278 256,366.4" fill="#EFF4FB"/><polygon points="256,138.64 432.8,227.04 256,315.44 79.2,227.04" fill="#FFFFFF"/><polygon points="70.88,221.84 256,314.4 256,319.6 70.88,227.04" fill="#DC961A"/><polygon points="256,314.4 441.12,221.84 441.12,227.04 256,319.6" fill="#F2AC28"/><polygon points="256,129.28 441.12,221.84 256,314.4 70.88,221.84" fill="#FFC53D"/><polygon points="133.28,165.68 256,227.04 256,283.2 133.28,221.84" fill="#D9457A"/><polygon points="256,227.04 378.72,165.68 378.72,221.84 256,283.2" fill="#F25F8F"/><polygon points="256,104.32 378.72,165.68 256,227.04 133.28,165.68" fill="#FF7BA6"/><polygon points="123.92,160.48 256,226.52 256,231.72 123.92,165.68" fill="#D7E2F1"/><polygon points="256,226.52 388.08,160.48 388.08,165.68 256,231.72" fill="#EFF4FB"/><polygon points="256,94.44 388.08,160.48 256,226.52 123.92,160.48" fill="#FFFFFF"/>
+    <rect x="208" y="136.48" width="14" height="28" rx="5" fill="#DC961A"/><rect x="290" y="136.48" width="14" height="28" rx="5" fill="#DC961A"/><rect x="180" y="78.48" width="152" height="74" rx="22" fill="#DC961A"/><rect x="180" y="70.48" width="152" height="74" rx="22" fill="#FFC53D"/><text x="256" y="107.48" text-anchor="middle" dominant-baseline="central" font-family="'Baloo 2','Fredoka','Nunito','Segoe UI',system-ui,sans-serif" font-size="56" font-weight="800" fill="#16295C">M</text>
+    
+  </g>
+</svg>

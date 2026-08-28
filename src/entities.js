@@ -25,6 +25,7 @@ window.MSM = window.MSM || {};
       this.queue.length = 0;
       this.spawnTimer = 1.5;
       this.syncStockers();
+      if (MSM.cafe) MSM.cafe.reset();
     },
 
     /** Keep the crew on the floor matching how many you have hired. */
@@ -57,6 +58,8 @@ window.MSM = window.MSM || {};
       store.products.forEach((prod, n) => {
         const ps = ss.products[n];
         if (!ps.built) return;
+        /* Drinks are made to order at a machine, not grown in a crate. */
+        if (prod.drink) { ps.t = 0; return; }
         if (ps.out >= CFG.CRATE_CAP) { ps.t = 0; return; }
 
         const needsFeed = prod.source.inputIndex >= 0;
@@ -126,11 +129,16 @@ window.MSM = window.MSM || {};
       if (body.handle < 1 / CFG.HANDLE_RATE) return;
       const store = MSM.econ.store(), ss = MSM.econ.sstate();
 
+      /* The coffee shop has its own things to pick up and put down — a
+         drink off the pickup counter, a drink into a customer's hand. */
+      if (store.mode === 'cafe' && MSM.cafe.handle(body)) { body.handle = 0; return; }
+
       store.products.some((prod, n) => {
         const ps = ss.products[n];
         if (!ps.built) return false;
 
-        if (prod.sell && ps.shelf < CFG.SHELF_CAP &&
+        // in the cafe the "shelf" is the ingredient storage the bar draws on
+        if (prod.shelf && (prod.sell || prod.ingredient) && ps.shelf < CFG.SHELF_CAP &&
             body.hold.indexOf(n) >= 0 && W.atBox(body, prod.shelf)) {
           E.takeOne(body, n); ps.shelf++;
           body.handle = 0;
@@ -144,7 +152,7 @@ window.MSM = window.MSM || {};
           body.handle = 0;
           return true;
         }
-        if (ps.out > 0 && body.hold.length < CFG.CARRY_CAP &&
+        if (ps.out > 0 && !prod.drink && body.hold.length < CFG.CARRY_CAP &&
             (body.only < 0 || body.only === n) && W.atBox(body, prod.crate)) {
           ps.out--; body.hold.push(n); E.sync(body);
           body.handle = 0;
@@ -177,10 +185,10 @@ window.MSM = window.MSM || {};
       }
     },
 
-    dropCash(value) {
+    dropCash(value, x, y) {
       this.cash.push({
-        x: P.serve.x + (Math.random() - 0.5) * 1.3,
-        y: P.serve.y - 0.15 + (Math.random() - 0.5) * 0.5,
+        x: (x != null ? x : P.serve.x) + (Math.random() - 0.5) * 1.3,
+        y: (y != null ? y : P.serve.y - 0.15) + (Math.random() - 0.5) * 0.5,
         value, t: 0,
       });
       if (this.cash.length > 14) this.cash.shift();
@@ -249,7 +257,7 @@ window.MSM = window.MSM || {};
           // otherwise, whichever shelf is emptiest and has stock behind it
           let best = -1, worst = 1e9;
           ss.products.forEach((ps, n) => {
-            if (!ps.built || !prods[n].sell || ps.out === 0 || ps.shelf >= CFG.SHELF_CAP) return;
+            if (!ps.built || !prods[n].shelf || ps.out === 0 || ps.shelf >= CFG.SHELF_CAP) return;
             if (claimed.has('s' + n)) return;
             if (ps.shelf < worst) { worst = ps.shelf; best = n; }
           });
@@ -322,6 +330,7 @@ window.MSM = window.MSM || {};
     spawn() {
       const store = MSM.econ.store();
       const ss = MSM.econ.sstate();
+      if (store.mode === 'cafe') { MSM.cafe.spawn(); return; }
 
       /* During the tutorial, customers keep it simple: one item, and always
          something that is actually on a shelf — the first customer walking
@@ -398,8 +407,11 @@ window.MSM = window.MSM || {};
         if (this.customers.length < 9) this.spawn();
       }
 
+      const cafe = MSM.econ.store().mode === 'cafe';
+
       for (let k = this.customers.length - 1; k >= 0; k--) {
         const c = this.customers[k];
+        if (cafe) { MSM.cafe.stepCustomer(c, k, dt); continue; }
         const prod = MSM.econ.prod(c.want);
         const ps = ss.products[c.want];
 

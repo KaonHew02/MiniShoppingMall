@@ -604,6 +604,161 @@ window.MSM = window.MSM || {};
       ell(ctx, x, y - s * 0.55, s * 0.08, s * 0.08, 0, '#FF3B5C');
     },
 
+    /* -------------------------------------------- the coffee shop's larder */
+    /* A sack of beans: hessian, a tied neck, and three beans spilled at its
+       foot so the silhouette is not just "bag". */
+    beans(ctx, x, y, s, c) {
+      const w = s * 0.3, h = s * 0.42;
+      ctx.beginPath();
+      ctx.moveTo(x - w, y);
+      ctx.bezierCurveTo(x - w * 1.08, y - h * 0.66, x - w * 0.6, y - h * 0.94, x - w * 0.34, y - h);
+      ctx.lineTo(x + w * 0.34, y - h);
+      ctx.bezierCurveTo(x + w * 0.6, y - h * 0.94, x + w * 1.08, y - h * 0.66, x + w, y);
+      ctx.closePath();
+      fill(ctx, U.shade(c, 0.46));
+      ctx.beginPath();
+      ctx.moveTo(x + w * 0.12, y - h);
+      ctx.bezierCurveTo(x + w * 0.6, y - h * 0.94, x + w * 1.08, y - h * 0.66, x + w, y);
+      ctx.lineTo(x + w * 0.14, y);
+      ctx.closePath();
+      fill(ctx, U.shade(c, 0.24));
+      rr(ctx, x - w * 0.4, y - h * 1.2, w * 0.8, h * 0.24, s * 0.03, U.shade(c, 0.12));
+      [[-0.62, 0.02], [-0.06, -0.05], [0.56, 0.03]].forEach(([p, q]) => {
+        const bx = x + p * w, by = y - h * 0.04 + q * h;
+        ell(ctx, bx, by, s * 0.072, s * 0.048, -0.4, c);
+        ctx.beginPath();
+        ctx.moveTo(bx - s * 0.055, by + s * 0.015);
+        ctx.quadraticCurveTo(bx, by - s * 0.022, bx + s * 0.055, by - s * 0.028);
+        stroke(ctx, U.shade(c, -0.4), s * 0.013);
+      });
+    },
+
+    matchatin(ctx, x, y, s, c) {
+      const w = s * 0.26, h = s * 0.34;
+      rr(ctx, x - w, y - h, w * 2, h, s * 0.028, c);
+      rr(ctx, x - w, y - h * 0.66, w * 2, h * 0.32, 0, '#F2F7EC');
+      ell(ctx, x, y - h * 0.5, s * 0.07, s * 0.036, -0.6, U.shade(c, -0.12));
+      rr(ctx, x - w * 1.08, y - h - s * 0.09, w * 2.16, s * 0.1, s * 0.03, U.shade(c, -0.22));
+      ell(ctx, x, y - h - s * 0.09, w * 1.02, s * 0.055, 0, U.shade(c, 0.28));
+      ell(ctx, x - w * 0.34, y - h - s * 0.1, w * 0.34, s * 0.022, 0, U.shade(c, 0.55));
+    },
+
+    cocoa(ctx, x, y, s, c) {
+      ctx.save();
+      ctx.translate(x, y - s * 0.17);
+      ctx.rotate(-0.2);
+      const w = s * 0.5, h = s * 0.3;
+      rr(ctx, -w / 2, -h / 2, w, h, s * 0.022, c);
+      rr(ctx, -w / 2, -h / 2, w, h * 0.28, s * 0.022, U.shade(c, 0.24));
+      for (let i = 1; i < 3; i++) {
+        ctx.beginPath();
+        ctx.moveTo(-w / 2 + (w * i) / 3, -h / 2);
+        ctx.lineTo(-w / 2 + (w * i) / 3, h / 2);
+        stroke(ctx, U.shade(c, -0.32), s * 0.016);
+      }
+      ctx.beginPath(); ctx.moveTo(-w / 2, 0); ctx.lineTo(w / 2, 0);
+      stroke(ctx, U.shade(c, -0.32), s * 0.016);
+      ctx.restore();
+    },
+
+    ice(ctx, x, y, s, c) {
+      const cube = (cx, cy, r) => {
+        rr(ctx, cx - r, cy - r, r * 2, r * 2, r * 0.3, c);
+        rr(ctx, cx - r * 0.66, cy - r * 0.72, r * 0.8, r * 0.66, r * 0.22, U.shade(c, 0.55));
+      };
+      cube(x - s * 0.15, y - s * 0.14, s * 0.135);
+      cube(x + s * 0.15, y - s * 0.12, s * 0.125);
+      cube(x - s * 0.01, y - s * 0.34, s * 0.125);
+    },
+
+    dough(ctx, x, y, s, c) {
+      rr(ctx, x - s * 0.32, y - s * 0.07, s * 0.64, s * 0.08, s * 0.035, '#C79154');
+      ell(ctx, x, y - s * 0.2, s * 0.26, s * 0.16, 0, c);
+      ell(ctx, x - s * 0.08, y - s * 0.27, s * 0.11, s * 0.055, -0.4, U.shade(c, 0.3));
+      ell(ctx, x + s * 0.14, y - s * 0.15, s * 0.1, s * 0.06, 0.2, U.shade(c, -0.12));
+    },
+
+    /* ------------------------------------------------ the coffee shop's menu */
+    /* A takeaway cup: tapered body, a sleeve in the drink's colour, a lid. */
+    americano(ctx, x, y, s, c) {
+      const w = s * 0.2, h = s * 0.56;
+      ctx.beginPath();
+      ctx.moveTo(x - w, y - h); ctx.lineTo(x + w, y - h);
+      ctx.lineTo(x + w * 0.76, y); ctx.lineTo(x - w * 0.76, y);
+      ctx.closePath(); fill(ctx, '#F2F5FA');
+      ctx.beginPath();
+      ctx.moveTo(x + w * 0.2, y - h); ctx.lineTo(x + w, y - h);
+      ctx.lineTo(x + w * 0.76, y); ctx.lineTo(x + w * 0.16, y);
+      ctx.closePath(); fill(ctx, '#DFE7F2');
+      rr(ctx, x - w * 1.02, y - h * 0.62, w * 2.04, h * 0.24, s * 0.02, c);
+      rr(ctx, x - w * 1.12, y - h - s * 0.07, w * 2.24, s * 0.09, s * 0.035, U.shade(c, -0.28));
+      ell(ctx, x + w * 0.36, y - h - s * 0.045, s * 0.032, s * 0.018, 0, '#2B2118');
+    },
+
+    cappuccino(ctx, x, y, s, c) {
+      P.espresso(ctx, x, y, s, c);
+      const top = y - s * 0.4;
+      ell(ctx, x, top - s * 0.015, s * 0.165, s * 0.055, 0, '#FFF6E8');
+      ell(ctx, x - s * 0.05, top - s * 0.03, s * 0.05, s * 0.02, 0, '#FFFFFF');
+      [[-0.055, 0.004], [0.026, -0.012], [0.066, 0.014]].forEach(([p, q]) =>
+        ell(ctx, x + p * s, top - s * 0.015 + q * s, s * 0.015, s * 0.009, 0, U.shade(c, -0.34)));
+    },
+
+    /* One tall glass, two drinks — the ice and the straw are the whole read. */
+    iced(ctx, x, y, s, c, straw) {
+      const w = s * 0.21, h = s * 0.6;
+      ctx.beginPath();
+      ctx.moveTo(x - w, y - h); ctx.lineTo(x + w, y - h);
+      ctx.lineTo(x + w * 0.82, y); ctx.lineTo(x - w * 0.82, y);
+      ctx.closePath(); fill(ctx, U.shade(c, 0.66));
+      ctx.beginPath();
+      ctx.moveTo(x - w * 0.94, y - h * 0.86); ctx.lineTo(x + w * 0.94, y - h * 0.86);
+      ctx.lineTo(x + w * 0.82, y - s * 0.02); ctx.lineTo(x - w * 0.82, y - s * 0.02);
+      ctx.closePath(); fill(ctx, c);
+      [[-0.34, 0.7, 1], [0.32, 0.56, 0.86], [0.0, 0.34, 0.9]].forEach(([p, q, k]) =>
+        rr(ctx, x + p * w - w * 0.34 * k, y - h * q, w * 0.68 * k, w * 0.68 * k,
+           w * 0.16, 'rgba(255,255,255,0.55)'));
+      ctx.save();
+      ctx.translate(x, y); ctx.rotate(0.22);
+      rr(ctx, -s * 0.03, -h * 1.12, s * 0.06, h * 1.06, s * 0.03, straw);
+      ctx.restore();
+      rr(ctx, x - w * 0.78, y - h * 0.78, w * 0.16, h * 0.62, w * 0.08, 'rgba(255,255,255,0.45)');
+    },
+
+    icedcoffee(ctx, x, y, s, c) { P.iced(ctx, x, y, s, c, '#FF5C8A'); },
+    icedmatcha(ctx, x, y, s, c) { P.iced(ctx, x, y, s, c, '#3E8F3A'); },
+
+    /* A glass mug, layered: chocolate at the bottom, coffee, cream, drizzle. */
+    mocha(ctx, x, y, s, c) {
+      const w = s * 0.22, h = s * 0.5;
+      ctx.beginPath(); ctx.arc(x + w * 1.2, y - h * 0.52, s * 0.105, -1.3, 1.3);
+      stroke(ctx, U.shade(c, 0.52), s * 0.05);
+      ctx.beginPath();
+      ctx.moveTo(x - w, y - h); ctx.lineTo(x + w, y - h);
+      ctx.lineTo(x + w * 0.86, y); ctx.lineTo(x - w * 0.86, y);
+      ctx.closePath(); fill(ctx, U.shade(c, 0.66));
+      rr(ctx, x - w * 0.9, y - h * 0.36, w * 1.8, h * 0.34, 0, U.shade(c, -0.36));
+      rr(ctx, x - w * 0.94, y - h * 0.72, w * 1.88, h * 0.37, 0, c);
+      ell(ctx, x, y - h * 0.72, w * 0.94, s * 0.05, 0, '#FFF6E8');
+      ctx.beginPath();
+      ctx.moveTo(x - w * 0.5, y - h * 0.74);
+      ctx.quadraticCurveTo(x, y - h * 0.66, x + w * 0.5, y - h * 0.76);
+      stroke(ctx, '#6B4226', s * 0.022);
+    },
+
+    /* Matcha over milk in a straight glass — the two bands are the drink. */
+    matchalatte(ctx, x, y, s, c) {
+      const w = s * 0.2, h = s * 0.54;
+      ctx.beginPath();
+      ctx.moveTo(x - w, y - h); ctx.lineTo(x + w, y - h);
+      ctx.lineTo(x + w * 0.84, y); ctx.lineTo(x - w * 0.84, y);
+      ctx.closePath(); fill(ctx, '#EDF3F8');
+      rr(ctx, x - w * 0.9, y - h * 0.44, w * 1.8, h * 0.42, 0, '#FBFDFF');
+      rr(ctx, x - w * 0.94, y - h * 0.86, w * 1.88, h * 0.44, 0, c);
+      ell(ctx, x, y - h * 0.86, w * 0.94, s * 0.045, 0, U.shade(c, 0.32));
+      rr(ctx, x - w * 0.8, y - h * 0.76, w * 0.15, h * 0.6, w * 0.075, 'rgba(255,255,255,0.5)');
+    },
+
     /* ----------------------------------------------------------- sports */
     /* A straight cross with one arc off to the side is a beach ball. The
        basketball pattern is a horizontal seam, a vertical seam, and two more

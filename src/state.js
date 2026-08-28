@@ -5,6 +5,21 @@ window.MSM = window.MSM || {};
   const CFG = MSM.CFG;
   const GROWTH = 1.13;
 
+  /* Stage 2 keeps three things the mini mart has no idea about: the machines
+     behind the bar, the tables out front, and the drinks already made and
+     waiting on the pickup counter. */
+  const blankCafe = (store) => ({
+    machines: store.plan.machines.map((m) => ({
+      built: m.cost === 0, buildPaid: 0, level: 1, pay: 0,
+    })),
+    tables: store.plan.tables.map((t) => ({
+      built: t.cost === 0, buildPaid: 0, dirty: false,
+    })),
+    ready: [],                  // finished drinks sitting on the pickup counter
+    barista: false, server: false, cleaner: false,
+    tips: 0, walkouts: 0,
+  });
+
   const blank = () => ({
     cash: CFG.START_CASH,
     gems: 0,
@@ -23,9 +38,10 @@ window.MSM = window.MSM || {};
       stockers: 0,
       cashier: false,
       products: s.products.map((p) => ({
-        built: p.rank === 0, buildPaid: 0,
+        built: p.buildCost === 0, buildPaid: 0,
         level: 1, shelf: 0, out: 0, feed: 0, t: 0, pay: 0,
       })),
+      cafe: s.mode === 'cafe' ? blankCafe(s) : null,
     })),
   });
 
@@ -56,6 +72,43 @@ window.MSM = window.MSM || {};
         rank = p.rank; best = n;
       });
       return best;
+    },
+
+    /* ------------------------------------------------------- the cafe */
+    cstate: (i) => MSM.state.stores[i ?? MSM.state.current].cafe,
+    isCafe: (i) => CFG.STORES[i ?? MSM.state.current].mode === 'cafe',
+
+    /** A machine's brew speed and how many cups it can have on at once. */
+    machine(mi, i) {
+      const cs = E.cstate(i);
+      const lvl = (cs && cs.machines[mi] ? cs.machines[mi].level : 1);
+      return {
+        level: lvl,
+        speed: 1 + CFG.CAFE.MACHINE_SPEED * (lvl - 1),
+        cap: CFG.CAFE.MACHINE_CAP(lvl),
+      };
+    },
+
+    machineCost(mi, i) {
+      const spec = E.store(i).plan.machines[mi];
+      const lvl = E.cstate(i).machines[mi].level;
+      return Math.ceil(spec.base * Math.pow(CFG.CAFE.MACHINE_GROWTH, lvl - 1));
+    },
+
+    /** Seconds to brew one of this drink, on the machine that makes it. */
+    brewTime(n, i) {
+      const prod = E.prod(n, i);
+      const m = E.machine(prod.machineIndex, i);
+      return Math.max(CFG.MIN_RESTOCK, E.restock(n, i) / m.speed);
+    },
+
+    /** Fraction of the built tables that are clean — it drives the tip. */
+    clean(i) {
+      const cs = E.cstate(i);
+      if (!cs) return 1;
+      let built = 0, dirty = 0;
+      cs.tables.forEach((t) => { if (t.built) { built++; if (t.dirty) dirty++; } });
+      return built ? 1 - dirty / built : 1;
     },
 
     boosting: () => Date.now() < MSM.state.boostUntil,
@@ -89,6 +142,9 @@ window.MSM = window.MSM || {};
     storeRate(i) {
       const ss = MSM.state.stores[i];
       if (!ss.owned || !ss.till || !ss.open || !ss.stockers || !ss.cashier) return 0;
+      /* A cafe needs the whole crew: somebody to brew it and somebody to
+         carry it out, or the drinks just pile up on the counter. */
+      if (ss.cafe && !(ss.cafe.barista && ss.cafe.server)) return 0;
       let r = 0;
       CFG.STORES[i].products.forEach((p, n) => {
         if (p.sell && ss.products[n].built) r += E.price(n, i) / E.restock(n, i);
@@ -155,7 +211,13 @@ window.MSM = window.MSM || {};
       s.stores[i].tillPaid = Math.max(0, +old.tillPaid || 0);
       s.stores[i].open = !!old.open;
       s.stores[i].cashier = !!old.cashier;
-      (old.products || []).forEach((op, n) => {
+      /* The coffee shop was rebuilt from four shelf products into sixteen
+         ingredients and recipes. An old save's numbers would land on
+         completely different lines, so that store starts fresh — everything
+         else merges by index as before. */
+      const fresh = (old.products || []).length !== s.stores[i].products.length;
+      if (fresh) { s.stores[i].till = false; s.stores[i].open = false; }
+      (fresh ? [] : old.products || []).forEach((op, n) => {
         const ps = s.stores[i].products[n];
         if (!ps || !op) return;
         ps.level = Math.max(1, +op.level || 1);
@@ -166,6 +228,33 @@ window.MSM = window.MSM || {};
         ps.built = op.built != null ? !!op.built : true;   // old saves had everything
         ps.buildPaid = Math.max(0, +op.buildPaid || 0);
       });
+
+      const cs = s.stores[i].cafe, oc = old.cafe;
+      if (!cs || !oc || fresh) return;
+      cs.barista = !!oc.barista;
+      cs.server = !!oc.server;
+      cs.cleaner = !!oc.cleaner;
+      cs.tips = Math.max(0, +oc.tips || 0);
+      cs.walkouts = Math.max(0, +oc.walkouts || 0);
+      (oc.machines || []).forEach((om, k) => {
+        const m = cs.machines[k];
+        if (!m || !om) return;
+        m.built = !!om.built;
+        m.buildPaid = Math.max(0, +om.buildPaid || 0);
+        m.level = Math.max(1, +om.level || 1);
+        m.pay = Math.max(0, +om.pay || 0);
+      });
+      (oc.tables || []).forEach((ot, k) => {
+        const t = cs.tables[k];
+        if (!t || !ot) return;
+        t.built = !!ot.built;
+        t.buildPaid = Math.max(0, +ot.buildPaid || 0);
+        t.dirty = !!ot.dirty;
+      });
+      cs.ready = (oc.ready || [])
+        .map((n) => +n)
+        .filter((n) => n >= 0 && n < s.stores[i].products.length)
+        .slice(0, CFG.CAFE.READY_CAP);
     });
     if (!s.stores[s.current].owned) s.current = 0;
     MSM.state = s;

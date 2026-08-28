@@ -7,8 +7,12 @@ window.MSM = window.MSM || {};
   const W = MSM.world = {
     _solids: null,
 
-    /** Call when the active store changes. */
-    invalidate() { this._solids = null; this._grid = null; },
+    /** Call when the active store changes, or when anything is built. */
+    invalidate() {
+      CFG.usePlan(MSM.state.current);
+      this._solids = null;
+      this._grid = null;
+    },
 
     solids() {
       if (this._solids) return this._solids;
@@ -20,8 +24,16 @@ window.MSM = window.MSM || {};
       MSM.econ.store().products.forEach((p, n) => {
         if (!ps[n].built) return;
         list.push(p.crate);
-        if (p.shelf) list.push(p.shelf);
+        // every cafe ingredient shares the one storage unit — add it once
+        if (p.shelf && list.indexOf(p.shelf) < 0) list.push(p.shelf);
       });
+      const cs = MSM.econ.cstate();
+      if (cs) {
+        const P = CFG.PLAN;
+        list.push(P.pickup);
+        cs.machines.forEach((m, k) => { if (m.built) list.push(P.machines[k].box); });
+        cs.tables.forEach((t, k) => { if (t.built) list.push(P.tables[k].box); });
+      }
       this._solids = list;
       return list;
     },

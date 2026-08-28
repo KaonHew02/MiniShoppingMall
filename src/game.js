@@ -138,11 +138,13 @@ window.MSM = window.MSM || {};
       MSM.ent.spawnGate = MSM.econ.sstate().open;
       MSM.ent.updateCustomers(dt);
       MSM.ent.ageCash(dt);
-      G.serve(dt);
+      if (MSM.cafe.active()) MSM.cafe.update(dt);
+      else G.serve(dt);
       G.tillPad(dt);
       G.buildPads(dt);
       G.signPost(dt);
       G.tutorial();
+      if (MSM.cafe.active()) { G.tutTarget = null; G.tutText = MSM.cafe.guide(); }
       G.levelPads(dt);
       G.doors(dt);
       G.passive(dt);
@@ -426,7 +428,7 @@ window.MSM = window.MSM || {};
     travel(i) {
       if (!MSM.state.stores[i].owned || i === MSM.state.current) return;
       MSM.state.current = i;
-      MSM.world.invalidate();
+      MSM.world.invalidate();          // also swaps in the new store's floor plan
       MSM.ent.reset();
       // arrive standing in the new store's doorway, not at the till
       MSM.ent.player.x = (P.door.x0 + P.door.x1) / 2;
@@ -476,6 +478,39 @@ window.MSM = window.MSM || {};
       ss.cashier = true;
       MSM.ui.toast(MSM.t('toast.cashier'));
       MSM.save();
+    },
+
+    /* The cafe crew. A barista works the bar, a server runs the drinks out
+       and a cleaner clears the tables — the three jobs stage 2 adds. */
+    hireCafe(job) {
+      const store = MSM.econ.store(), cs = MSM.econ.cstate();
+      if (!cs || cs[job]) return;
+      const cost = G.cafeCost(job);
+      if (MSM.state.cash < cost) return;
+      MSM.state.cash -= cost;
+      cs[job] = true;
+      MSM.cafe.syncCrew();
+      MSM.ui.toast(MSM.t('toast.' + job));
+      MSM.save();
+    },
+
+    /* A machine's own levels: faster, and more cups on the go at once. Also
+       on its pad in the world, exactly like a product's. */
+    upgradeMachine(mi) {
+      const cs = MSM.econ.cstate();
+      if (!cs || !cs.machines[mi].built) return;
+      const cost = MSM.econ.machineCost(mi);
+      if (MSM.state.cash < cost) { MSM.ui.toast(MSM.t('toast.noCash')); return; }
+      MSM.state.cash -= cost;
+      cs.machines[mi].level++;
+      MSM.ui.toast(MSM.t('cafe.machineUp', {
+        label: MSM.econ.store().plan.machines[mi].label, n: cs.machines[mi].level }));
+    },
+
+    cafeCost(job) {
+      const u = MSM.econ.store().unlock;
+      return job === 'barista' ? CFG.CAFE.BARISTA_COST(u)
+        : job === 'server' ? CFG.CAFE.SERVER_COST(u) : CFG.CAFE.CLEANER_COST(u);
     },
 
     boost() {

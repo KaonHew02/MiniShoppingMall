@@ -26,11 +26,25 @@ works if you just double-click it.
 | | |
 | --- | --- |
 | **Drag anywhere** | floating joystick — the stick appears where you touch |
+| | it is analog: a small push walks, a full push runs |
 | **WASD / arrows** | same thing on desktop |
 | **Scroll wheel** | zoom |
 
 Walk up to the **bin** on the shop floor to empty your arms — useful when you
 grabbed the wrong thing.
+
+## Your first five minutes
+
+You start with **$500** in a closed, empty store. A gold arrow walks you
+through the spec-standard opening: stand on the **checkout plot** and $100
+drains in to build the counter, harvest potatoes, stock their shelf, flip the
+**OPEN sign** by the door, serve the first customer at the till, and run over
+the cash. FIRST SALE — then the game opens up.
+
+Customers only come in while the sign says OPEN, and once the tutorial is done
+they carry **shopping lists** — up to three different items, collected shelf
+by shelf and paid in one total at the till. Carrying a full armful slows you
+down; the bin is where mistakes go.
 
 ## The loop
 

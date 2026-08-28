@@ -18,7 +18,7 @@ window.MSM = window.MSM || {};
       this.player = {
         x: P.spawn.x, y: P.spawn.y,
         hold: [], carry: 0, carryP: -1, only: -1,
-        walk: 0, moving: false, handle: 0,
+        vx: 0, vy: 0, walk: 0, moving: false, handle: 0,
       };
       this.customers.length = 0;
       this.cash.length = 0;
@@ -56,6 +56,7 @@ window.MSM = window.MSM || {};
       const store = MSM.econ.store(), ss = MSM.econ.sstate();
       store.products.forEach((prod, n) => {
         const ps = ss.products[n];
+        if (!ps.built) return;
         if (ps.out >= CFG.CRATE_CAP) { ps.t = 0; return; }
 
         const needsFeed = prod.source.inputIndex >= 0;
@@ -77,13 +78,24 @@ window.MSM = window.MSM || {};
     /* ------------------------------------------------------------ player */
     movePlayer(dt, ix, iy) {
       const p = this.player;
-      const len = Math.hypot(ix, iy);
-      if (len > 0.05) {
-        const s = CFG.PLAYER_SPEED * dt;
-        W.move(p, (ix / len) * s, (iy / len) * s);
-        p.walk += s;
+      /* Ease toward the requested velocity rather than snapping to it, and
+         honour how hard the stick is pushed, so small corrections stay small. */
+      const want = Math.hypot(ix, iy);
+      // a full armful slows you down — dropping the load is how you sprint
+      const slow = 1 - CFG.CARRY_SLOW * (p.hold.length / CFG.CARRY_CAP);
+      const top = CFG.PLAYER_SPEED * slow;
+      const tx = want > 0.02 ? (ix / want) * Math.min(want, 1) * top : 0;
+      const ty = want > 0.02 ? (iy / want) * Math.min(want, 1) * top : 0;
+      const k = 1 - Math.exp(-CFG.ACCEL * dt);
+      p.vx = (p.vx || 0) + (tx - (p.vx || 0)) * k;
+      p.vy = (p.vy || 0) + (ty - (p.vy || 0)) * k;
+
+      const speed = Math.hypot(p.vx, p.vy);
+      if (speed > 0.06) {
+        W.move(p, p.vx * dt, p.vy * dt);
+        p.walk += speed * dt;
         p.moving = true;
-      } else p.moving = false;
+      } else { p.moving = false; p.vx = 0; p.vy = 0; }
 
       this.handle(p, dt);
       this.dump(p, dt);
@@ -116,6 +128,7 @@ window.MSM = window.MSM || {};
 
       store.products.some((prod, n) => {
         const ps = ss.products[n];
+        if (!ps.built) return false;
 
         if (prod.sell && ps.shelf < CFG.SHELF_CAP &&
             body.hold.indexOf(n) >= 0 && W.atBox(body, prod.shelf)) {
@@ -220,6 +233,7 @@ window.MSM = window.MSM || {};
             if (inp < 0 || feedMe >= 0 || claimed.has('f' + n)) return;
             // only divert for a station that has actually run dry, and only
             // if it still has somewhere to put what it makes
+            if (!ss.products[n].built || !ss.products[inp].built) return;
             if (ss.products[n].feed === 0 && ss.products[inp].out > 0 &&
                 ss.products[n].out < CFG.CRATE_CAP) feedMe = n;
           });
@@ -235,7 +249,7 @@ window.MSM = window.MSM || {};
           // otherwise, whichever shelf is emptiest and has stock behind it
           let best = -1, worst = 1e9;
           ss.products.forEach((ps, n) => {
-            if (!prods[n].sell || ps.out === 0 || ps.shelf >= CFG.SHELF_CAP) return;
+            if (!ps.built || !prods[n].sell || ps.out === 0 || ps.shelf >= CFG.SHELF_CAP) return;
             if (claimed.has('s' + n)) return;
             if (ps.shelf < worst) { worst = ps.shelf; best = n; }
           });
@@ -307,10 +321,46 @@ window.MSM = window.MSM || {};
     /* --------------------------------------------------------- customers */
     spawn() {
       const store = MSM.econ.store();
-      const prod = store.sells[(Math.random() * store.sells.length) | 0];
-      const want = prod.index;
+      const ss = MSM.econ.sstate();
+
+      /* During the tutorial, customers keep it simple: one item, and always
+         something that is actually on a shelf — the first customer walking
+         straight to your stocked potatoes is the whole first-sale moment. */
+      if (MSM.state.tut < 99) {
+        let best = -1, most = 0;
+        store.sells.forEach((pr) => {
+          const st = ss.products[pr.index];
+          if (st.shelf > most) { most = st.shelf; best = pr.index; }
+        });
+        if (best < 0) return;                  // nothing stocked yet, nobody comes
+        const prodT = store.products[best];
+        this.customers.push({
+          want: best, list: [], total: 0, got: 0,
+          color: '#4FB0FF', shade: '#F2F5FA',
+          x: P.entrance.x, y: P.entrance.y, lane: prodT.lane,
+          phase: 'toLane', carry: 0, carryP: -1,
+          wait: 0, walk: 0, moving: true, viaLane: false, mood: 'want',
+        });
+        return;
+      }
+
+      // a shopping list: mostly one thing, sometimes two or three
+      const open = store.sells.filter((pr) => ss.products[pr.index].built);
+      if (!open.length) return;
+      const roll = Math.random();
+      const n = Math.min(open.length,
+        roll < CFG.LIST_ODDS[0] ? 1 : roll < CFG.LIST_ODDS[0] + CFG.LIST_ODDS[1] ? 2 : 3);
+      const list = [];
+      while (list.length < n) {
+        const pick = open[(Math.random() * open.length) | 0].index;
+        if (list.indexOf(pick) < 0) list.push(pick);
+      }
+      const want = list.shift();
+      const prod = store.products[want];
       this.customers.push({
         want,
+        list,                    // still to collect after the current want
+        total: 0, got: 0,
         color: ['#FF7BA6', '#4FB0FF', '#8B62FF', '#FF9E4D', '#2FCB9E', '#FF5C5C'][(Math.random() * 6) | 0],
         shade: ['#F2F5FA', '#E9EEF6', '#F6F0E6', '#EDF3EC'][(Math.random() * 4) | 0],
         x: P.entrance.x + (Math.random() - 0.5) * 0.7, y: P.entrance.y,
@@ -325,7 +375,7 @@ window.MSM = window.MSM || {};
       const ss = MSM.econ.sstate();
 
       this.spawnTimer -= dt;
-      if (this.spawnTimer <= 0) {
+      if (this.spawnTimer <= 0 && this.spawnGate) {
         const busy = U.clamp(MSM.state.level / 12, 0, 1);
         this.spawnTimer = U.lerp(CFG.SPAWN_EVERY[0], CFG.SPAWN_EVERY[1], busy);
         if (this.customers.length < 9) this.spawn();
@@ -338,7 +388,7 @@ window.MSM = window.MSM || {};
 
         switch (c.phase) {
           case 'toLane':
-            if (W.seek(c, c.lane, 9.3, spd, dt, false)) c.phase = 'toShelfLane';
+            if (W.seek(c, c.lane, P.walkway, spd, dt, false)) c.phase = 'toShelfLane';
             break;
 
           case 'toShelfLane':
@@ -355,12 +405,28 @@ window.MSM = window.MSM || {};
             c.moving = false;
             if (ps.shelf > 0) {
               ps.shelf--;
-              c.carry = 1; c.carryP = c.want;
+              c.got++;
+              (c.bought = c.bought || []).push(c.want);
+              c.total += MSM.econ.price(c.want);
+              c.carry = c.got; c.carryP = c.want;
               c.mood = 'happy';
+              if (c.list.length) {
+                // more on the list — head for the next shelf
+                c.want = c.list.shift();
+                c.lane = MSM.econ.prod(c.want).lane;
+                c.phase = 'toNextLane';
+                break;
+              }
               c.phase = 'toQueue'; c.viaLane = true;
               break;
             }
             c.mood = 'wait';
+            break;
+
+          /* Cross to the next item's lane at the current row, then walk the
+             lane to its shelf — the same route a person would take. */
+          case 'toNextLane':
+            if (W.seek(c, c.lane, c.y, spd, dt, false)) c.phase = 'toShelfLane';
             break;
 
           case 'toQueue': {
@@ -370,7 +436,7 @@ window.MSM = window.MSM || {};
             }
             // back down the lane first, then across to the slot
             if (c.viaLane) {
-              if (W.seek(c, c.lane, 9.3, spd, dt, false)) c.viaLane = false;
+              if (W.seek(c, c.lane, P.walkway, spd, dt, false)) c.viaLane = false;
               break;
             }
             const slot = P.queue[Math.max(0, this.queue.indexOf(c))];

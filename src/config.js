@@ -8,14 +8,18 @@
 window.MSM = window.MSM || {};
 
 MSM.CFG = {
-  SAVE_KEY: 'msm.save.v6',
-  START_CASH: 60,
+  SAVE_KEY: 'msm.save.v9',
+  START_CASH: 500,
 
-  WORLD: { W: 16, H: 14.0 },
+  WORLD: { W: 21.0, H: 15.2 },
 
-  PLAYER_SPEED: 5.4,
-  STAFF_SPEED: 3.2,
-  CUSTOMER_SPEED: 2.3,
+  PLAYER_SPEED: 3.8,       // top speed; a light push on the stick is slower
+  STAFF_SPEED: 2.9,
+  CUSTOMER_SPEED: 2.1,
+  STICK_DEAD: 9,           // px of stick travel ignored
+  STICK_FULL: 46,          // px at which you are running flat out
+  ACCEL: 14,               // how sharply the character takes up a new heading
+  CARRY_SLOW: 0.4,         // fraction of speed lost with full arms
   BODY_R: 0.22,
   REACH: 0.8,
 
@@ -24,7 +28,8 @@ MSM.CFG = {
   FEED_CAP: 8,               // input items an animal or machine can hold
   SHELF_CAP: 8,
   HANDLE_RATE: 9,            // items per second in and out of your arms
-  SERVE_TIME: 0.6,
+  SERVE_TIME: 0.6,           // minimum checkout, even for one item
+  PACK_TIME: 0.35,           // extra seconds per item as it is bagged
 
   SPAWN_EVERY: [3.0, 1.3],   // seconds between arrivals: [quiet, busy]
   DOOR_HOLD: 0.7,            // seconds stood in the doorway before you travel
@@ -34,6 +39,8 @@ MSM.CFG = {
   OFFLINE_RATE: 0.5,
 
   CASHIER_COST: (unlock) => Math.max(2500, unlock * 0.9),
+  TILL_COST: (unlock) => Math.max(100, Math.round(unlock * 0.02)),
+  LIST_ODDS: [0.55, 0.3, 0.15],   // chance of a 1 / 2 / 3 item shopping list
   /* Each extra stocker costs a good deal more than the last. One cannot keep
      eleven shelves and four feed stations going on their own. */
   MAX_STOCKERS: 4,
@@ -59,102 +66,137 @@ MSM.CFG = {
        middle       the shop floor: eight shelves in two rows
        front-right  the till, with the queue running back to the door   */
   PLAN: {
-    /* Production sits round the edges: crop beds along the back, the farmyard
-       down the left, an orchard down the right, the oven by the door. */
+    /* Nine crop beds along the back, an orchard down the right, the farmyard
+       down the left. Every walking gap is at least 0.6 tiles. */
     stations: [
-      { x0: 0.60,  y0: 0.60, x1: 2.50,  y1: 1.90 },   // 0 potato bed
-      { x0: 3.00,  y0: 0.60, x1: 4.90,  y1: 1.90 },   // 1 tomato bed
-      { x0: 5.40,  y0: 0.60, x1: 7.30,  y1: 1.90 },   // 2 carrot bed
-      { x0: 7.80,  y0: 0.60, x1: 9.70,  y1: 1.90 },   // 3 eggplant bed
-      { x0: 10.20, y0: 0.60, x1: 12.10, y1: 1.90 },   // 4 cabbage bed
-      { x0: 13.90, y0: 3.20, x1: 15.60, y1: 4.60 },   // 5 apple tree
-      { x0: 13.90, y0: 5.20, x1: 15.60, y1: 6.60 },   // 6 banana tree
-      { x0: 13.90, y0: 7.20, x1: 15.60, y1: 8.60 },   // 7 orange tree
-      { x0: 0.60,  y0: 3.60, x1: 3.10,  y1: 5.60 },   // 8 cow pen
-      { x0: 0.60,  y0: 6.40, x1: 3.10,  y1: 8.40 },   // 9 chicken coop
-      { x0: 0.60,  y0: 9.40, x1: 2.30,  y1: 10.70 },  // 10 oven
-      { x0: 12.60, y0: 0.60, x1: 14.50, y1: 1.90 },   // 11 wheat field
+      { x0: 0.60,  y0: 0.60, x1: 2.30,  y1: 1.90 },   //  0 potato bed
+      { x0: 2.90,  y0: 0.60, x1: 4.60,  y1: 1.90 },   //  1 tomato bed
+      { x0: 5.20,  y0: 0.60, x1: 6.90,  y1: 1.90 },   //  2 carrot bed
+      { x0: 7.50,  y0: 0.60, x1: 9.20,  y1: 1.90 },   //  3 eggplant bed
+      { x0: 9.80,  y0: 0.60, x1: 11.50, y1: 1.90 },   //  4 cabbage bed
+      { x0: 12.10, y0: 0.60, x1: 13.80, y1: 1.90 },   //  5 watermelon patch
+      { x0: 14.40, y0: 0.60, x1: 16.10, y1: 1.90 },   //  6 strawberry patch
+      { x0: 16.70, y0: 0.60, x1: 18.40, y1: 1.90 },   //  7 blueberry bushes
+      { x0: 18.60, y0: 3.60, x1: 20.50, y1: 5.00 },   //  8 apple tree
+      { x0: 18.60, y0: 5.80, x1: 20.50, y1: 7.20 },   //  9 banana tree
+      { x0: 18.60, y0: 8.00, x1: 20.50, y1: 9.40 },   // 10 orange tree
+      { x0: 0.60,  y0: 3.90, x1: 3.30,  y1: 6.10 },   // 11 cow pen
+      { x0: 0.60,  y0: 7.10, x1: 3.30,  y1: 9.30 },   // 12 chicken coop
+      { x0: 0.60,  y0: 10.30, x1: 2.40, y1: 11.60 },  // 13 oven
+      { x0: 19.00, y0: 0.60, x1: 20.70, y1: 1.90 },   // 14 wheat field
     ],
     pads: [
-      { x0: 0.60,  y0: 2.15, x1: 1.30,  y1: 2.85 },
-      { x0: 3.00,  y0: 2.15, x1: 3.70,  y1: 2.85 },
-      { x0: 5.40,  y0: 2.15, x1: 6.10,  y1: 2.85 },
-      { x0: 7.80,  y0: 2.15, x1: 8.50,  y1: 2.85 },
-      { x0: 10.20, y0: 2.15, x1: 10.90, y1: 2.85 },
-      { x0: 13.90, y0: 4.75, x1: 14.60, y1: 5.05 },
-      { x0: 13.90, y0: 6.75, x1: 14.60, y1: 7.05 },
-      { x0: 13.90, y0: 8.75, x1: 14.60, y1: 9.05 },
-      { x0: 3.25,  y0: 3.60, x1: 3.55,  y1: 4.30 },
-      { x0: 3.25,  y0: 6.40, x1: 3.55,  y1: 7.10 },
-      { x0: 2.45,  y0: 9.40, x1: 3.15,  y1: 10.10 },
-      { x0: 12.60, y0: 2.15, x1: 13.30, y1: 2.85 },
+      { x0: 0.60,  y0: 2.20, x1: 1.30,  y1: 2.90 },
+      { x0: 2.90,  y0: 2.20, x1: 3.60,  y1: 2.90 },
+      { x0: 5.20,  y0: 2.20, x1: 5.90,  y1: 2.90 },
+      { x0: 7.50,  y0: 2.20, x1: 8.20,  y1: 2.90 },
+      { x0: 9.80,  y0: 2.20, x1: 10.50, y1: 2.90 },
+      { x0: 12.10, y0: 2.20, x1: 12.80, y1: 2.90 },
+      { x0: 14.40, y0: 2.20, x1: 15.10, y1: 2.90 },
+      { x0: 16.70, y0: 2.20, x1: 17.40, y1: 2.90 },
+      { x0: 17.70, y0: 4.00, x1: 18.40, y1: 4.70 },
+      { x0: 17.70, y0: 6.20, x1: 18.40, y1: 6.90 },
+      { x0: 17.70, y0: 8.40, x1: 18.40, y1: 9.10 },
+      { x0: 3.60,  y0: 4.40, x1: 4.30,  y1: 5.10 },
+      { x0: 3.60,  y0: 7.60, x1: 4.30,  y1: 8.30 },
+      { x0: 2.70,  y0: 10.60, x1: 3.40, y1: 11.30 },
+      { x0: 19.00, y0: 2.20, x1: 19.70, y1: 2.90 },
     ],
-    /* Eleven shelves in three labelled bands, so the floor reads as a shop
-       laid out by department rather than a field of identical tables. */
+    /* Three department rows: 5 vegetables, 6 fruit, 3 dairy & bakery. */
     shelves: [
-      { x0: 3.90, y0: 4.20, x1: 5.20, y1: 5.10 },     // vegetables
-      { x0: 5.60, y0: 4.20, x1: 6.90, y1: 5.10 },
-      { x0: 7.30, y0: 4.20, x1: 8.60, y1: 5.10 },
-      { x0: 9.00, y0: 4.20, x1: 10.30, y1: 5.10 },
-      { x0: 10.70, y0: 4.20, x1: 12.00, y1: 5.10 },
-      { x0: 3.90, y0: 6.40, x1: 5.20, y1: 7.30 },     // fruit
-      { x0: 5.60, y0: 6.40, x1: 6.90, y1: 7.30 },
-      { x0: 7.30, y0: 6.40, x1: 8.60, y1: 7.30 },
-      { x0: 3.90, y0: 8.60, x1: 5.20, y1: 9.50 },     // dairy + bakery
-      { x0: 5.60, y0: 8.60, x1: 6.90, y1: 9.50 },
-      { x0: 7.30, y0: 8.60, x1: 8.60, y1: 9.50 },
+      { x0: 4.60,  y0: 4.40, x1: 5.85,  y1: 5.30 },   // vegetables
+      { x0: 6.55,  y0: 4.40, x1: 7.80,  y1: 5.30 },
+      { x0: 8.50,  y0: 4.40, x1: 9.75,  y1: 5.30 },
+      { x0: 10.45, y0: 4.40, x1: 11.70, y1: 5.30 },
+      { x0: 12.40, y0: 4.40, x1: 13.65, y1: 5.30 },
+      { x0: 4.60,  y0: 7.00, x1: 5.85,  y1: 7.90 },   // fruit
+      { x0: 6.55,  y0: 7.00, x1: 7.80,  y1: 7.90 },
+      { x0: 8.50,  y0: 7.00, x1: 9.75,  y1: 7.90 },
+      { x0: 10.45, y0: 7.00, x1: 11.70, y1: 7.90 },
+      { x0: 12.40, y0: 7.00, x1: 13.65, y1: 7.90 },
+      { x0: 14.35, y0: 7.00, x1: 15.60, y1: 7.90 },
+      { x0: 4.60,  y0: 9.60, x1: 5.85,  y1: 10.50 },  // dairy + bakery
+      { x0: 6.55,  y0: 9.60, x1: 7.80,  y1: 10.50 },
+      { x0: 8.50,  y0: 9.60, x1: 9.75,  y1: 10.50 },
     ],
-    lanes: [5.40, 7.10, 8.80, 10.50, 12.40,
-            5.40, 7.10, 8.80,
-            5.40, 7.10, 8.80],
+    lanes: [6.20, 8.15, 10.10, 12.05, 14.00,
+            6.20, 8.15, 10.10, 12.05, 14.00, 16.20,
+            6.20, 8.15, 10.10],
     sections: [
-      { name: 'VEGETABLES',     x0: 3.60, y0: 3.90, x1: 12.30, y1: 5.85, tint: '#BFEAB6' },
-      { name: 'FRUIT',          x0: 3.60, y0: 6.10, x1: 8.90,  y1: 8.05, tint: '#FFDCA8' },
-      { name: 'DAIRY & BAKERY', x0: 3.60, y0: 8.30, x1: 8.90,  y1: 10.25, tint: '#CFE2FF' },
+      { name: 'VEGETABLES',     x0: 4.20, y0: 4.10, x1: 14.05, y1: 6.30,  tint: '#BFEAB6' },
+      { name: 'FRUIT',          x0: 4.20, y0: 6.70, x1: 16.00, y1: 8.90,  tint: '#FFDCA8' },
+      { name: 'DAIRY & BAKERY', x0: 4.20, y0: 9.30, x1: 10.15, y1: 11.50, tint: '#CFE2FF' },
     ],
-    stockLane: 3.00,                          // the open run behind the shelves
+    stockLane: 3.40,
+    walkway: 12.35,
 
-    till:  { x0: 12.90, y0: 9.60, x1: 14.50, y1: 10.40 },
-    serve: { x: 13.70, y: 9.15 },
-    queue: [{ x: 13.70, y: 10.90 }, { x: 13.70, y: 11.45 },
-            { x: 13.70, y: 12.00 }, { x: 13.70, y: 12.55 }],
-    entrance: { x: 13.70, y: 13.60 },
-    spawn:    { x: 11.20, y: 11.40 },
-    door:     { x0: 0.60, y0: 11.60, x1: 2.20, y1: 12.80 },
-    bin:      { x0: 14.90, y0: 12.90, x1: 15.60, y1: 13.60 },
+    till:  { x0: 17.00, y0: 10.40, x1: 18.60, y1: 11.20 },
+    serve: { x: 17.80, y: 9.95 },
+    queue: [{ x: 17.80, y: 11.90 }, { x: 17.80, y: 12.45 },
+            { x: 17.80, y: 13.00 }, { x: 17.80, y: 13.55 }],
+    entrance: { x: 17.80, y: 14.70 },
+    spawn:    { x: 15.20, y: 12.40 },
+    door:     { x0: 0.60, y0: 12.80, x1: 2.20, y1: 14.00 },
+    sign:     { x0: 16.30, y0: 13.95, x1: 17.00, y1: 14.60 },
+    bin:      { x0: 19.80, y0: 14.00, x1: 20.50, y1: 14.70 },
   },
 
   STORES: [
     {
       id: 'grocery', name: 'Grocery Store', glyph: '\ud83e\udd55', color: '#5FCBB6', unlock: 0,
+      /* Product lines open one at a time, each at its own build plot. Prices
+         rise with the unlock order, so a later line is always worth more. */
+      unlocks: [
+        { id: 'potato',     cost: 0 },
+        { id: 'tomato',     cost: 250 },
+        { id: 'carrot',     cost: 550 },
+        { id: 'wheat',      cost: 950 },
+        { id: 'milk',       cost: 1600 },
+        { id: 'bread',      cost: 2600 },
+        { id: 'egg',        cost: 4200 },
+        { id: 'eggplant',   cost: 6500 },
+        { id: 'cabbage',    cost: 9500 },
+        { id: 'strawberry', cost: 14000 },
+        { id: 'watermelon', cost: 20000 },
+        { id: 'blueberry',  cost: 28000 },
+        { id: 'apple',      cost: 40000 },
+        { id: 'banana',     cost: 56000 },
+        { id: 'orange',     cost: 78000 },
+      ],
       products: [
         /* --- vegetables ------------------------------------------------ */
-        { id:'potato',   name:'Potato',   glyph:'\ud83e\udd54', color:'#D9A85F', price:9,  restock:2.0, art:'potato',
+        { id:'potato',     name:'Potato',     glyph:'\ud83e\udd54', color:'#D9A85F', price:9,   restock:2.0, art:'potato',
           source:{ kind:'crop', label:'Potato Bed' } },
-        { id:'tomato',   name:'Tomato',   glyph:'\ud83c\udf45', color:'#FF5C5C', price:14, restock:2.2, art:'tomato',
+        { id:'tomato',     name:'Tomato',     glyph:'\ud83c\udf45', color:'#FF5C5C', price:14,  restock:2.2, art:'tomato',
           source:{ kind:'crop', label:'Tomato Bed' } },
-        { id:'carrot',   name:'Carrot',   glyph:'\ud83e\udd55', color:'#F08A2E', price:20, restock:2.4, art:'carrot',
+        { id:'carrot',     name:'Carrot',     glyph:'\ud83e\udd55', color:'#F08A2E', price:20,  restock:2.4, art:'carrot',
           source:{ kind:'crop', label:'Carrot Bed' } },
-        { id:'eggplant', name:'Eggplant', glyph:'\ud83c\udf46', color:'#8B5CC7', price:28, restock:2.6, art:'eggplant',
+        { id:'eggplant',   name:'Eggplant',   glyph:'\ud83c\udf46', color:'#8B5CC7', price:72,  restock:2.6, art:'eggplant',
           source:{ kind:'crop', label:'Eggplant Bed' } },
-        { id:'cabbage',  name:'Cabbage',  glyph:'\ud83e\udd6c', color:'#7CC24E', price:36, restock:2.8, art:'cabbage',
+        { id:'cabbage',    name:'Cabbage',    glyph:'\ud83e\udd6c', color:'#7CC24E', price:90,  restock:2.8, art:'cabbage',
           source:{ kind:'crop', label:'Cabbage Bed' } },
         /* --- fruit ----------------------------------------------------- */
-        { id:'apple',    name:'Apple',    glyph:'\ud83c\udf4e', color:'#E8413F', price:44, restock:2.6, art:'apple',
+        { id:'watermelon', name:'Watermelon', glyph:'\ud83c\udf49', color:'#3FA45B', price:145, restock:3.0, art:'watermelon',
+          source:{ kind:'crop', label:'Watermelon Patch' } },
+        { id:'strawberry', name:'Strawberry', glyph:'\ud83c\udf53', color:'#F0384F', price:115, restock:2.8, art:'strawberry',
+          source:{ kind:'crop', label:'Strawberry Patch' } },
+        { id:'blueberry',  name:'Blueberry',  glyph:'\ud83e\uded0', color:'#5A6CD8', price:180, restock:3.1, art:'blueberry',
+          source:{ kind:'crop', label:'Blueberry Bushes' } },
+        { id:'apple',      name:'Apple',      glyph:'\ud83c\udf4e', color:'#E8413F', price:225, restock:3.0, art:'apple',
           source:{ kind:'tree', label:'Apple Tree' } },
-        { id:'banana',   name:'Banana',   glyph:'\ud83c\udf4c', color:'#F2CB3D', price:54, restock:2.8, art:'banana',
+        { id:'banana',     name:'Banana',     glyph:'\ud83c\udf4c', color:'#F2CB3D', price:280, restock:3.2, art:'banana',
           source:{ kind:'tree', label:'Banana Tree' } },
-        { id:'orange',   name:'Orange',   glyph:'\ud83c\udf4a', color:'#FF9A1F', price:66, restock:3.0, art:'orange',
+        { id:'orange',     name:'Orange',     glyph:'\ud83c\udf4a', color:'#FF9A1F', price:350, restock:3.4, art:'orange',
           source:{ kind:'tree', label:'Orange Tree' } },
         /* --- dairy and bakery ------------------------------------------ */
-        { id:'milk',     name:'Milk',     glyph:'\ud83e\udd5b', color:'#DFE7F3', price:80, restock:3.0, art:'milk',
+        { id:'milk',       name:'Milk',       glyph:'\ud83e\udd5b', color:'#DFE7F3', price:30,  restock:3.0, art:'milk',
           source:{ kind:'cow', label:'Cow', input:'wheat' } },
-        { id:'egg',      name:'Eggs',     glyph:'\ud83e\udd5a', color:'#F6E7CE', price:96, restock:3.2, art:'egg',
+        { id:'egg',        name:'Eggs',       glyph:'\ud83e\udd5a', color:'#F6E7CE', price:56,  restock:3.2, art:'egg',
           source:{ kind:'chicken', label:'Chicken Coop', input:'tomato' } },
-        { id:'bread',    name:'Bread',    glyph:'\ud83c\udf5e', color:'#E0A44E', price:120, restock:3.4, art:'bread',
+        { id:'bread',      name:'Bread',      glyph:'\ud83c\udf5e', color:'#E0A44E', price:42,  restock:3.4, art:'bread',
           source:{ kind:'machine', label:'Oven', input:'wheat' } },
         /* Not sold — wheat is what the cow and the oven eat. */
-        { id:'wheat',    name:'Wheat',    glyph:'\ud83c\udf3e', color:'#E8C86A', price:0,  restock:1.5, art:'wheat',
+        { id:'wheat',      name:'Wheat',      glyph:'\ud83c\udf3e', color:'#E8C86A', price:0,   restock:1.5, art:'wheat',
           sell:false, source:{ kind:'crop', label:'Wheat Field' } },
       ],
     },
@@ -225,6 +267,15 @@ MSM.CFG.STORES.forEach((store) => {
   store.products.forEach((p) => {
     p.source.inputIndex = p.source.input
       ? store.products.findIndex((q) => q.id === p.source.input) : -1;
+  });
+  /* The unlock sequence: an explicit list, or array order with costs from the
+     price. The first line in the sequence comes with the store. */
+  const order = store.unlocks
+    ? store.unlocks.map((u) => ({ n: store.products.findIndex((q) => q.id === u.id), cost: u.cost }))
+    : store.products.map((p, n) => ({ n, cost: n === 0 ? 0 : Math.round((p.price || 12) * 22) }));
+  order.forEach((u, rank) => {
+    store.products[u.n].rank = rank;
+    store.products[u.n].buildCost = u.cost;
   });
   store.sells = store.products.filter((p) => p.sell);
   store.stockerCost = (owned) => MSM.CFG.STOCKER_COST(store.unlock, owned);

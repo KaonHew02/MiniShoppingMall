@@ -27,7 +27,9 @@ window.MSM = window.MSM || {};
       addEventListener('pagehide', () => MSM.save());
 
       if (offline) MSM.ui.open('offline', offline);
-      else setTimeout(() => MSM.ui.toast('Customers show what they want — keep those shelves full'), 800);
+      else if (MSM.state.tut >= 99) {
+        setTimeout(() => MSM.ui.toast('Customers show what they want — keep those shelves full'), 800);
+      }
 
       this.last = performance.now();
       requestAnimationFrame(G.loop);
@@ -76,26 +78,38 @@ window.MSM = window.MSM || {};
       }, { passive: false });
     },
 
-    /** Stick / keys -> a direction in world space. */
+    /**
+     * Stick / keys -> a heading in world space, scaled 0..1 by how far the
+     * stick is pushed. Full speed on the faintest touch is what made it feel
+     * like the character was getting away from you.
+     */
     input() {
-      let sx = 0, sy = 0;
+      let sx = 0, sy = 0, throttle = 0;
+
       const st = MSM.render.stick;
       if (st) {
         const d = Math.hypot(st.dx, st.dy);
-        if (d > 8) { sx = st.dx; sy = st.dy; }
+        if (d > CFG.STICK_DEAD) {
+          sx = st.dx; sy = st.dy;
+          throttle = U.clamp((d - CFG.STICK_DEAD) / (CFG.STICK_FULL - CFG.STICK_DEAD), 0.22, 1);
+        }
       }
+
       const k = G.keys;
-      if (k.has('a') || k.has('arrowleft'))  sx -= 60;
-      if (k.has('d') || k.has('arrowright')) sx += 60;
-      if (k.has('w') || k.has('arrowup'))    sy -= 60;
-      if (k.has('s') || k.has('arrowdown'))  sy += 60;
-      if (!sx && !sy) return { x: 0, y: 0 };
+      let kx = 0, ky = 0;
+      if (k.has('a') || k.has('arrowleft'))  kx -= 1;
+      if (k.has('d') || k.has('arrowright')) kx += 1;
+      if (k.has('w') || k.has('arrowup'))    ky -= 1;
+      if (k.has('s') || k.has('arrowdown'))  ky += 1;
+      if (kx || ky) { sx = kx * 60; sy = ky * 60; throttle = 1; }
+
+      if (!throttle) return { x: 0, y: 0 };
 
       // undo the isometric projection so "up" on screen is up the shop
       const a = sx / (MSM.iso.TW / 2), b = sy / (MSM.iso.TH / 2);
       const wx = (a + b) / 2, wy = (b - a) / 2;
       const len = Math.hypot(wx, wy) || 1;
-      return { x: wx / len, y: wy / len };
+      return { x: (wx / len) * throttle, y: (wy / len) * throttle };
     },
 
     /* ---------------------------------------------------------- loop */
@@ -109,9 +123,14 @@ window.MSM = window.MSM || {};
       MSM.ent.restock(dt);
       MSM.ent.movePlayer(dt, dir.x, dir.y);
       MSM.ent.updateStockers(dt);
+      MSM.ent.spawnGate = MSM.econ.sstate().open;
       MSM.ent.updateCustomers(dt);
       MSM.ent.ageCash(dt);
       G.serve(dt);
+      G.tillPad(dt);
+      G.buildPads(dt);
+      G.signPost(dt);
+      G.tutorial();
       G.levelPads(dt);
       G.doors(dt);
       G.passive(dt);
@@ -133,18 +152,163 @@ window.MSM = window.MSM || {};
       if (!front || front.phase !== 'queue') { G.serveT = 0; return; }
 
       const ss = MSM.econ.sstate();
+      if (!ss.till) { G.serveT = 0; return; }
       const atTill = MSM.world.atPoint(MSM.ent.player, P.serve, 0.95);
       if (!atTill && !ss.cashier) { G.serveT = 0; return; }
 
+      // bigger baskets take longer — each item gets its beat in the bag
+      G.serveDur = Math.max(CFG.SERVE_TIME, (front.got || 1) * CFG.PACK_TIME + 0.25);
       G.serveT += dt * (atTill && ss.cashier ? 1.7 : 1);
-      if (G.serveT < CFG.SERVE_TIME) return;
+      if (G.serveT < G.serveDur) return;
       G.serveT = 0;
 
       q.shift();
       front.carry = 0;
       front.phase = 'leave';
       MSM.state.served++;
-      MSM.ent.dropCash(MSM.econ.price(front.want));
+      MSM.ent.dropCash(front.total || MSM.econ.price(front.want));
+    },
+
+    /* The counter is a construction plot until you pay for it: walk onto
+       it and your cash drains in, exactly like the level pads. */
+    tillPad(dt) {
+      const ss = MSM.econ.sstate();
+      if (ss.till) return;
+      const p = MSM.ent.player;
+      if (U.boxDist(p.x, p.y, P.till) > 0.05) return;
+
+      const cost = CFG.TILL_COST(MSM.econ.store().unlock);
+      const rate = Math.max(cost / 1.6, 60);
+      const pay = Math.min(rate * dt, cost - ss.tillPaid, MSM.state.cash);
+      if (pay <= 0) return;
+      MSM.state.cash -= pay;
+      ss.tillPaid += pay;
+      if (ss.tillPaid < cost) return;
+
+      ss.till = true;
+      ss.tillPaid = 0;
+      MSM.world.invalidate();
+      // you were standing ON the plot to pay for it — step out to the serving
+      // side, or the finished counter appears around you and traps you inside
+      p.x = P.serve.x;
+      p.y = P.serve.y;
+      p.vx = 0; p.vy = 0;
+      MSM.render.pop(p.x, p.y, 1.3, '\u2728 Counter built!', '#2CA85C');
+      MSM.ui.toast('\u2728 Checkout counter unlocked!');
+      MSM.save();
+    },
+
+    /* The next product line's station is a build plot: stand on it and pay,
+       exactly like the counter. Lines open strictly in order. */
+    buildPads(dt) {
+      const n = MSM.econ.nextBuild();
+      if (n < 0) return;
+      const prod = MSM.econ.prod(n), ps = MSM.econ.pstate(n);
+      const p = MSM.ent.player;
+      if (U.boxDist(p.x, p.y, prod.crate) > 0.05) return;
+
+      const cost = prod.buildCost;
+      const rate = Math.max(cost / 2.5, 60);
+      const pay = Math.min(rate * dt, cost - ps.buildPaid, MSM.state.cash);
+      if (pay <= 0) return;
+      MSM.state.cash -= pay;
+      ps.buildPaid += pay;
+      if (ps.buildPaid < cost) return;
+
+      ps.built = true;
+      ps.buildPaid = 0;
+      MSM.world.invalidate();
+      const stand = MSM.ent.crateStand(n);
+      p.x = stand.x; p.y = stand.y; p.vx = 0; p.vy = 0;
+      MSM.render.pop(p.x, p.y, 1.3, '\u2728 ' + prod.source.label + '!', '#2CA85C');
+      MSM.ui.toast('\u2728 ' + prod.name + ' unlocked \u2014 ' + prod.source.label + ' built!');
+      MSM.save();
+    },
+
+    signHold: 0,
+    signArmed: true,
+
+    /* The OPEN/CLOSED sign by the door. Stand at it a moment to flip it —
+       customers only come in while it says OPEN. */
+    signPost(dt) {
+      const ss = MSM.econ.sstate();
+      const p = MSM.ent.player;
+      if (U.boxDist(p.x, p.y, P.sign) > 0.15) {
+        G.signHold = 0;
+        G.signArmed = true;
+        return;
+      }
+      if (!G.signArmed) return;
+      if (!ss.till) {
+        if (G.signHold === 0) MSM.ui.toast('Build the checkout counter first');
+        G.signHold = 0.01;
+        return;
+      }
+      G.signHold += dt;
+      if (G.signHold < CFG.DOOR_HOLD) return;
+      G.signHold = 0;
+      G.signArmed = false;                     // step away before flipping again
+      ss.open = !ss.open;
+      MSM.ui.toast(ss.open ? '\ud83d\udfe2 The store is OPEN!' : '\ud83d\udd34 Closed for now');
+      MSM.save();
+    },
+
+    /* -------------------------------------------------------- tutorial */
+    tutTarget: null,
+    tutText: '',
+
+    /* The first five minutes, guided by an arrow: build the counter, harvest,
+       stock a shelf, open up, serve, collect. All by walking. */
+    tutorial() {
+      const s = MSM.state;
+      if (s.tut >= 99 || s.current !== 0) { G.tutTarget = null; G.tutText = ''; return; }
+      const ss = MSM.econ.sstate();
+      const p = MSM.ent.player;
+      const potato = MSM.econ.prod(0);
+
+      switch (s.tut) {
+        case 0:
+          if (ss.till) { s.tut = 1; break; }
+          G.tutTarget = { x: (P.till.x0 + P.till.x1) / 2, y: (P.till.y0 + P.till.y1) / 2 };
+          G.tutText = 'Stand on the plot to build your counter \u2014 $' +
+                      CFG.TILL_COST(MSM.econ.store().unlock);
+          break;
+        case 1:
+          if (p.hold.indexOf(0) >= 0) { s.tut = 2; break; }
+          if (MSM.econ.pstate(0).shelf > 0) { s.tut = 3; break; }
+          G.tutTarget = { x: (potato.crate.x0 + potato.crate.x1) / 2, y: potato.crate.y1 + 0.4 };
+          G.tutText = 'Harvest potatoes \u2014 stand at the potato bed';
+          break;
+        case 2:
+          if (MSM.econ.pstate(0).shelf > 0) { s.tut = 3; break; }
+          G.tutTarget = { x: potato.browse.x, y: potato.browse.y };
+          G.tutText = 'Carry them to the potato shelf';
+          break;
+        case 3:
+          if (ss.open) { s.tut = 4; break; }
+          G.tutTarget = { x: (P.sign.x0 + P.sign.x1) / 2, y: (P.sign.y0 + P.sign.y1) / 2 };
+          G.tutText = 'Flip the sign to OPEN your store';
+          break;
+        case 4:
+          if (s.served > 0) { s.tut = 5; break; }
+          G.tutTarget = { x: P.serve.x, y: P.serve.y };
+          G.tutText = 'A customer is coming \u2014 wait at the counter to serve them';
+          break;
+        case 5:
+          if (MSM.ent.cash.length === 0 && s.totalEarned > 0) {
+            s.tut = 99;
+            G.tutTarget = null;
+            G.tutText = '';
+            MSM.ui.toast('\ud83c\udf89 FIRST SALE! Keep your shelves stocked!');
+            MSM.save();
+            break;
+          }
+          if (MSM.ent.cash.length) {
+            G.tutTarget = { x: MSM.ent.cash[0].x, y: MSM.ent.cash[0].y };
+            G.tutText = 'Collect your money!';
+          }
+          break;
+      }
     },
 
     /* Stand on a product's pad and your cash drains into its next level.
@@ -153,6 +317,7 @@ window.MSM = window.MSM || {};
       const p = MSM.ent.player;
       MSM.econ.store().products.forEach((prod, n) => {
         const ps = MSM.econ.pstate(n);
+        if (!ps.built) return;
         if (U.boxDist(p.x, p.y, prod.pad) > 0.05) return;
 
         const cost = MSM.econ.upgradeCost(n, 1);

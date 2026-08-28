@@ -1,72 +1,135 @@
-# Backing up your save
+# Saving to Google Drive
 
-Progress lives in this browser's `localStorage` under `msm.save.v3`. Clearing
-your browsing data destroys it. There are two ways to keep a copy.
+Progress lives in this browser's `localStorage` under `msm.save.v9`. Clearing
+your browsing data destroys it. Two ways to keep a copy.
 
-## 1. Backup file — works everywhere
+## Already done for you
 
-Settings → **Export** writes `mini-shopping-mall-YYYY-MM-DD.json`. Keep it
-wherever you like. **Import** reads one back.
+| | |
+| --- | --- |
+| Drive folder | `1fQZvAMTKITE2ZAjjfZog2l5U21UITe-E` — already in `src/drive-config.js` |
+| File name | `mini-shopping-mall-save.json` |
+| Scope | `drive.file` — the app can only touch files it made itself |
+| Code | `src/backup.js` + `src/drive.js`, the same layer MoneyFlow and FinSim use |
 
-This works from a double-clicked `index.html` as well as from a served page.
+## Setting it up on a fresh project
 
-## 2. Google Drive — needs a hosted page
+You made a new Google Cloud project for this rather than reusing MoneyFlow's.
+That is tidier, but a new project starts empty — the Drive API is **off** and
+there is **no consent screen** — so there are two steps before the Client ID
+that MoneyFlow's project already had done. Do them in this order or the
+sign-in fails with an error that does not explain itself.
 
-Settings → **To Drive** / **From Drive** keep one file in a folder of your own
-Drive. Two things have to be true first.
+All of it needs your own Google sign-in, so none of it can be done for you.
 
-### It cannot run from `file://`
+### 1. Turn on the Drive API
 
-A page opened straight off disk has no origin, and Google will not issue a
-token to one. Drive works when the game is served from a real origin — GitHub
-Pages, the same as MoneyFlow and FinSim — or from an authorised
-`http://localhost:8788` while you are developing.
+<https://console.cloud.google.com/> → make sure your **Mini Shopping Mall**
+project is the one selected in the bar at the top.
 
-Everything else, including Export/Import, keeps working from `file://`.
+**APIs & Services → Library** → search `Google Drive API` → **Enable**.
 
-### You have to make the OAuth client yourself
+Miss this and the sign-in works but every push fails with a 403.
 
-It needs your Google sign-in and your acceptance of Google's terms, so it is
-not something that can be set up for you.
+### 2. Set up the consent screen
 
-You already have a Google Cloud project from MoneyFlow with the Drive API and
-the consent screen done. **Add a third OAuth client to that same project**
-rather than reusing MoneyFlow's — it works either way, but a separate client
-makes the sign-in window name the right app and keeps the grants separate.
+This is the panel Google shows when the game asks for permission. In a new
+project it does not exist yet. Look for **OAuth consent screen** under APIs &
+Services — newer consoles call the same area **Google Auth Platform**, with
+the settings split across *Branding*, *Audience* and *Data access*.
 
-1. Google Cloud console → **APIs & Services → Credentials**
-2. **Create credentials → OAuth client ID → Web application**
-3. Under *Authorised JavaScript origins* add the scheme and host only, no
-   path — e.g. `https://kaonhew02.github.io`, and `http://localhost:8788` if
-   you want it while developing
-4. Copy the client ID into `src/drive-config.js`
-5. Make a folder in Drive for the save, open it, and copy the id out of the
-   URL into `FOLDER_ID` (leave blank to use the root of My Drive)
+Fill in:
 
-Until `CLIENT_ID` is filled in, the Drive row in Settings says it is not set
-up rather than failing strangely.
+- **User type / Audience: External** (unless this is a Workspace account)
+- **App name:** `Mini Shopping Mall`
+- **User support email:** your own address
+- **Developer contact email:** your own address
 
-### Scope
+Then, under **Audience → Test users**, click *Add users* and **add your own
+Google address**. A new project starts in *Testing* mode, and in that mode
+only listed test users may sign in — including you. This is the step people
+skip, and it produces *"Access blocked: this app has not completed
+verification"*.
 
-`drive.file` — the app can only see files it created itself. It cannot read
-the rest of your Drive, needs no Google verification, and a client ID sitting
-in a public repo is not a key to anything else. **Do not widen it to
-`drive`.**
+You do **not** need to submit anything for review. `drive.file` is a
+non-sensitive scope and Testing mode is fine for your own use — it just means
+you have to be on the test-user list.
+
+### 3. Create the client
+
+**APIs & Services → Credentials → + Create credentials → OAuth client ID**
+
+- **Application type:** Web application
+- **Name:** `Mini Shopping Mall`
+
+Under **Authorised JavaScript origins**, click *Add URI* for each. Scheme and
+host only — **no path, no trailing slash**:
+
+```
+http://127.0.0.1:8788
+http://localhost:8788
+```
+
+Add this one too if you later publish it, like your other apps:
+
+```
+https://kaonhew02.github.io
+```
+
+Leave *Authorised redirect URIs* empty — this flow does not use one.
+
+### 4. Copy the Client ID into the game
+
+Press **Create**. Copy the long string ending in
+`.apps.googleusercontent.com`, and paste it into
+[`src/drive-config.js`](../src/drive-config.js), replacing the placeholder:
+
+```js
+CLIENT_ID: '1234567890-abcdefg.apps.googleusercontent.com',
+```
+
+### 5. Use it
+
+Hard-refresh the game, then **⚙ Settings → To Drive**. Google asks you to sign
+in and to allow the app; after that the cloud icon turns green and shows the
+time of the last copy. **From Drive** pulls it back onto any browser.
+
+## If something goes wrong
+
+**"Drive is not set up yet"** — the Client ID is still the placeholder, or the
+file was not saved.
+
+**Error 400: `redirect_uri_mismatch` or `origin_mismatch`** — the address in
+your browser's bar does not exactly match an authorised origin. Check whether
+you are on `127.0.0.1` or `localhost`, and that the port is `8788`.
+
+**"Access blocked: this app has not completed verification"** — you are not on
+the test-user list. Consent screen → **Audience → Test users** → add your own
+address. Step 2 above.
+
+**Push fails with 403 / "Drive API has not been used"** — the Drive API is not
+enabled on this project. Step 1 above. If you just enabled it, give it a
+minute and retry.
+
+**Nothing happens when you press To Drive** — the sign-in window was blocked.
+Allow pop-ups for the site and press it again.
 
 ## Things worth knowing
 
+**It cannot work from `file://`.** A page opened straight off disk has no
+origin and Google will not issue a token to one. Run it with `npm start`.
+Export/Import work off disk either way.
+
 **The Drive file is a mirror, not a history.** Each push overwrites the same
-file with whatever is in this browser now. If you reset your progress and then
-push, the reset is what is in Drive. Export a file before doing anything
-drastic.
+file with whatever is in this browser now. Reset your progress and push, and
+the reset is what is in Drive. Export a file before anything drastic.
 
 **Restoring replaces, it never merges.** Two saves cannot be reconciled — the
-game would have to guess which one is further along, and guessing wrong
-rewrites your progress silently. Both Import and From Drive confirm first,
-then reload.
+game would have to guess which is further along. Import and From Drive both
+confirm first, then reload.
 
-**Auto-backup is off by default.** Turn it on and a successful save pushes to
-Drive, at most once a minute. It never opens a sign-in window on its own: the
-first push always has to be a manual **To Drive**, and if the silent token
-renewal is refused it just stands down and the cloud icon goes red. A failed
-automatic push shows no dialog — check the icon.
+**Auto-backup is off by default.** Turn it on and a successful save pushes at
+most once a minute. It never opens a sign-in window by itself: the first push
+must be a manual **To Drive**, and if the silent token renewal is refused it
+stands down and the cloud icon goes red. A failed automatic push shows no
+dialog — check the icon.

@@ -119,6 +119,11 @@ window.MSM = window.MSM || {};
           `   (${pl.hold.length}/${CFG.CARRY_CAP})`;
       } else carry.hidden = true;
 
+      // the tutorial's one-line instruction
+      const obj = $('objective');
+      if (MSM.game.tutText) { obj.hidden = false; obj.textContent = MSM.game.tutText; }
+      else obj.hidden = true;
+
       const banner = $('boost-banner');
       if (MSM.econ.boosting()) {
         banner.hidden = false;
@@ -164,6 +169,17 @@ window.MSM = window.MSM || {};
 
     const rows = MSM.econ.store().products.map((prod, n) => {
       const ps = MSM.econ.pstate(n), cash = MSM.state.cash;
+      if (!ps.built) {
+        const next = MSM.econ.nextBuild() === n;
+        return `<div class="row locked">${chip(prod.glyph, prod.color)}
+          <div class="row-main">
+            <div class="row-name">${prod.name}</div>
+            <div class="row-sub">${next
+              ? `Stand on its plot to build \u2014 $${U.money(prod.buildCost)}`
+              : 'Unlocks later'}</div>
+          </div>
+        </div>`;
+      }
       const count = UI.buyMode === 'max' ? Math.max(1, MSM.econ.maxBuy(n, cash)) : UI.buyMode;
       const cost = MSM.econ.upgradeCost(n, count);
       const ms = MSM.econ.nextMilestone(ps.level);

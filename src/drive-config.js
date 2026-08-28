@@ -6,11 +6,11 @@ window.MSM = window.MSM || {};
 MSM.DRIVE_CFG = {
   // OAuth 2.0 Client ID (Web application) from your Google Cloud project.
   // The same project MoneyFlow and FinSim use — just add a third client.
-  CLIENT_ID: 'PASTE_YOUR_CLIENT_ID_HERE.apps.googleusercontent.com',
+  CLIENT_ID: '724538062298-fgnnaeqlcrmi9soeelj838fc4ug09sac.apps.googleusercontent.com',
 
-  // The Drive folder the save file lives in. Open the folder in Drive and
-  // copy the id out of the URL. Leave blank to use the root of My Drive.
-  FOLDER_ID: '',
+  // The Drive folder the save file lives in — the one you shared on
+  // 2026-08-28. Copy the id out of the folder URL to change it.
+  FOLDER_ID: '1fQZvAMTKITE2ZAjjfZog2l5U21UITe-E',
 
   // One file, overwritten each push. It is a mirror of this browser, not a
   // history — see docs/DRIVE.md.

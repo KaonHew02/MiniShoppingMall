@@ -197,6 +197,64 @@ window.MSM = window.MSM || {};
       ell(ctx, x - s * 0.07, cy - s * 0.1, s * 0.07, s * 0.05, -0.5, '#FFFFFF');
     },
 
+    watermelon(ctx, x, y, s, c) {
+      const cy = y - s * 0.31;
+      ell(ctx, x, cy, s * 0.36, s * 0.31, 0, c);
+      ctx.save();
+      ctx.beginPath(); ctx.ellipse(x, cy, s * 0.36, s * 0.31, 0, 0, TAU); ctx.clip();
+      ctx.strokeStyle = U.shade(c, -0.35); ctx.lineWidth = s * 0.055;
+      [-0.2, 0, 0.2].forEach((o) => {
+        ctx.beginPath();
+        ctx.moveTo(x + o * s, cy - s * 0.34);
+        ctx.quadraticCurveTo(x + o * s * 1.9, cy, x + o * s, cy + s * 0.34);
+        ctx.stroke();
+      });
+      ctx.restore();
+      ell(ctx, x - s * 0.13, cy - s * 0.13, s * 0.09, s * 0.055, -0.5, U.shade(c, 0.4));
+      rr(ctx, x - s * 0.025, cy - s * 0.4, s * 0.05, s * 0.1, s * 0.025, '#3B7C32');
+    },
+
+    strawberry(ctx, x, y, s, c) {
+      const cy = y - s * 0.33;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.bezierCurveTo(x - s * 0.34, y - s * 0.22, x - s * 0.3, cy - s * 0.24, x, cy - s * 0.2);
+      ctx.bezierCurveTo(x + s * 0.3, cy - s * 0.24, x + s * 0.34, y - s * 0.22, x, y);
+      ctx.closePath();
+      fill(ctx, c);
+      ctx.fillStyle = U.shade(c, 0.55);
+      [[-0.11, -0.16], [0.1, -0.14], [0, -0.03], [-0.14, 0.02], [0.13, 0.03]].forEach(([a2, b2]) => {
+        ctx.beginPath();
+        ctx.ellipse(x + a2 * s, cy + b2 * s, s * 0.028, s * 0.042, 0.3, 0, TAU);
+        ctx.fill();
+      });
+      ctx.fillStyle = '#4C9A3F';
+      for (let i = 0; i < 5; i++) {
+        const ang = (i / 5) * TAU - Math.PI / 2;
+        ctx.beginPath();
+        ctx.ellipse(x + Math.cos(ang) * s * 0.13, cy - s * 0.22 + Math.sin(ang) * s * 0.05,
+                    s * 0.1, s * 0.045, ang, 0, TAU);
+        ctx.fill();
+      }
+    },
+
+    blueberry(ctx, x, y, s, c) {
+      [[-0.14, -0.19, 0.15], [0.15, -0.16, 0.14], [0, -0.36, 0.15]].forEach(([dx, dy, r], i) => {
+        const bx = x + dx * s, by = y + dy * s;
+        ell(ctx, bx, by, s * r, s * r, 0, i === 2 ? U.shade(c, 0.12) : c);
+        ell(ctx, bx - s * r * 0.32, by - s * r * 0.36, s * r * 0.36, s * r * 0.24, -0.5,
+            U.shade(c, 0.42));
+        ctx.fillStyle = U.shade(c, -0.4);
+        for (let k = 0; k < 5; k++) {
+          const ang = (k / 5) * TAU - Math.PI / 2;
+          ctx.beginPath();
+          ctx.ellipse(bx + Math.cos(ang) * s * r * 0.3, by - s * r * 0.55 + Math.sin(ang) * s * r * 0.12,
+                      s * r * 0.16, s * r * 0.07, ang, 0, TAU);
+          ctx.fill();
+        }
+      });
+    },
+
     apple(ctx, x, y, s, c) {
       const cy = y - s * 0.32;
       ell(ctx, x, cy, s * 0.31, s * 0.30, 0, c);

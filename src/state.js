@@ -14,11 +14,18 @@ window.MSM = window.MSM || {};
     lastSeen: Date.now(),
     totalEarned: 0,
     served: 0,
+    tut: 0,                     // tutorial step; 99 once the first sale is done
     stores: CFG.STORES.map((s, i) => ({
       owned: i === 0,
+      till: false,              // the counter has to be built before you can sell
+      tillPaid: 0,
+      open: false,              // customers only come while the sign says OPEN
       stockers: 0,
       cashier: false,
-      products: s.products.map(() => ({ level: 1, shelf: 0, out: 0, feed: 0, t: 0, pay: 0 })),
+      products: s.products.map((p) => ({
+        built: p.rank === 0, buildPaid: 0,
+        level: 1, shelf: 0, out: 0, feed: 0, t: 0, pay: 0,
+      })),
     })),
   });
 
@@ -39,6 +46,17 @@ window.MSM = window.MSM || {};
     },
 
     nextMilestone: (level) => CFG.MILESTONES.find((m) => level < m.lvl) || null,
+
+    /** The next product line to open — lowest unbuilt rank, or -1. */
+    nextBuild(i) {
+      const store = E.store(i), ss = E.sstate(i);
+      let best = -1, rank = 1e9;
+      store.products.forEach((p, n) => {
+        if (ss.products[n].built || p.rank >= rank) return;
+        rank = p.rank; best = n;
+      });
+      return best;
+    },
 
     boosting: () => Date.now() < MSM.state.boostUntil,
     boostMult: () => (E.boosting() ? CFG.BOOST.mult : 1),
@@ -70,10 +88,10 @@ window.MSM = window.MSM || {};
     /** Cash per second a store earns unattended — needs a stocker AND a cashier. */
     storeRate(i) {
       const ss = MSM.state.stores[i];
-      if (!ss.owned || !ss.stockers || !ss.cashier) return 0;
+      if (!ss.owned || !ss.till || !ss.open || !ss.stockers || !ss.cashier) return 0;
       let r = 0;
       CFG.STORES[i].products.forEach((p, n) => {
-        if (p.sell) r += E.price(n, i) / E.restock(n, i);
+        if (p.sell && ss.products[n].built) r += E.price(n, i) / E.restock(n, i);
       });
       return r * 0.5;             // customers, not supply, are the real limit
     },
@@ -127,11 +145,15 @@ window.MSM = window.MSM || {};
     s.served = +data.served || 0;
     s.lastSeen = +data.lastSeen || Date.now();
     s.current = MSM.util.clamp(+data.current || 0, 0, s.stores.length - 1);
+    s.tut = +data.tut || 0;
     // merge by index so adding stores or products never breaks an old save
     data.stores.forEach((old, i) => {
       if (!s.stores[i] || !old) return;
       s.stores[i].owned = !!old.owned;
       s.stores[i].stockers = Math.max(0, +old.stockers || (old.stocker ? 1 : 0));
+      s.stores[i].till = !!old.till;
+      s.stores[i].tillPaid = Math.max(0, +old.tillPaid || 0);
+      s.stores[i].open = !!old.open;
       s.stores[i].cashier = !!old.cashier;
       (old.products || []).forEach((op, n) => {
         const ps = s.stores[i].products[n];
@@ -141,6 +163,8 @@ window.MSM = window.MSM || {};
         ps.out = MSM.util.clamp(+(op.out != null ? op.out : op.crate) || 0, 0, CFG.CRATE_CAP);
         ps.feed = MSM.util.clamp(+op.feed || 0, 0, CFG.FEED_CAP);
         ps.pay = Math.max(0, +op.pay || 0);
+        ps.built = op.built != null ? !!op.built : true;   // old saves had everything
+        ps.buildPaid = Math.max(0, +op.buildPaid || 0);
       });
     });
     if (!s.stores[s.current].owned) s.current = 0;

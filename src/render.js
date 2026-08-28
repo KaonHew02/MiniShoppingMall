@@ -81,9 +81,9 @@ window.MSM = window.MSM || {};
     /* Zones, then departments on top: the green growing strip at the back,
        the warm sales floor, a cool strip by the door. */
     const ZONES = [
-      { y0: -M,    y1: 2.95,     a: '#A9E4A2', b: '#9FDD98' },   // the crop beds
-      { y0: 2.95,  y1: 10.80,    a: '#FFE3D2', b: '#FBDBC8' },   // the shop floor
-      { y0: 10.80, y1: B.H + M,  a: '#DCE4EE', b: '#D3DCE8' },   // by the door
+      { y0: -M,    y1: 3.15,     a: '#A9E4A2', b: '#9FDD98' },   // the crop beds
+      { y0: 3.15,  y1: 12.00,    a: '#FFE3D2', b: '#FBDBC8' },   // the shop floor
+      { y0: 12.00, y1: B.H + M,  a: '#DCE4EE', b: '#D3DCE8' },   // by the door
     ];
     ZONES.forEach((z) => {
       for (let x = 0; x < B.W; x++) {
@@ -97,11 +97,11 @@ window.MSM = window.MSM || {};
     });
 
     // the farmyard runs down the left, grass rather than shop floor
-    iso.tile(ctx, -M, 2.95, 3.45, 9.00, 0.005, '#9FDD98');
-    iso.tile(ctx, 3.40, 2.95, 3.45, 9.00, 0.007, '#FFFFFF');
+    iso.tile(ctx, -M, 3.15, 3.50, 12.00, 0.005, '#9FDD98');
+    iso.tile(ctx, 3.45, 3.15, 3.50, 12.00, 0.007, '#FFFFFF');
     // and the orchard down the right
-    iso.tile(ctx, 13.55, 2.95, B.W + M, 9.00, 0.005, '#9FDD98');
-    iso.tile(ctx, 13.55, 2.95, 13.60, 9.00, 0.007, '#FFFFFF');
+    iso.tile(ctx, 18.20, 3.15, B.W + M, 9.90, 0.005, '#9FDD98');
+    iso.tile(ctx, 18.20, 3.15, 18.25, 9.90, 0.007, '#FFFFFF');
 
     /* Departments: a tinted floor block per section with its name on it, so
        the shop reads as vegetables / fruit / dairy rather than one big room. */
@@ -109,10 +109,17 @@ window.MSM = window.MSM || {};
       iso.tile(ctx, z.x0, z.y0, z.x1, z.y1, 0.009, z.tint);
       iso.tile(ctx, z.x0, z.y0, z.x1, z.y0 + 0.06, 0.011, '#FFFFFF');
       iso.tile(ctx, z.x0, z.y1 - 0.06, z.x1, z.y1, 0.011, '#FFFFFF');
-      const c = iso.s(z.x0 + 0.9, z.y0 + 0.3, 0.012);
+      /* Centre the name in its block and shrink it to fit — anchored at a
+         corner, a long name like DAIRY & BAKERY sprawled out of the box. */
+      const c = iso.s((z.x0 + z.x1) / 2, z.y0 + 0.30, 0.012);
+      const size = Math.max(10, iso.TW * 0.15);
       ctx.save();
       ctx.transform(1, 0.5, -1, 0.5, c.x, c.y);          // lie the text on the floor
-      text(ctx, z.name, 0, 0, Math.max(11, iso.TW * 0.17), '#8A7566');
+      ctx.font = `800 ${size}px 'Baloo 2','Fredoka','Nunito','Segoe UI',system-ui,sans-serif`;
+      const tw = ctx.measureText(z.name).width;
+      const fit = Math.min(1, ((z.x1 - z.x0 - 0.6) * (iso.TW / 2)) / tw);
+      ctx.scale(fit, fit);
+      text(ctx, z.name, 0, 0, size, '#8A7566');
       ctx.restore();
     });
 
@@ -140,6 +147,33 @@ window.MSM = window.MSM || {};
   function drawSource(ctx, n) {
     const prod = MSM.econ.prod(n), ps = MSM.econ.pstate(n), b = prod.crate;
     const kind = prod.source.kind;
+
+    /* Not built yet: the NEXT line in the sequence is a build plot with its
+       price; anything later is empty floor you have not earned yet. */
+    if (!ps.built) {
+      if (MSM.econ.nextBuild() !== n) return;
+      const cost = prod.buildCost;
+      const pct = U.clamp(ps.buildPaid / cost, 0, 1);
+      iso.tile(ctx, b.x0, b.y0, b.x1, b.y1, 0.012, '#FFC53D');
+      iso.tile(ctx, b.x0 + 0.08, b.y0 + 0.08, b.x1 - 0.08, b.y1 - 0.08, 0.014, '#FFF0C4');
+      if (pct > 0) {
+        iso.tile(ctx, b.x0 + 0.08, b.y0 + 0.08,
+                 b.x0 + 0.08 + (b.x1 - b.x0 - 0.16) * pct, b.y1 - 0.08, 0.016, '#5FE08D');
+      }
+      const c = iso.s((b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2, 0.02);
+      const h = Math.max(30, iso.TW * 0.34);
+      ctx.save();
+      ctx.shadowColor = '#0b1c3d40'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 3;
+      rrect(ctx, c.x - h * 1.9, c.y - h - 6, h * 3.8, h, h * 0.3);
+      ctx.fillStyle = '#FFFFFF'; ctx.fill();
+      ctx.restore();
+      text(ctx, prod.glyph + ' ' + prod.source.label.toUpperCase(),
+           c.x, c.y - h * 0.7 - 6, h * 0.26, '#8A95AB');
+      text(ctx, '$' + U.money(Math.max(0, cost - ps.buildPaid)),
+           c.x, c.y - h * 0.28 - 6, h * 0.36,
+           MSM.state.cash > 0 ? '#2CA85C' : '#98A6C4');
+      return;
+    }
 
     if (kind === 'crop') {
       iso.box(ctx, b.x0, b.y0, b.x1, b.y1, 0, 0.16, '#8A5A2B');
@@ -563,11 +597,119 @@ window.MSM = window.MSM || {};
   }
 
   function drawTill(ctx) {
-    const b = P.till;
+    const b = P.till, ss = MSM.econ.sstate();
+
+    if (!ss.till) {
+      // a construction plot: stand on it and your money builds the counter
+      const cost = CFG.TILL_COST(MSM.econ.store().unlock);
+      const pct = U.clamp(ss.tillPaid / cost, 0, 1);
+      iso.tile(ctx, b.x0, b.y0, b.x1, b.y1, 0.012, '#FFC53D');
+      iso.tile(ctx, b.x0 + 0.08, b.y0 + 0.08, b.x1 - 0.08, b.y1 - 0.08, 0.014, '#FFF0C4');
+      if (pct > 0) {
+        iso.tile(ctx, b.x0 + 0.08, b.y0 + 0.08,
+                 b.x0 + 0.08 + (b.x1 - b.x0 - 0.16) * pct, b.y1 - 0.08, 0.016, '#5FE08D');
+      }
+      const c = iso.s((b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2, 0.02);
+      const h = Math.max(30, iso.TW * 0.34);
+      ctx.save();
+      ctx.shadowColor = '#0b1c3d40'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 3;
+      rrect(ctx, c.x - h * 1.6, c.y - h - 6, h * 3.2, h, h * 0.3);
+      ctx.fillStyle = '#FFFFFF'; ctx.fill();
+      ctx.restore();
+      text(ctx, '\ud83e\uddfe CHECKOUT', c.x, c.y - h * 0.7 - 6, h * 0.28, '#8A95AB');
+      text(ctx, '$' + U.money(Math.max(0, cost - ss.tillPaid)), c.x, c.y - h * 0.28 - 6, h * 0.36,
+           MSM.state.cash > 0 ? '#2CA85C' : '#98A6C4');
+      return;
+    }
+
     box(ctx, b, 0, 0.55, '#FFC53D');
     iso.tile(ctx, b.x0 + 0.05, b.y0 + 0.05, b.x1 - 0.05, b.y1 - 0.05, 0.552, '#FFE9AE');
     iso.box(ctx, b.x0 + 0.15, b.y0 + 0.12, b.x0 + 0.62, b.y0 + 0.46, 0.55, 0.88, '#4E5D80');
     iso.tile(ctx, b.x0 + 0.19, b.y0 + 0.16, b.x0 + 0.58, b.y0 + 0.42, 0.882, '#8FD8FF');
+
+    /* Checkout in progress: a bag on the counter, and the customer's items
+       hop into it one by one as they are rung up. */
+    const front = MSM.ent.queue[0];
+    if (front && front.phase === 'queue' && MSM.game.serveT > 0) {
+      const bagAt = iso.s(b.x1 - 0.45, (b.y0 + b.y1) / 2, 0.56);
+      const u = iso.TW / 64;
+      const got = Math.max(1, front.got || 1);
+      const pct = U.clamp(MSM.game.serveT / (MSM.game.serveDur || 1), 0, 1);
+      const packed = Math.floor(pct * got);
+
+      // the item currently in flight, arcing into the bag
+      if (packed < got && front.bought && front.bought[packed] != null) {
+        const t = (pct * got) - packed;
+        const fx = bagAt.x + 26 * u, fy = bagAt.y - 4 * u;
+        const px = fx + (bagAt.x - fx) * t;
+        const py = fy + (bagAt.y - fy) * t - Math.sin(t * Math.PI) * 22 * u;
+        const prod = MSM.econ.prod(front.bought[packed]);
+        MSM.art.draw(ctx, prod.art, px, py, iso.TW * 0.24, prod.color);
+      }
+
+      drawPaperBag(ctx, bagAt.x, bagAt.y, 24 * u);
+      text(ctx, packed + '/' + got, bagAt.x, bagAt.y - 34 * u, 11 * u, '#16295C');
+    }
+  }
+
+  /** A little kraft-paper shopping bag. */
+  function drawPaperBag(ctx, x, y, s) {
+    rrect(ctx, x - s * 0.5, y - s * 0.95, s, s * 0.95, s * 0.1);
+    ctx.fillStyle = '#D9A96B'; ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(x + s * 0.08, y - s * 0.95); ctx.lineTo(x + s * 0.5, y - s * 0.95);
+    ctx.lineTo(x + s * 0.5, y); ctx.lineTo(x + s * 0.08, y); ctx.closePath();
+    ctx.fillStyle = '#C08A4E'; ctx.fill();
+    rrect(ctx, x - s * 0.5, y - s * 0.95, s, s * 0.16, s * 0.06);
+    ctx.fillStyle = '#B07C42'; ctx.fill();
+  }
+
+  /* The OPEN/CLOSED sign: a post by the door with the state on its board. */
+  function drawSign(ctx) {
+    const b = P.sign, open = MSM.econ.sstate().open;
+    const cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2;
+    iso.tile(ctx, b.x0, b.y0, b.x1, b.y1, 0.01, open ? '#DFF5E6' : '#FFE4E4');
+    iso.box(ctx, cx - 0.06, cy - 0.06, cx + 0.06, cy + 0.06, 0, 0.95, '#8A5A2B');
+
+    const s = iso.s(cx, cy, 1.28);
+    const w = Math.max(58, iso.TW * 0.72), h = Math.max(24, iso.TW * 0.3);
+    ctx.save();
+    ctx.shadowColor = '#0b1c3d40'; ctx.shadowBlur = 7; ctx.shadowOffsetY = 3;
+    rrect(ctx, s.x - w / 2, s.y - h / 2, w, h, h * 0.3);
+    ctx.fillStyle = open ? '#2CA85C' : '#E0553F'; ctx.fill();
+    ctx.restore();
+    text(ctx, open ? 'OPEN' : 'CLOSED', s.x, s.y, h * 0.44, '#FFFFFF');
+  }
+
+  /* The tutorial's bouncing arrow over whatever you should walk to next. */
+  function drawTutArrow(ctx, dt) {
+    const t = MSM.game.tutTarget;
+    if (!t) return;
+    const s = iso.s(t.x, t.y, 0);
+    const bob = Math.sin(performance.now() / 240) * iso.TW * 0.08;
+    const u = iso.TW / 64;
+
+    ctx.save();
+    ctx.globalAlpha = 0.55;
+    ctx.beginPath();
+    ctx.ellipse(s.x, s.y, iso.TW * 0.34, iso.TH * 0.34, 0, 0, 7);
+    ctx.strokeStyle = '#FFC53D'; ctx.lineWidth = 4; ctx.stroke();
+    ctx.restore();
+
+    const ay = s.y - iso.TW * 0.95 + bob;
+    ctx.save();
+    ctx.shadowColor = '#0b1c3d55'; ctx.shadowBlur = 6; ctx.shadowOffsetY = 3;
+    ctx.beginPath();
+    ctx.moveTo(s.x, ay + 22 * u * 0.6);
+    ctx.lineTo(s.x - 13 * u * 0.6, ay);
+    ctx.lineTo(s.x - 5 * u * 0.6, ay);
+    ctx.lineTo(s.x - 5 * u * 0.6, ay - 14 * u * 0.6);
+    ctx.lineTo(s.x + 5 * u * 0.6, ay - 14 * u * 0.6);
+    ctx.lineTo(s.x + 5 * u * 0.6, ay);
+    ctx.lineTo(s.x + 13 * u * 0.6, ay);
+    ctx.closePath();
+    ctx.fillStyle = '#FFC53D'; ctx.fill();
+    ctx.restore();
   }
 
   /* -------------------------------------------------------------- bodies */
@@ -579,65 +721,84 @@ window.MSM = window.MSM || {};
   function drawBody(ctx, e, look) {
     const u = iso.TW / 64;
     const s = iso.s(e.x, e.y, 0);
-    const bw = 19 * u, bh = 20 * u, hr = 11 * u;
     const phase = e.moving ? Math.sin(e.walk * 10) : 0;
-    const bob = e.moving ? Math.abs(phase) * 1.7 * u : 0;
+    const bob = e.moving ? Math.abs(phase) * 1.6 * u : 0;
 
-    const feet = s.y;
-    const bodyBot = feet - 2.5 * u - bob;
-    const bodyTop = bodyBot - bh;
-    const dark = U.shade(look.body, -0.3);
+    /* Mini-mart figure: one solid colour head to toe — a big round head on a
+       small bean body — and a white cap on anyone who works here. */
+    const col = look.body;
+    const dark = U.shade(col, -0.18);
 
     shadow(ctx, e.x, e.y, 0.36);
 
-    // legs — they scissor while walking
+    const feet = s.y;
+    const bw = 15 * u, bh = 16 * u;
+    const hr = 12.5 * u;
+    const bodyBot = feet - 2 * u - bob;
+    const bodyTop = bodyBot - bh;
+    const hy = bodyTop - hr * 0.68;
+
+    // stubby legs that scissor
     [-1, 1].forEach((d) => {
-      const lift = e.moving ? Math.max(0, phase * d) * 3 * u : 0;
-      rrect(ctx, s.x + d * 4.2 * u - 2.6 * u, bodyBot - 3 * u - lift, 5.2 * u, 7 * u + lift, 2.6 * u);
-      ctx.fillStyle = look.legs || dark; ctx.fill();
+      const lift = e.moving ? Math.max(0, phase * d) * 2.6 * u : 0;
+      rrect(ctx, s.x + d * 3.6 * u - 2.4 * u, bodyBot - 2.5 * u - lift, 4.8 * u, 6.5 * u + lift, 2.4 * u);
+      ctx.fillStyle = dark; ctx.fill();
     });
 
-    // far arm, behind the body
-    rrect(ctx, s.x - bw / 2 - 1.5 * u, bodyTop + 5 * u - phase * 2.5 * u, 5 * u, 11 * u, 2.5 * u);
+    // far arm, then torso, then near arm
+    rrect(ctx, s.x - bw / 2 - 2.6 * u, bodyTop + 3 * u - phase * 2.4 * u, 4.8 * u, 10 * u, 2.4 * u);
     ctx.fillStyle = dark; ctx.fill();
 
-    // body
-    rrect(ctx, s.x - bw / 2, bodyTop, bw, bh, bw * 0.44);
-    ctx.fillStyle = look.body; ctx.fill();
-    rrect(ctx, s.x - bw * 0.22, bodyTop + bh * 0.34, bw * 0.44, bh * 0.5, bw * 0.2);
-    ctx.fillStyle = U.shade(look.body, 0.22); ctx.fill();
+    rrect(ctx, s.x - bw / 2, bodyTop, bw, bh + 2.5 * u, bw * 0.5);
+    ctx.fillStyle = col; ctx.fill();
 
-    // near arm, in front
-    rrect(ctx, s.x + bw / 2 - 3.5 * u, bodyTop + 5 * u + phase * 2.5 * u, 5 * u, 11 * u, 2.5 * u);
-    ctx.fillStyle = U.shade(look.body, -0.12); ctx.fill();
+    rrect(ctx, s.x + bw / 2 - 2.2 * u, bodyTop + 3 * u + phase * 2.4 * u, 4.8 * u, 10 * u, 2.4 * u);
+    ctx.fillStyle = col; ctx.fill();
 
-    // head
-    const hy = bodyTop - hr * 0.62;
-    ctx.beginPath(); ctx.arc(s.x, hy, hr, 0, 7);
-    ctx.fillStyle = look.head || SKIN; ctx.fill();
+    // the head IS the colour — no face, like the reference
+    ctx.beginPath(); ctx.arc(s.x, hy, hr, 0, TAU2);
+    ctx.fillStyle = col; ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(s.x - hr * 0.34, hy - hr * 0.34, hr * 0.3, hr * 0.2, -0.6, 0, TAU2);
+    ctx.fillStyle = U.shade(col, 0.32); ctx.fill();
+
+    // white cap: dome, accent band, brim off to the left
     if (look.cap) {
-      ctx.beginPath(); ctx.arc(s.x, hy, hr, Math.PI * 1.05, Math.PI * 1.95);
-      ctx.lineTo(s.x, hy); ctx.closePath();
+      ctx.beginPath();
+      ctx.arc(s.x, hy - hr * 0.12, hr * 0.99, Math.PI, 0);
+      ctx.closePath();
       ctx.fillStyle = look.cap; ctx.fill();
-      ctx.beginPath(); ctx.arc(s.x, hy - hr * 0.06, hr * 1.02, Math.PI, 0);
+      ctx.beginPath();
+      ctx.arc(s.x, hy - hr * 0.12, hr * 0.86, Math.PI * 1.24, Math.PI * 1.76);
+      ctx.lineWidth = hr * 0.24;
+      ctx.strokeStyle = look.accent || col;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.ellipse(s.x - hr * 0.72, hy - hr * 0.3, hr * 0.52, hr * 0.24, -0.3, 0, TAU2);
       ctx.fillStyle = look.cap; ctx.fill();
     }
 
-    // what they are carrying, stacked over the head
+    // whatever they are carrying, stacked over the head
     const hold = e.hold || (e.carry && e.carryP >= 0 ? [e.carryP] : []);
     if (hold.length) {
       const size = iso.TW * 0.26, step = size * 0.44;
       hold.forEach((pi, k) => {
         const prod = MSM.econ.prod(pi);
-        MSM.art.draw(ctx, prod.art, s.x, hy - hr * 0.95 - k * step, size, prod.color);
+        MSM.art.draw(ctx, prod.art, s.x, hy - hr * 1.05 - k * step, size, prod.color);
       });
-      return { x: s.x, y: hy - hr * 0.95 - (hold.length - 1) * step - size };
+      return { x: s.x, y: hy - hr * 1.05 - (hold.length - 1) * step - size };
     }
-    return { x: s.x, y: hy - hr };
+    return { x: s.x, y: hy - hr - (look.cap ? hr * 0.35 : 0) };
   }
 
-  /** A customer with something in their basket. */
+  /** A customer with something in their basket — or, once they have paid,
+      the packed paper bag they carry out of the store. */
   function drawBasket(ctx, c) {
+    if (c.phase === 'leave' && c.got > 0) {
+      const u = iso.TW / 64, s = iso.s(c.x, c.y, 0);
+      drawPaperBag(ctx, s.x + 12 * u, s.y - 10 * u, 15 * u);
+      return;
+    }
     if (!c.carry) return;
     const u = iso.TW / 64, s = iso.s(c.x, c.y, 0);
     const prod = MSM.econ.prod(c.carryP >= 0 ? c.carryP : c.want);
@@ -709,34 +870,40 @@ window.MSM = window.MSM || {};
 
     const items = [];
     MSM.econ.store().products.forEach((prod, n) => {
+      const built = MSM.econ.pstate(n).built;
       items.push({ d: prod.crate.x1 + prod.crate.y1, fn: () => drawSource(ctx, n) });
-      items.push({ d: prod.pad.x1 + prod.pad.y1 - 0.5, fn: () => drawLevelPad(ctx, n) });
-      if (prod.sell) items.push({ d: prod.shelf.x1 + prod.shelf.y1, fn: () => drawShelf(ctx, n) });
+      if (built) {
+        items.push({ d: prod.pad.x1 + prod.pad.y1 - 0.5, fn: () => drawLevelPad(ctx, n) });
+        if (prod.sell) items.push({ d: prod.shelf.x1 + prod.shelf.y1, fn: () => drawShelf(ctx, n) });
+      }
     });
     items.push({ d: P.till.x1 + P.till.y1, fn: () => drawTill(ctx) });
     items.push({ d: P.door.x1 + P.door.y1, fn: () => drawDoor(ctx) });
     items.push({ d: P.bin.x1 + P.bin.y1, fn: () => drawBin(ctx) });
+    items.push({ d: P.sign.x1 + P.sign.y1, fn: () => drawSign(ctx) });
     MSM.ent.cash.forEach((c) => items.push({ d: c.x + c.y, fn: () => drawCash(ctx, c) }));
     MSM.ent.customers.forEach((c) => items.push({
       d: c.x + c.y + 0.3,
       fn: () => {
-        const head = drawBody(ctx, c, { body: c.shade, cap: c.color, legs: '#B9C4D6' });
+        const head = drawBody(ctx, c, { body: c.color });
         drawBasket(ctx, c);
         drawBubble(ctx, c, head);
       },
     }));
-    const CREW = ['#2F80F0', '#12B4A6', '#F2A03D', '#B45CE0'];
+    // staff are pink; the player is the blue one you drive
+    const CREW = ['#FF2E9C', '#F2A03D', '#B45CE0', '#12B4A6'];
     MSM.ent.stockers.forEach((st, i) => {
       items.push({ d: st.x + st.y + 0.3,
                    fn: () => drawBody(ctx, st,
-                     { body: CREW[i % CREW.length], cap: '#FFC53D', legs: '#1B4F9B' }) });
+                     { body: CREW[i % CREW.length], cap: '#FFFFFF', accent: CREW[i % CREW.length] }) });
     });
     const p = MSM.ent.player;
     items.push({ d: p.x + p.y + 0.35,
-                 fn: () => drawBody(ctx, p, { body: '#FF3D7F', cap: '#16295C', legs: '#B0264F' }) });
+                 fn: () => drawBody(ctx, p, { body: '#29A9F2', cap: '#FFFFFF', accent: '#29A9F2' }) });
 
     items.sort((a, b) => a.d - b.d).forEach((it) => it.fn());
     drawPops(ctx, dt);
+    drawTutArrow(ctx, dt);
     drawStick(ctx);
   };
 })();

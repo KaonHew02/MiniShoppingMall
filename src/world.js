@@ -12,9 +12,13 @@ window.MSM = window.MSM || {};
 
     solids() {
       if (this._solids) return this._solids;
-      const list = [CFG.PLAN.till, CFG.PLAN.bin];
+      // an unbuilt counter is an open construction plot you stand on to pay
+      const list = MSM.econ.sstate().till ? [CFG.PLAN.till, CFG.PLAN.bin] : [CFG.PLAN.bin];
       // wheat and other inputs have no shelf — only sellable goods do
-      MSM.econ.store().products.forEach((p) => {
+      // a line you have not built yet is empty floor
+      const ps = MSM.econ.sstate().products;
+      MSM.econ.store().products.forEach((p, n) => {
+        if (!ps[n].built) return;
         list.push(p.crate);
         if (p.shelf) list.push(p.shelf);
       });
@@ -37,13 +41,18 @@ window.MSM = window.MSM || {};
 
     /** Move a body, sliding along whatever it bumps into. */
     move(e, dx, dy) {
+      /* If something was built around this body (the counter finishing while
+         you stand on its plot), collision would refuse every step and trap
+         them inside. Inside a solid, all movement is allowed — walking out is
+         always possible. */
+      const trapped = this.blocked(e.x, e.y);
       if (dx) {
         const nx = e.x + dx;
-        if (this.inBounds(nx, e.y) && !this.blocked(nx, e.y)) e.x = nx;
+        if (this.inBounds(nx, e.y) && (trapped || !this.blocked(nx, e.y))) e.x = nx;
       }
       if (dy) {
         const ny = e.y + dy;
-        if (this.inBounds(e.x, ny) && !this.blocked(e.x, ny)) e.y = ny;
+        if (this.inBounds(e.x, ny) && (trapped || !this.blocked(e.x, ny))) e.y = ny;
       }
     },
 

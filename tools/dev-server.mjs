@@ -23,7 +23,7 @@ const TYPES = {
   '.ico': 'image/x-icon',
 };
 
-createServer(async (req, res) => {
+const handler = async (req, res) => {
   if (req.method === 'POST' && req.url === '/__snap') {
     const chunks = [];
     for await (const c of req) chunks.push(c);
@@ -49,6 +49,26 @@ createServer(async (req, res) => {
   } catch {
     res.writeHead(404, { 'Content-Type': 'text/plain' }).end('not found');
   }
-}).listen(PORT, '127.0.0.1', () => {
-  console.log(`Mini Shopping Mall — http://127.0.0.1:${PORT}`);
+};
+
+/* Listen on both loopback addresses. Google treats http://localhost:PORT and
+   http://127.0.0.1:PORT as different origins, so whichever one you registered
+   as an authorised JavaScript origin has to be the one that answers. Binding
+   only 127.0.0.1 left http://localhost:8788 refusing connections on any
+   machine where localhost resolves to ::1 first. */
+const HOSTS = ['127.0.0.1', '::1'];
+let live = 0;
+HOSTS.forEach((host) => {
+  const server = createServer(handler);
+  server.on('error', (err) => {
+    // ::1 is absent on some machines — that is fine, 127.0.0.1 still serves
+    if (err.code !== 'EADDRINUSE' && err.code !== 'EADDRNOTAVAIL') throw err;
+    console.log(`  (skipped ${host}: ${err.code})`);
+  });
+  server.listen(PORT, host, () => {
+    if (live++ === 0) {
+      console.log(`Mini Shopping Mall — http://localhost:${PORT}`);
+      console.log(`                     http://127.0.0.1:${PORT}`);
+    }
+  });
 });

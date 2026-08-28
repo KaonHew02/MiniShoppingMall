@@ -545,7 +545,7 @@ window.MSM = window.MSM || {};
     rrect(ctx, c.x - w / 2, c.y - h - 4, w, h, h * 0.28);
     ctx.fillStyle = '#FFFFFF'; ctx.fill();
     ctx.restore();
-    text(ctx, 'Lv ' + ps.level, c.x, c.y - h * 0.68 - 4, h * 0.32, '#8A95AB');
+    text(ctx, MSM.t('world.lv') + ' ' + ps.level, c.x, c.y - h * 0.68 - 4, h * 0.32, '#8A95AB');
     text(ctx, label, c.x, c.y - h * 0.26 - 4, h * 0.36,
          MSM.state.cash >= cost ? '#2CA85C' : '#98A6C4');
   }
@@ -617,7 +617,7 @@ window.MSM = window.MSM || {};
     rrect(ctx, c.x - w / 2, c.y - h, w, h, h * 0.3);
     ctx.fillStyle = '#FFFFFF'; ctx.fill();
     ctx.restore();
-    text(ctx, open ? 'GO TO  →' : 'LOCKED', c.x, c.y - h * 0.68, h * 0.27, '#8A95AB');
+    text(ctx, MSM.t(open ? 'world.goto' : 'world.locked'), c.x, c.y - h * 0.68, h * 0.27, '#8A95AB');
     text(ctx, store.glyph + '  ' + store.name, c.x, c.y - h * 0.28, h * 0.3,
          open ? '#16295C' : '#98A6C4');
   }
@@ -668,7 +668,7 @@ window.MSM = window.MSM || {};
       rrect(ctx, c.x - h * 1.6, c.y - h - 6, h * 3.2, h, h * 0.3);
       ctx.fillStyle = '#FFFFFF'; ctx.fill();
       ctx.restore();
-      text(ctx, '\ud83e\uddfe CHECKOUT', c.x, c.y - h * 0.7 - 6, h * 0.28, '#8A95AB');
+      text(ctx, MSM.t('world.checkout'), c.x, c.y - h * 0.7 - 6, h * 0.28, '#8A95AB');
       text(ctx, '$' + U.money(Math.max(0, cost - ss.tillPaid)), c.x, c.y - h * 0.28 - 6, h * 0.36,
            MSM.state.cash > 0 ? '#2CA85C' : '#98A6C4');
       return;
@@ -730,7 +730,7 @@ window.MSM = window.MSM || {};
     rrect(ctx, s.x - w / 2, s.y - h / 2, w, h, h * 0.3);
     ctx.fillStyle = open ? '#2CA85C' : '#E0553F'; ctx.fill();
     ctx.restore();
-    text(ctx, open ? 'OPEN' : 'CLOSED', s.x, s.y, h * 0.44, '#FFFFFF');
+    text(ctx, MSM.t(open ? 'world.open' : 'world.closed'), s.x, s.y, h * 0.44, '#FFFFFF');
   }
 
   /* The tutorial's bouncing arrow over whatever you should walk to next. */
@@ -830,15 +830,28 @@ window.MSM = window.MSM || {};
       ctx.fillStyle = look.cap; ctx.fill();
     }
 
-    // whatever they are carrying, stacked over the head
+    /* Whatever they are carrying, stacked over the head — but capped. One
+       sprite per item drew a twelve-high tomato skyscraper taller than the
+       shop wall, on desktop and phone alike. Past SHOW the pile tightens and
+       the remainder becomes a small count beside it; the HUD chip has the
+       exact numbers anyway. */
     const hold = e.hold || (e.carry && e.carryP >= 0 ? [e.carryP] : []);
     if (hold.length) {
-      const size = iso.TW * 0.26, step = size * 0.44;
-      hold.forEach((pi, k) => {
+      const SHOW = 4;
+      const shown = hold.slice(-SHOW);          // last picked up sits on top
+      const size = iso.TW * 0.26 * (shown.length > 2 ? 0.88 : 1);
+      const step = size * 0.6;
+      const base = hy - hr * 1.05;
+      shown.forEach((pi, k) => {
         const prod = MSM.econ.prod(pi);
-        MSM.art.draw(ctx, prod.art, s.x, hy - hr * 1.05 - k * step, size, prod.color);
+        MSM.art.draw(ctx, prod.art, s.x + (k % 2 ? 1 : -1) * size * 0.06,
+                     base - k * step, size, prod.color);
       });
-      return { x: s.x, y: hy - hr * 1.05 - (hold.length - 1) * step - size };
+      const top = base - (shown.length - 1) * step - size;
+      if (hold.length > SHOW) {
+        tag(ctx, s.x + size * 0.8, top + size * 0.62, '+' + (hold.length - SHOW), '#FFFFFF');
+      }
+      return { x: s.x, y: top };
     }
     return { x: s.x, y: hy - hr - (look.cap ? hr * 0.35 : 0) };
   }

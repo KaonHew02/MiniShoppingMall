@@ -332,7 +332,8 @@ MSM.util = {
   time(sec) {
     sec = Math.max(0, Math.floor(sec));
     const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
-    return h ? `${h}h ${m}m` : m ? `${m}m ${s}s` : `${s}s`;
+    const H = MSM.t('time.h'), M = MSM.t('time.m'), S = MSM.t('time.s');
+    return h ? `${h}${H} ${m}${M}` : m ? `${m}${M} ${s}${S}` : `${s}${S}`;
   },
 
   boxDist(px, py, b) {

@@ -13,9 +13,11 @@ MSM.iso = {
   zoom: 1.0, cx: 4, cy: 8,
   ZOOM_MIN: 0.7, ZOOM_MAX: 1.7,
 
+  /* Tile size follows the smaller of the two axes: sized on width alone, a
+     wide-but-short desktop window zoomed in until the shop no longer fit. */
   fit(w, h) {
     this.vw = w; this.vh = h;
-    this.baseTW = MSM.util.clamp(w / 4.4, 56, 120);
+    this.baseTW = MSM.util.clamp(Math.min(w / 4.4, h / 5.2), 56, 120);
     this.apply();
   },
 

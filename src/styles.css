@@ -21,7 +21,10 @@ html,body { height:100%; margin:0; overflow:hidden; overscroll-behavior:none; }
 body {
   font-family:var(--font); font-weight:700; color:var(--ink);
   background:#0d1730; display:flex; justify-content:center; align-items:stretch;
-  user-select:none;
+  /* iOS still raises its long-press Copy / Look Up bar over a canvas that
+     user-select alone has silenced, and that bar eats the pointerup the
+     joystick is waiting for. */
+  user-select:none; -webkit-user-select:none; -webkit-touch-callout:none;
 }
 
 #app {
@@ -204,3 +207,38 @@ body {
   white-space:nowrap; max-width:140px; overflow:hidden; text-overflow:ellipsis;
 }
 .dock-label { font-size:10px; }
+
+/* -------------------------------------------------------------- desktop */
+/* Below 900px the phone column IS the design. Above it the window is the
+   shop: the canvas takes the full width, the dock stops stretching a metre
+   wide, and the bottom sheet becomes a side panel you can read while the
+   game carries on beside it. */
+@media (min-width: 900px) {
+  #app { max-width:none; width:100%; box-shadow:none; }
+
+  .hud { padding:calc(14px + env(safe-area-inset-top)) 18px 0; gap:14px; }
+  .store-tag { max-width:220px; font-size:13px; }
+  .carry, .toasts { top:104px; }
+
+  .dock {
+    left:50%; right:auto; transform:translateX(-50%);
+    width:min(600px, 62vw); background:none;
+    padding:8px 0 calc(12px + env(safe-area-inset-bottom));
+  }
+  .dock-label { font-size:11px; }
+
+  .sheet {
+    left:auto; right:0; top:0; bottom:0; width:min(430px, 36vw);
+    max-height:none; border-radius:26px 0 0 26px; padding-bottom:0;
+    box-shadow:-8px 0 30px #0b1c3d55; animation:slide .22s ease-out;
+  }
+  .sheet-grip { display:none; }
+  .sheet-head { padding:calc(16px + env(safe-area-inset-top)) 16px 10px; }
+  .sheet-body { padding:0 16px 18px; }
+}
+
+@keyframes slide { from { transform:translateX(100%) } to { transform:translateX(0) } }
+
+/* the language picker: four names do not fit on one row */
+.seg-wrap { flex-wrap:wrap; }
+.seg-wrap button { flex:1 1 44%; }

@@ -38,16 +38,16 @@ window.MSM = window.MSM || {};
       a.click();
       a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
-      MSM.ui.toast('Save exported');
+      MSM.ui.toast(MSM.t('toast.exported'));
     },
 
     /** Validate an envelope. Returns an error string, or null when it is fine. */
     check(data) {
-      if (!data || typeof data !== 'object') return 'That file is not a save.';
-      if (data.format !== FORMAT) return 'That file is not a Mini Shopping Mall save.';
-      if (!data.stores || typeof data.stores !== 'object') return 'That save has no data in it.';
+      if (!data || typeof data !== 'object') return MSM.t('err.notSave');
+      if (data.format !== FORMAT) return MSM.t('err.notMSM');
+      if (!data.stores || typeof data.stores !== 'object') return MSM.t('err.noData');
       const main = data.stores[MSM.CFG.SAVE_KEY];
-      if (!main || !Array.isArray(main.stores)) return 'That save is from an older version and cannot be read.';
+      if (!main || !Array.isArray(main.stores)) return MSM.t('err.oldSave');
       return null;
     },
 
@@ -72,7 +72,7 @@ window.MSM = window.MSM || {};
           if (before[k] == null) localStorage.removeItem(k);
           else localStorage.setItem(k, before[k]);
         });
-        MSM.ui.toast('Could not write the save — nothing was changed.');
+        MSM.ui.toast(MSM.t('toast.writeFail'));
         return false;
       }
 
@@ -95,8 +95,8 @@ window.MSM = window.MSM || {};
         fr.onload = () => {
           let data = null;
           try { data = JSON.parse(String(fr.result)); } catch (e) { /* handled below */ }
-          if (!data) { MSM.ui.toast('That file is not readable JSON.'); return; }
-          if (!confirm('Replace your current progress with this save? This cannot be undone.')) return;
+          if (!data) { MSM.ui.toast(MSM.t('toast.badJson')); return; }
+          if (!confirm(MSM.t('confirm.import'))) return;
           B.apply(data);
         };
         fr.readAsText(file);

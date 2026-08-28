@@ -12,6 +12,7 @@ window.MSM = window.MSM || {};
 
     init() {
       const canvas = document.getElementById('scene');
+      MSM.i18n.init();
       MSM.render.setup(canvas);
       MSM.ui.init();
 
@@ -28,7 +29,7 @@ window.MSM = window.MSM || {};
 
       if (offline) MSM.ui.open('offline', offline);
       else if (MSM.state.tut >= 99) {
-        setTimeout(() => MSM.ui.toast('Customers show what they want — keep those shelves full'), 800);
+        setTimeout(() => MSM.ui.toast(MSM.t('toast.tip')), 800);
       }
 
       this.last = performance.now();
@@ -41,10 +42,12 @@ window.MSM = window.MSM || {};
     bindInput(canvas) {
       let stickId = null;
 
+      const drop = () => { stickId = null; MSM.render.stick = null; };
+
       canvas.addEventListener('pointerdown', (e) => {
         if (stickId !== null) return;
         stickId = e.pointerId;
-        canvas.setPointerCapture(e.pointerId);
+        try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* already gone */ }
         const r = canvas.getBoundingClientRect();
         MSM.render.stick = { ox: e.clientX - r.left, oy: e.clientY - r.top, dx: 0, dy: 0 };
       });
@@ -56,13 +59,22 @@ window.MSM = window.MSM || {};
         MSM.render.stick.dy = e.clientY - r.top - MSM.render.stick.oy;
       });
 
-      const drop = (e) => {
-        if (e.pointerId !== stickId) return;
-        stickId = null;
-        MSM.render.stick = null;
-      };
-      canvas.addEventListener('pointerup', drop);
-      canvas.addEventListener('pointercancel', drop);
+      const release = (e) => { if (e.pointerId === stickId) drop(); };
+      canvas.addEventListener('pointerup', release);
+      canvas.addEventListener('pointercancel', release);
+
+      /* The stick used to jam, and that is what "the game hangs" looked like:
+         anything that takes the window away mid-drag — a Google sign-in
+         popup, the iOS long-press callout, switching apps — swallows the
+         pointerup, so stickId stayed set (no new touch was ever accepted)
+         and the last heading kept walking the character into a wall. Every
+         way of losing the pointer now drops the stick. */
+      canvas.addEventListener('lostpointercapture', release);
+      canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+      addEventListener('blur', () => { drop(); G.keys.clear(); });
+      addEventListener('visibilitychange', () => {
+        if (document.hidden) { drop(); G.keys.clear(); }
+      });
 
       addEventListener('keydown', (e) => {
         G.keys.add(e.key.toLowerCase());
@@ -193,8 +205,8 @@ window.MSM = window.MSM || {};
       p.x = P.serve.x;
       p.y = P.serve.y;
       p.vx = 0; p.vy = 0;
-      MSM.render.pop(p.x, p.y, 1.3, '\u2728 Counter built!', '#2CA85C');
-      MSM.ui.toast('\u2728 Checkout counter unlocked!');
+      MSM.render.pop(p.x, p.y, 1.3, MSM.t('pop.counter'), '#2CA85C');
+      MSM.ui.toast(MSM.t('toast.counter'));
       MSM.save();
     },
 
@@ -220,8 +232,8 @@ window.MSM = window.MSM || {};
       MSM.world.invalidate();
       const stand = MSM.ent.crateStand(n);
       p.x = stand.x; p.y = stand.y; p.vx = 0; p.vy = 0;
-      MSM.render.pop(p.x, p.y, 1.3, '\u2728 ' + prod.source.label + '!', '#2CA85C');
-      MSM.ui.toast('\u2728 ' + prod.name + ' unlocked \u2014 ' + prod.source.label + ' built!');
+      MSM.render.pop(p.x, p.y, 1.3, MSM.t('pop.built', { label: prod.source.label }), '#2CA85C');
+      MSM.ui.toast(MSM.t('toast.built', { name: prod.name, label: prod.source.label }));
       MSM.save();
     },
 
@@ -240,7 +252,7 @@ window.MSM = window.MSM || {};
       }
       if (!G.signArmed) return;
       if (!ss.till) {
-        if (G.signHold === 0) MSM.ui.toast('Build the checkout counter first');
+        if (G.signHold === 0) MSM.ui.toast(MSM.t('toast.tillFirst'));
         G.signHold = 0.01;
         return;
       }
@@ -249,7 +261,7 @@ window.MSM = window.MSM || {};
       G.signHold = 0;
       G.signArmed = false;                     // step away before flipping again
       ss.open = !ss.open;
-      MSM.ui.toast(ss.open ? '\ud83d\udfe2 The store is OPEN!' : '\ud83d\udd34 Closed for now');
+      MSM.ui.toast(MSM.t(ss.open ? 'toast.open' : 'toast.closed'));
       MSM.save();
     },
 
@@ -270,42 +282,41 @@ window.MSM = window.MSM || {};
         case 0:
           if (ss.till) { s.tut = 1; break; }
           G.tutTarget = { x: (P.till.x0 + P.till.x1) / 2, y: (P.till.y0 + P.till.y1) / 2 };
-          G.tutText = 'Stand on the plot to build your counter \u2014 $' +
-                      CFG.TILL_COST(MSM.econ.store().unlock);
+          G.tutText = MSM.t('tut.counter', { cost: '$' + CFG.TILL_COST(MSM.econ.store().unlock) });
           break;
         case 1:
           if (p.hold.indexOf(0) >= 0) { s.tut = 2; break; }
           if (MSM.econ.pstate(0).shelf > 0) { s.tut = 3; break; }
           G.tutTarget = { x: (potato.crate.x0 + potato.crate.x1) / 2, y: potato.crate.y1 + 0.4 };
-          G.tutText = 'Harvest potatoes \u2014 stand at the potato bed';
+          G.tutText = MSM.t('tut.harvest');
           break;
         case 2:
           if (MSM.econ.pstate(0).shelf > 0) { s.tut = 3; break; }
           G.tutTarget = { x: potato.browse.x, y: potato.browse.y };
-          G.tutText = 'Carry them to the potato shelf';
+          G.tutText = MSM.t('tut.shelf');
           break;
         case 3:
           if (ss.open) { s.tut = 4; break; }
           G.tutTarget = { x: (P.sign.x0 + P.sign.x1) / 2, y: (P.sign.y0 + P.sign.y1) / 2 };
-          G.tutText = 'Flip the sign to OPEN your store';
+          G.tutText = MSM.t('tut.sign');
           break;
         case 4:
           if (s.served > 0) { s.tut = 5; break; }
           G.tutTarget = { x: P.serve.x, y: P.serve.y };
-          G.tutText = 'A customer is coming \u2014 wait at the counter to serve them';
+          G.tutText = MSM.t('tut.serve');
           break;
         case 5:
           if (MSM.ent.cash.length === 0 && s.totalEarned > 0) {
             s.tut = 99;
             G.tutTarget = null;
             G.tutText = '';
-            MSM.ui.toast('\ud83c\udf89 FIRST SALE! Keep your shelves stocked!');
+            MSM.ui.toast(MSM.t('toast.firstSale'));
             MSM.save();
             break;
           }
           if (MSM.ent.cash.length) {
             G.tutTarget = { x: MSM.ent.cash[0].x, y: MSM.ent.cash[0].y };
-            G.tutText = 'Collect your money!';
+            G.tutText = MSM.t('tut.collect');
           }
           break;
       }
@@ -332,9 +343,9 @@ window.MSM = window.MSM || {};
         const before = MSM.econ.mults(ps.level);
         ps.level++;
         const after = MSM.econ.mults(ps.level);
-        MSM.render.pop(p.x, p.y, 1.2, prod.name + ' Lv ' + ps.level, '#2CA85C');
+        MSM.render.pop(p.x, p.y, 1.2, prod.name + ' ' + MSM.t('lv', { n: ps.level }), '#2CA85C');
         if (after.income > before.income || after.speed > before.speed) {
-          MSM.ui.toast('Milestone! ' + prod.name + ' Lv ' + ps.level);
+          MSM.ui.toast(MSM.t('toast.milestone', { name: prod.name, n: ps.level }));
         }
       });
     },
@@ -389,7 +400,7 @@ window.MSM = window.MSM || {};
       if (amount <= 0) return;
       MSM.state.cash += amount;
       MSM.state.totalEarned += amount;
-      if (sec > 20) MSM.ui.toast(`+$${U.money(amount)} while you were away`);
+      if (sec > 20) MSM.ui.toast(MSM.t('toast.away', { n: '$' + U.money(amount) }));
     },
 
     checkLevel() {
@@ -398,7 +409,7 @@ window.MSM = window.MSM || {};
       const gained = p.level - MSM.state.level;
       MSM.state.level = p.level;
       MSM.state.gems += CFG.GEMS_PER_LEVEL * gained;
-      MSM.ui.toast(`Mall level ${p.level}! +${CFG.GEMS_PER_LEVEL * gained} 💎`);
+      MSM.ui.toast(MSM.t('toast.level', { n: p.level, g: CFG.GEMS_PER_LEVEL * gained }));
     },
 
     /* ---------------------------------------------------- map actions */
@@ -407,7 +418,7 @@ window.MSM = window.MSM || {};
       if (ss.owned || MSM.state.cash < store.unlock) return;
       MSM.state.cash -= store.unlock;
       ss.owned = true;
-      MSM.ui.toast(`${store.name} is yours!`);
+      MSM.ui.toast(MSM.t('toast.storeYours', { store: store.name }));
       MSM.save();
       G.travel(i);
     },
@@ -425,7 +436,7 @@ window.MSM = window.MSM || {};
       MSM.iso.cy = MSM.ent.player.y;
       MSM.iso.apply();
       MSM.ui.close();
-      MSM.ui.toast(`Welcome to ${CFG.STORES[i].name}`);
+      MSM.ui.toast(MSM.t('toast.welcomeStore', { store: CFG.STORES[i].name }));
       MSM.save();
     },
 
@@ -433,16 +444,16 @@ window.MSM = window.MSM || {};
     upgrade(n, mode) {
       const ps = MSM.econ.pstate(n);
       const count = mode === 'max' ? MSM.econ.maxBuy(n, MSM.state.cash) : mode;
-      if (count < 1) { MSM.ui.toast('Not enough cash'); return; }
+      if (count < 1) { MSM.ui.toast(MSM.t('toast.noCash')); return; }
       const cost = MSM.econ.upgradeCost(n, count);
-      if (MSM.state.cash < cost) { MSM.ui.toast('Not enough cash'); return; }
+      if (MSM.state.cash < cost) { MSM.ui.toast(MSM.t('toast.noCash')); return; }
 
       const before = MSM.econ.mults(ps.level);
       MSM.state.cash -= cost;
       ps.level += count;
       const after = MSM.econ.mults(ps.level);
       if (after.income > before.income || after.speed > before.speed) {
-        MSM.ui.toast(`Milestone! ${MSM.econ.prod(n).name} Lv ${ps.level}`);
+        MSM.ui.toast(MSM.t('toast.milestone', { name: MSM.econ.prod(n).name, n: ps.level }));
       }
     },
 
@@ -454,7 +465,7 @@ window.MSM = window.MSM || {};
       MSM.state.cash -= cost;
       ss.stockers++;
       MSM.ent.syncStockers();
-      MSM.ui.toast(`Stocker hired (${ss.stockers}/${CFG.MAX_STOCKERS})`);
+      MSM.ui.toast(MSM.t('toast.stocker', { a: ss.stockers, b: CFG.MAX_STOCKERS }));
       MSM.save();
     },
 
@@ -463,7 +474,7 @@ window.MSM = window.MSM || {};
       if (ss.cashier || MSM.state.cash < store.cashierCost) return;
       MSM.state.cash -= store.cashierCost;
       ss.cashier = true;
-      MSM.ui.toast('Cashier hired — the queue clears itself');
+      MSM.ui.toast(MSM.t('toast.cashier'));
       MSM.save();
     },
 
@@ -472,7 +483,7 @@ window.MSM = window.MSM || {};
       if (MSM.econ.boosting() || MSM.state.gems < b.gems) return;
       MSM.state.gems -= b.gems;
       MSM.state.boostUntil = Date.now() + b.seconds * 1000;
-      MSM.ui.toast(`Rush hour! ×${b.mult} prices`);
+      MSM.ui.toast(MSM.t('toast.boost', { n: b.mult }));
     },
   };
 

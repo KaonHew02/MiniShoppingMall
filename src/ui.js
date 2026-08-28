@@ -1,10 +1,15 @@
 /* HUD, bottom sheets and toasts. The canvas owns the world; this file owns
-   everything made of DOM. */
+   everything made of DOM.
+
+   Every visible string goes through t() — see src/i18n.js. Names (stores,
+   products, the bed a product comes from) do not: i18n.js has already written
+   the active language into MSM.CFG, so prod.name is whatever the player set. */
 window.MSM = window.MSM || {};
 
 (function () {
   const U = MSM.util, CFG = MSM.CFG;
   const $ = (id) => document.getElementById(id);
+  const t = (key, p) => MSM.t(key, p);
 
   const UI = MSM.ui = {
     mode: null,
@@ -36,8 +41,8 @@ window.MSM = window.MSM || {};
     open(mode, arg) {
       this.mode = mode; this.arg = arg;
       $('sheet-title').textContent = ({
-        products: MSM.econ.store().name, staff: 'Staff', map: 'Map',
-        boost: 'Boost', settings: 'Settings', offline: 'Welcome back!',
+        products: MSM.econ.store().name, staff: t('title.staff'), map: t('title.map'),
+        boost: t('title.boost'), settings: t('title.settings'), offline: t('title.offline'),
       })[mode] || '';
       $('scrim').hidden = false;
       $('sheet').hidden = false;
@@ -51,11 +56,11 @@ window.MSM = window.MSM || {};
     },
 
     toast(msg) {
-      const t = document.createElement('div');
-      t.className = 'toast';
-      t.textContent = msg;
-      $('toasts').appendChild(t);
-      setTimeout(() => t.remove(), 1900);
+      const el = document.createElement('div');
+      el.className = 'toast';
+      el.textContent = msg;
+      $('toasts').appendChild(el);
+      setTimeout(() => el.remove(), 1900);
     },
 
     action(act, i) {
@@ -68,16 +73,18 @@ window.MSM = window.MSM || {};
         case 'boost':   MSM.game.boost(); break;
         case 'buymode': this.buyMode = i === 2 ? 'max' : i === 1 ? 10 : 1; break;
         case 'close':   this.close(); return;
-        case 'save':    MSM.save(); this.toast('Saved'); return;
+        case 'save':    MSM.save(); this.toast(t('toast.saved')); return;
         case 'export':  MSM.backup.exportFile(); return;
         case 'import':  MSM.backup.importFile(); return;
         case 'push':    MSM.drive.push(true); return;
         case 'pull':    MSM.drive.pull(); return;
         case 'auto':    MSM.drive.setAuto(!MSM.drive.auto()); break;
+        // setLang redraws the sheet itself, so there is nothing to do after
+        case 'lang':    MSM.i18n.setLang((MSM.i18n.LANGS[i] || {}).id); return;
         case 'reset':
-          if (confirm('Reset all progress? This cannot be undone.')) {
+          if (confirm(t('confirm.reset'))) {
             MSM.reset(); MSM.world.invalidate(); MSM.ent.reset();
-            this.close(); this.toast('Progress reset');
+            this.close(); this.toast(t('toast.reset'));
           }
           return;
       }
@@ -162,7 +169,7 @@ window.MSM = window.MSM || {};
 
   /* ------------------------------------------------------------- bodies */
   function productsBody() {
-    const seg = ['×1', '×10', 'Max'].map((l, k) => {
+    const seg = [t('buy.1'), t('buy.10'), t('buy.max')].map((l, k) => {
       const on = (k === 0 && UI.buyMode === 1) || (k === 1 && UI.buyMode === 10) || (k === 2 && UI.buyMode === 'max');
       return `<button class="${on ? 'on' : ''}" data-act="buymode" data-i="${k}">${l}</button>`;
     }).join('');
@@ -175,8 +182,8 @@ window.MSM = window.MSM || {};
           <div class="row-main">
             <div class="row-name">${prod.name}</div>
             <div class="row-sub">${next
-              ? `Stand on its plot to build \u2014 $${U.money(prod.buildCost)}`
-              : 'Unlocks later'}</div>
+              ? t('prod.build', { cost: '$' + U.money(prod.buildCost) })
+              : t('prod.later')}</div>
           </div>
         </div>`;
       }
@@ -185,13 +192,15 @@ window.MSM = window.MSM || {};
       const ms = MSM.econ.nextMilestone(ps.level);
       return `<div class="row">${chip(prod.glyph, prod.color)}
         <div class="row-main">
-          <div class="row-name">${prod.name} <span style="color:#42538C">Lv ${ps.level}</span></div>
-          <div class="row-sub">$${U.money(MSM.econ.price(n))} each · delivery every ${MSM.econ.restock(n).toFixed(2)}s</div>
-          <div class="row-sub">shelf ${ps.shelf}/${CFG.SHELF_CAP} · crate ${ps.crate}/${CFG.CRATE_CAP}${
-            ms ? ` · next bonus Lv ${ms.lvl}` : ' · maxed'}</div>
+          <div class="row-name">${prod.name} <span style="color:#42538C">${t('lv', { n: ps.level })}</span></div>
+          <div class="row-sub">${t('prod.price', {
+            price: '$' + U.money(MSM.econ.price(n)), sec: MSM.econ.restock(n).toFixed(2) })}</div>
+          <div class="row-sub">${t('prod.stock', {
+            a: ps.shelf, b: CFG.SHELF_CAP, c: ps.out, d: CFG.CRATE_CAP })}${
+            ms ? t('prod.next', { n: ms.lvl }) : t('prod.maxed')}</div>
         </div>
         <button class="btn" data-act="upgrade" data-i="${n}" ${cash >= cost ? '' : 'disabled'}>
-          Upgrade ×${count}<small>$${U.money(cost)}</small></button>
+          ${t('btn.upgrade', { n: count })}<small>$${U.money(cost)}</small></button>
       </div>`;
     }).join('');
 
@@ -207,24 +216,24 @@ window.MSM = window.MSM || {};
         <div class="row-sub">${sub}</div>
       </div>
       ${hired
-        ? '<button class="btn" disabled>Hired ✓</button>'
+        ? `<button class="btn" disabled>${t('btn.hired')}</button>`
         : `<button class="btn ${act === 'cashier' ? 'gold' : 'pink'}" data-act="${act}" ${cash >= cost ? '' : 'disabled'}>
-             Hire<small>$${U.money(cost)}</small></button>`}
+             ${t('btn.hire')}<small>$${U.money(cost)}</small></button>`}
     </div>`;
 
-    return `<div class="hint">Staff for ${store.name}. Hire both and it earns while you are elsewhere.</div>` +
-      row('📦', '#FFE9D6', `Stockers ${ss.stockers}/${CFG.MAX_STOCKERS}`,
+    return `<div class="hint">${t('staff.hint', { store: store.name })}</div>` +
+      row('📦', '#FFE9D6', t('staff.stockers', { a: ss.stockers, b: CFG.MAX_STOCKERS }),
           ss.stockers
-            ? `${ss.stockers} on the floor — hire more to keep every section filled`
-            : 'Runs station → shelf so you do not have to',
+            ? t('staff.stockersOn', { n: ss.stockers })
+            : t('staff.stockersOff'),
           ss.stockers >= CFG.MAX_STOCKERS, 'stocker', store.stockerCost(ss.stockers)) +
-      row('🧾', '#FFE9AE', 'Cashier',
-          ss.cashier ? 'Serving the queue without you' : 'Otherwise you must stand at the till',
+      row('🧾', '#FFE9AE', t('staff.cashier'),
+          ss.cashier ? t('staff.cashierOn') : t('staff.cashierOff'),
           ss.cashier, 'cashier', store.cashierCost) +
       `<div class="row">
         <div class="row-ico" style="background:#E4F6EA">📈</div>
         <div class="row-main">
-          <div class="row-name">This store, unattended</div>
+          <div class="row-name">${t('staff.rate')}</div>
           <div class="row-sub">$${U.money(MSM.econ.storeRate(MSM.state.current))}/s</div>
         </div>
       </div>`;
@@ -239,41 +248,61 @@ window.MSM = window.MSM || {};
         return `<div class="row locked">${chip('🔒', store.color)}
           <div class="row-main">
             <div class="row-name">${store.name}</div>
-            <div class="row-sub">${store.products.map((p) => p.glyph).join(' ')} · ${store.products.length} products</div>
+            <div class="row-sub">${store.products.map((p) => p.glyph).join(' ')} · ${
+              t('map.products', { n: store.products.length })}</div>
           </div>
           <button class="btn gold" data-act="unlock" data-i="${i}" ${cash >= store.unlock ? '' : 'disabled'}>
-            Unlock<small>$${U.money(store.unlock)}</small></button>
+            ${t('btn.unlock')}<small>$${U.money(store.unlock)}</small></button>
         </div>`;
       }
       const rate = MSM.econ.storeRate(i);
       return `<div class="row">${chip(store.glyph, store.color)}
         <div class="row-main">
-          <div class="row-name">${store.name}${here ? ' <span style="color:#2CA85C">• here</span>' : ''}</div>
+          <div class="row-name">${store.name}${
+            here ? ` <span style="color:#2CA85C">${t('map.here')}</span>` : ''}</div>
           <div class="row-sub">${store.products.map((p) => p.glyph).join(' ')}</div>
-          <div class="row-sub">${rate > 0 ? `earning $${U.money(rate)}/s unattended` : 'needs a stocker and a cashier to idle'}</div>
+          <div class="row-sub">${rate > 0
+            ? t('map.earning', { n: '$' + U.money(rate) })
+            : t('map.needs')}</div>
         </div>
         ${here
-          ? '<button class="btn" disabled>You are here</button>'
-          : `<button class="btn" data-act="travel" data-i="${i}">Travel</button>`}
+          ? `<button class="btn" disabled>${t('btn.youAreHere')}</button>`
+          : `<button class="btn" data-act="travel" data-i="${i}">${t('btn.travel')}</button>`}
       </div>`;
     }).join('');
-    return `<div class="hint">Unlock a store once, then travel between them any time.</div>${rows}`;
+    return `<div class="hint">${t('map.hint')}</div>${rows}`;
   }
 
   function boostBody() {
     const b = CFG.BOOST, s = MSM.state, on = MSM.econ.boosting();
-    return `<div class="hint">Gems come from mall levels — ${CFG.GEMS_PER_LEVEL} per level.</div>
+    return `<div class="hint">${t('boost.hint', { n: CFG.GEMS_PER_LEVEL })}</div>
       <div class="row">
         <div class="row-ico" style="background:#EDE4FF">⚡</div>
         <div class="row-main">
-          <div class="row-name">Rush Hour ×${b.mult}</div>
+          <div class="row-name">${t('boost.name', { n: b.mult })}</div>
           <div class="row-sub">${on
-            ? `Active for ${Math.ceil((s.boostUntil - Date.now()) / 1000)}s`
-            : `Doubles every sale price for ${b.seconds}s`}</div>
+            ? t('boost.active', { n: Math.ceil((s.boostUntil - Date.now()) / 1000) })
+            : t('boost.sub', { n: b.seconds })}</div>
         </div>
         <button class="btn gem" data-act="boost" ${s.gems >= b.gems && !on ? '' : 'disabled'}>
-          ${on ? 'Active' : 'Activate'}<small>${b.gems} 💎</small></button>
+          ${on ? t('btn.active') : t('btn.activate')}<small>${b.gems} 💎</small></button>
       </div>`;
+  }
+
+  /* The language picker. Switching rewrites every name in MSM.CFG and reopens
+     this sheet, so the change is visible before the button springs back. */
+  function langRows() {
+    const seg = MSM.i18n.LANGS.map((l, k) =>
+      `<button class="${l.id === MSM.i18n.lang ? 'on' : ''}" data-act="lang" data-i="${k}">${l.label}</button>`
+    ).join('');
+    return `<div class="row">
+        <div class="row-ico" style="background:#E7EEFB">🌐</div>
+        <div class="row-main">
+          <div class="row-name">${t('set.lang')}</div>
+          <div class="row-sub">${t('set.langSub')}</div>
+        </div>
+      </div>
+      <div class="seg seg-wrap">${seg}</div>`;
   }
 
   function settingsBody() {
@@ -281,33 +310,35 @@ window.MSM = window.MSM || {};
     return `<div class="row">
         <div class="row-ico" style="background:#E4F6EA">💰</div>
         <div class="row-main">
-          <div class="row-name">Total earned</div>
-          <div class="row-sub">$${U.money(s.totalEarned)} · ${s.served} customers served</div>
+          <div class="row-name">${t('set.earned')}</div>
+          <div class="row-sub">${t('set.earnedSub', {
+            n: '$' + U.money(s.totalEarned), c: s.served })}</div>
         </div>
       </div>
+      ${langRows()}
       <div class="row">
         <div class="row-ico" style="background:#E7EEFB">🎮</div>
         <div class="row-main">
-          <div class="row-name">Controls</div>
-          <div class="row-sub">Drag anywhere to walk · WASD on desktop · scroll to zoom</div>
+          <div class="row-name">${t('set.controls')}</div>
+          <div class="row-sub">${t('set.controlsSub')}</div>
         </div>
       </div>
       <div class="row">
         <div class="row-ico" style="background:#E7EEFB">💾</div>
         <div class="row-main">
-          <div class="row-name">Save</div>
-          <div class="row-sub">Autosaves every 10s and when you leave</div>
+          <div class="row-name">${t('set.save')}</div>
+          <div class="row-sub">${t('set.saveSub')}</div>
         </div>
-        <button class="btn" data-act="save">Save now</button>
+        <button class="btn" data-act="save">${t('btn.saveNow')}</button>
       </div>
       ${driveRows()}
       <div class="row">
         <div class="row-ico" style="background:#FFE4E9">⚠️</div>
         <div class="row-main">
-          <div class="row-name">Reset progress</div>
-          <div class="row-sub">Start over from the grocery store</div>
+          <div class="row-name">${t('set.reset')}</div>
+          <div class="row-sub">${t('set.resetSub')}</div>
         </div>
-        <button class="btn pink" data-act="reset">Reset</button>
+        <button class="btn pink" data-act="reset">${t('btn.reset')}</button>
       </div>`;
   }
 
@@ -321,54 +352,55 @@ window.MSM = window.MSM || {};
     const files = `<div class="row">
         <div class="row-ico" style="background:#E7EEFB">📤</div>
         <div class="row-main">
-          <div class="row-name">Backup file</div>
-          <div class="row-sub">One .json you can keep anywhere</div>
+          <div class="row-name">${t('bk.file')}</div>
+          <div class="row-sub">${t('bk.fileSub')}</div>
         </div>
-        <button class="btn" data-act="export">Export</button>
+        <button class="btn" data-act="export">${t('btn.export')}</button>
       </div>
       <div class="row">
         <div class="row-ico" style="background:#E7EEFB">📥</div>
         <div class="row-main">
-          <div class="row-name">Restore from file</div>
-          <div class="row-sub">Replaces this browser's progress</div>
+          <div class="row-name">${t('bk.restore')}</div>
+          <div class="row-sub">${t('bk.replaces')}</div>
         </div>
-        <button class="btn gold" data-act="import">Import</button>
+        <button class="btn gold" data-act="import">${t('btn.import')}</button>
       </div>`;
 
     if (!D.configured()) {
       return files + `<div class="row locked">
         <div class="row-ico" style="background:#EDEFF5">☁️</div>
         <div class="row-main">
-          <div class="row-name">Google Drive</div>
-          <div class="row-sub">Not set up — see docs/DRIVE.md</div>
+          <div class="row-name">${t('drive.name')}</div>
+          <div class="row-sub">${t('drive.unset')}</div>
         </div>
       </div>`;
     }
 
     return files + `<div class="row">
         <div class="row-ico" style="background:${stamped ? '#DFF5E6' : '#FFE0E0'}"
-             title="${stamped ? 'Last copy ' + when : 'No copy in Drive yet'}">☁️</div>
+             title="${stamped ? t('drive.last', { when }) : t('drive.none')}">☁️</div>
         <div class="row-main">
-          <div class="row-name">Google Drive</div>
+          <div class="row-name">${t('drive.name')}</div>
           <div class="row-sub">${when || '—'}</div>
         </div>
-        <button class="btn" data-act="push">To Drive</button>
+        <button class="btn" data-act="push">${t('btn.toDrive')}</button>
       </div>
       <div class="row">
         <div class="row-ico" style="background:#E7EEFB">⬇️</div>
         <div class="row-main">
-          <div class="row-name">Restore from Drive</div>
-          <div class="row-sub">Replaces this browser's progress</div>
+          <div class="row-name">${t('drive.restore')}</div>
+          <div class="row-sub">${t('bk.replaces')}</div>
         </div>
-        <button class="btn gold" data-act="pull">From Drive</button>
+        <button class="btn gold" data-act="pull">${t('btn.fromDrive')}</button>
       </div>
       <div class="row">
         <div class="row-ico" style="background:#EDE4FF">🔁</div>
         <div class="row-main">
-          <div class="row-name">Auto-backup</div>
-          <div class="row-sub">Pushes after a save, at most once a minute</div>
+          <div class="row-name">${t('drive.auto')}</div>
+          <div class="row-sub">${t('drive.autoSub')}</div>
         </div>
-        <button class="btn ${D.auto() ? '' : 'pink'}" data-act="auto">${D.auto() ? 'On' : 'Off'}</button>
+        <button class="btn ${D.auto() ? '' : 'pink'}" data-act="auto">${
+          t(D.auto() ? 'btn.on' : 'btn.off')}</button>
       </div>`;
   }
 
@@ -376,13 +408,15 @@ window.MSM = window.MSM || {};
     return `<div class="row">
         <div class="row-ico" style="background:#E4F6EA">💤</div>
         <div class="row-main">
-          <div class="row-name">Your staff kept working</div>
-          <div class="row-sub">${U.time(info.seconds)} away · paid at ${CFG.OFFLINE_RATE * 100}% rate</div>
+          <div class="row-name">${t('off.title')}</div>
+          <div class="row-sub">${t('off.sub', {
+            t: U.time(info.seconds), p: CFG.OFFLINE_RATE * 100 })}</div>
         </div>
       </div>
       <div class="row" style="justify-content:center">
         <div class="row-name" style="font-size:26px;color:#2CA85C">+$${U.money(info.cash)}</div>
       </div>
-      <button class="btn gold" style="width:100%;align-items:center" data-act="close">Collect</button>`;
+      <button class="btn gold" style="width:100%;align-items:center" data-act="close">${
+        t('btn.collect')}</button>`;
   }
 })();

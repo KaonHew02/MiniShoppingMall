@@ -194,7 +194,7 @@ window.MSM = window.MSM || {};
           }
         }
       }
-    } else if (kind === 'cow' || kind === 'chicken') {
+    } else if (kind === 'cow' || kind === 'chicken' || kind === 'pig') {
       iso.tile(ctx, b.x0, b.y0, b.x1, b.y1, 0.006, '#8FD48A');
       iso.tile(ctx, b.x0 + 0.25, b.y0 + 0.25, b.x1 - 0.25, b.y1 - 0.25, 0.008, '#7FC97A');
       // post-and-rail fence round the pen
@@ -210,6 +210,7 @@ window.MSM = window.MSM || {};
 
       const cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2;
       if (kind === 'cow') drawCow(ctx, cx - 0.25, cy + 0.1);
+      else if (kind === 'pig') drawPig(ctx, cx - 0.2, cy + 0.1);
       else {
         drawHen(ctx, cx - 0.45, cy - 0.15);
         drawHen(ctx, cx + 0.25, cy + 0.35);
@@ -422,6 +423,57 @@ window.MSM = window.MSM || {};
     [[-1, -1], [8, -2]].forEach(([px, py]) => {
       ctx.beginPath(); ctx.arc(X(hx + px), Y(hy + py), 1.9 * u, 0, TAU2); ctx.fill();
     });
+  }
+
+  /* A pig, side on: barrel body, snout with two nostrils, a floppy ear,
+     trotters and a curly tail. */
+  function drawPig(ctx, gx, gy) {
+    const u = (iso.TW / 64) * 1.2;
+    const s = iso.s(gx, gy, 0);
+    const X = (n) => s.x + n * u, Y = (n) => s.y + n * u;
+    const PINK = '#F2A0B4', DARK = '#D97F97';
+
+    shadow(ctx, gx, gy, 0.78);
+
+    [-9, 8].forEach((lx) => {                                  // far trotters
+      rrect(ctx, X(lx), Y(-13), 5.5 * u, 13 * u, 2.6 * u);
+      ctx.fillStyle = DARK; ctx.fill();
+    });
+
+    ctx.beginPath();                                           // curly tail
+    ctx.arc(X(15), Y(-27), 3.4 * u, Math.PI * 0.6, Math.PI * 2.1);
+    ctx.strokeStyle = DARK; ctx.lineWidth = 2.4 * u; ctx.lineCap = 'round'; ctx.stroke();
+
+    rrect(ctx, X(-16), Y(-34), 32 * u, 22 * u, 10 * u);         // barrel
+    ctx.fillStyle = PINK; ctx.fill();
+    ell2(ctx, X(-4), Y(-30), 9 * u, 5 * u, U.shade(PINK, 0.3));
+
+    [-13, 5].forEach((lx) => {                                 // near trotters
+      rrect(ctx, X(lx), Y(-15), 6 * u, 15 * u, 2.8 * u);
+      ctx.fillStyle = PINK; ctx.fill();
+      rrect(ctx, X(lx), Y(-4), 6 * u, 4 * u, 1.8 * u);
+      ctx.fillStyle = '#8A5A66'; ctx.fill();
+    });
+
+    const hx = -24, hy = -29;
+    ctx.beginPath();                                           // floppy ear
+    ctx.moveTo(X(hx + 6), Y(hy - 7));
+    ctx.lineTo(X(hx + 13), Y(hy - 11));
+    ctx.lineTo(X(hx + 12), Y(hy - 1));
+    ctx.closePath();
+    ctx.fillStyle = DARK; ctx.fill();
+
+    rrect(ctx, X(hx - 3), Y(hy - 7), 17 * u, 16 * u, 6 * u);    // head
+    ctx.fillStyle = PINK; ctx.fill();
+    ell2(ctx, X(hx - 3), Y(hy + 4), 6.5 * u, 5 * u, DARK);      // snout
+    ctx.fillStyle = '#9C5E70';
+    [[-5, 3], [-1, 3.4]].forEach(([dx, dy]) => {
+      ctx.beginPath();
+      ctx.ellipse(X(hx + dx), Y(hy + dy), 1.3 * u, 1.6 * u, 0, 0, TAU2);
+      ctx.fill();
+    });
+    ctx.fillStyle = '#33383F';
+    ctx.beginPath(); ctx.arc(X(hx + 4), Y(hy - 2), 1.8 * u, 0, TAU2); ctx.fill();
   }
 
   /* A plump hen: body, folded wing, comb, wattle, beak and tail feathers. */
@@ -835,6 +887,15 @@ window.MSM = window.MSM || {};
     ctx.fillStyle = '#FFFFFF'; ctx.fill();
 
     MSM.art.draw(ctx, prod.art, x, y + rp * 0.62, rp * 1.35, prod.color);
+
+    // how many of it they still want, when it is more than one
+    const left = (c.wantQty || 1) - (c.wantGot || 0);
+    if (left > 1) {
+      const bx = x + rp * 0.72, by = y + rp * 0.62;
+      ctx.beginPath(); ctx.arc(bx, by, rp * 0.42, 0, TAU2);
+      ctx.fillStyle = '#16295C'; ctx.fill();
+      text(ctx, String(left), bx, by, rp * 0.52, '#FFFFFF');
+    }
   }
 
   function drawCash(ctx, c) {
@@ -880,7 +941,10 @@ window.MSM = window.MSM || {};
     items.push({ d: P.till.x1 + P.till.y1, fn: () => drawTill(ctx) });
     items.push({ d: P.door.x1 + P.door.y1, fn: () => drawDoor(ctx) });
     items.push({ d: P.bin.x1 + P.bin.y1, fn: () => drawBin(ctx) });
-    items.push({ d: P.sign.x1 + P.sign.y1, fn: () => drawSign(ctx) });
+    /* Sort the sign well behind its own tile. It stands at the bottom edge of
+       the room, so you always reach it from the north — which by raw depth
+       puts the post and board on top of you, hiding the character. */
+    items.push({ d: P.sign.x1 + P.sign.y1 - 1.6, fn: () => drawSign(ctx) });
     MSM.ent.cash.forEach((c) => items.push({ d: c.x + c.y, fn: () => drawCash(ctx, c) }));
     MSM.ent.customers.forEach((c) => items.push({
       d: c.x + c.y + 0.3,

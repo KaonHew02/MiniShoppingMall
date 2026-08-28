@@ -28,13 +28,40 @@ window.MSM = window.MSM || {};
   /* Every painter gets (ctx, x, y, s, c) — c is the product's tint. */
   const P = {
     /* ---------------------------------------------------------- grocery */
+    /* A round tan disc with three dark dots on it is a chocolate-chip cookie,
+       which is exactly what this used to look like. A potato needs a longer,
+       lumpy silhouette and eyes that are dimples, not spots. */
     potato(ctx, x, y, s, c) {
-      ctx.save(); ctx.translate(x, y - s * 0.3); ctx.rotate(-0.28);
-      ell(ctx, 0, 0, s * 0.42, s * 0.29, 0, c);
-      ell(ctx, -s * 0.1, -s * 0.09, s * 0.19, s * 0.1, -0.3, U.shade(c, 0.3));
-      ctx.fillStyle = U.shade(c, -0.38);
-      [[-0.16, 0.05], [0.13, -0.05], [0.04, 0.11]].forEach(([a, b]) => {
-        ctx.beginPath(); ctx.ellipse(a * s, b * s, s * 0.036, s * 0.026, 0.5, 0, TAU); ctx.fill();
+      ctx.save();
+      ctx.translate(x, y - s * 0.27);
+      ctx.rotate(-0.22);
+
+      const rx = s * 0.44, ry = s * 0.25;
+      ctx.beginPath();                                   // knobbly outline
+      ctx.moveTo(-rx, -ry * 0.15);
+      ctx.bezierCurveTo(-rx * 0.95, -ry * 1.5, -rx * 0.25, -ry * 1.25, rx * 0.1, -ry * 1.05);
+      ctx.bezierCurveTo(rx * 0.62, -ry * 0.95, rx * 1.02, -ry * 0.5, rx, ry * 0.15);
+      ctx.bezierCurveTo(rx * 0.98, ry * 1.15, rx * 0.3, ry * 1.3, -rx * 0.15, ry * 1.1);
+      ctx.bezierCurveTo(-rx * 0.7, ry * 0.95, -rx * 1.02, ry * 0.6, -rx, -ry * 0.15);
+      ctx.closePath();
+      fill(ctx, c);
+
+      ctx.beginPath();                                   // sunlit top
+      ctx.ellipse(-rx * 0.16, -ry * 0.45, rx * 0.52, ry * 0.36, -0.16, 0, TAU);
+      fill(ctx, U.shade(c, 0.24));
+      ctx.beginPath();                                   // shaded underside
+      ctx.ellipse(rx * 0.1, ry * 0.62, rx * 0.66, ry * 0.32, 0.06, 0, TAU);
+      fill(ctx, U.shade(c, -0.16));
+
+      // eyes: a short dark crease with a pale rim, not a round spot
+      [[-0.42, 0.1, 0.5], [0.18, -0.3, -0.35], [0.44, 0.32, 0.25]].forEach(([a, b, rot]) => {
+        const ex = a * rx, ey = b * ry * 1.6;
+        ctx.beginPath();
+        ctx.ellipse(ex, ey, s * 0.032, s * 0.017, rot, 0, TAU);
+        fill(ctx, U.shade(c, -0.42));
+        ctx.beginPath();
+        ctx.ellipse(ex - s * 0.012, ey - s * 0.016, s * 0.026, s * 0.012, rot, 0, TAU);
+        fill(ctx, U.shade(c, 0.3));
       });
       ctx.restore();
     },
@@ -197,6 +224,42 @@ window.MSM = window.MSM || {};
       ell(ctx, x - s * 0.07, cy - s * 0.1, s * 0.07, s * 0.05, -0.5, '#FFFFFF');
     },
 
+    /* A cucumber: long, gently curved, ridged, with a paler belly. */
+    cucumber(ctx, x, y, s, c) {
+      ctx.save();
+      ctx.translate(x, y - s * 0.26);
+      ctx.rotate(-0.38);
+
+      const L = s * 0.52, R = s * 0.135;
+      ctx.beginPath();
+      ctx.moveTo(-L, 0);
+      ctx.quadraticCurveTo(-L * 0.5, -R * 1.9, 0, -R * 1.25);
+      ctx.quadraticCurveTo(L * 0.55, -R * 0.7, L, R * 0.15);
+      ctx.quadraticCurveTo(L * 0.55, R * 1.5, 0, R * 1.35);
+      ctx.quadraticCurveTo(-L * 0.5, R * 1.2, -L, 0);
+      ctx.closePath();
+      fill(ctx, c);
+
+      ctx.beginPath();                                   // pale underside
+      ctx.moveTo(-L * 0.8, R * 0.5);
+      ctx.quadraticCurveTo(0, R * 1.35, L * 0.8, R * 0.15);
+      ctx.quadraticCurveTo(0, R * 0.75, -L * 0.8, R * 0.5);
+      ctx.closePath();
+      fill(ctx, U.shade(c, 0.36));
+
+      ctx.strokeStyle = U.shade(c, -0.3);                // ridges
+      ctx.lineWidth = s * 0.022; ctx.lineCap = 'round';
+      [-0.5, -0.16, 0.18, 0.5].forEach((t) => {
+        ctx.beginPath();
+        ctx.moveTo(L * t, -R * 1.15);
+        ctx.lineTo(L * t + s * 0.012, R * 0.85);
+        ctx.stroke();
+      });
+      ctx.fillStyle = U.shade(c, -0.42);                 // blossom end
+      ctx.beginPath(); ctx.ellipse(L * 0.97, R * 0.12, s * 0.028, s * 0.03, 0, 0, TAU); ctx.fill();
+      ctx.restore();
+    },
+
     watermelon(ctx, x, y, s, c) {
       const cy = y - s * 0.31;
       ell(ctx, x, cy, s * 0.36, s * 0.31, 0, c);
@@ -296,6 +359,34 @@ window.MSM = window.MSM || {};
       ctx.beginPath(); ctx.ellipse(0, 0, s * 0.09, s * 0.045, 0, 0, TAU);
       ctx.fillStyle = '#3F8F3B'; ctx.fill();
       ctx.restore();
+    },
+
+    /* Rashers of bacon: pink meat streaked with fat, wavy edges. */
+    bacon(ctx, x, y, s, c) {
+      [[-0.05, 0.02, -0.1], [0.05, -0.16, 0.06]].forEach(([ox, oy, rot], i) => {
+        ctx.save();
+        ctx.translate(x + ox * s, y + oy * s - s * 0.16);
+        ctx.rotate(rot);
+        const w = s * 0.62, h = s * 0.2;
+        ctx.beginPath();
+        ctx.moveTo(-w / 2, -h / 2);
+        ctx.bezierCurveTo(-w * 0.2, -h * 1.15, w * 0.2, h * 0.05, w / 2, -h * 0.5);
+        ctx.lineTo(w / 2, h * 0.5);
+        ctx.bezierCurveTo(w * 0.2, h * 1.05, -w * 0.2, -h * 0.05, -w / 2, h * 0.6);
+        ctx.closePath();
+        fill(ctx, i ? U.shade(c, 0.1) : c);
+
+        ctx.save(); ctx.clip();
+        ctx.strokeStyle = '#FFF0EC'; ctx.lineWidth = h * 0.26; ctx.lineCap = 'round';
+        [-0.22, 0.16].forEach((t) => {
+          ctx.beginPath();
+          ctx.moveTo(-w / 2, h * t);
+          ctx.bezierCurveTo(-w * 0.2, h * (t - 0.6), w * 0.2, h * (t + 0.5), w / 2, h * (t - 0.1));
+          ctx.stroke();
+        });
+        ctx.restore();
+        ctx.restore();
+      });
     },
 
     /* ----------------------------------------------------------- coffee */

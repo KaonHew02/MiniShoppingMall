@@ -335,7 +335,7 @@ window.MSM = window.MSM || {};
         if (best < 0) return;                  // nothing stocked yet, nobody comes
         const prodT = store.products[best];
         this.customers.push({
-          want: best, list: [], total: 0, got: 0,
+          want: best, wantQty: 1, wantGot: 0, list: [], total: 0, got: 0,
           color: '#4FB0FF', shade: '#F2F5FA',
           x: P.entrance.x, y: P.entrance.y, lane: prodT.lane,
           phase: 'toLane', carry: 0, carryP: -1,
@@ -347,19 +347,36 @@ window.MSM = window.MSM || {};
       // a shopping list: mostly one thing, sometimes two or three
       const open = store.sells.filter((pr) => ss.products[pr.index].built);
       if (!open.length) return;
-      const roll = Math.random();
-      const n = Math.min(open.length,
-        roll < CFG.LIST_ODDS[0] ? 1 : roll < CFG.LIST_ODDS[0] + CFG.LIST_ODDS[1] ? 2 : 3);
-      const list = [];
-      while (list.length < n) {
+      /* A basket: one to three different products, and one to three of each,
+         capped so nobody queues holding a warehouse. */
+      const pickCount = (odds) => {
+        const r = Math.random();
+        return r < odds[0] ? 1 : r < odds[0] + odds[1] ? 2 : 3;
+      };
+      const kinds = Math.min(open.length, pickCount(CFG.LIST_ODDS));
+      const chosen = [];
+      while (chosen.length < kinds) {
         const pick = open[(Math.random() * open.length) | 0].index;
-        if (list.indexOf(pick) < 0) list.push(pick);
+        if (chosen.indexOf(pick) < 0) chosen.push(pick);
       }
-      const want = list.shift();
+
+      const list = [];
+      let items = 0;
+      chosen.forEach((n) => {
+        const qty = Math.min(pickCount(CFG.QTY_ODDS), CFG.MAX_BASKET - items);
+        if (qty <= 0) return;
+        items += qty;
+        list.push({ n, qty });
+      });
+
+      const first = list.shift();
+      const want = first.n;
       const prod = store.products[want];
       this.customers.push({
         want,
-        list,                    // still to collect after the current want
+        wantQty: first.qty,      // how many of the current item they want
+        wantGot: 0,
+        list,                    // {n, qty} still to collect afterwards
         total: 0, got: 0,
         color: ['#FF7BA6', '#4FB0FF', '#8B62FF', '#FF9E4D', '#2FCB9E', '#FF5C5C'][(Math.random() * 6) | 0],
         shade: ['#F2F5FA', '#E9EEF6', '#F6F0E6', '#EDF3EC'][(Math.random() * 4) | 0],
@@ -401,27 +418,35 @@ window.MSM = window.MSM || {};
 
           /* The heart of it: they stand at the shelf wanting the thing and
              wait as long as it takes. The bubbles are your to-do list. */
-          case 'browse':
+          case 'browse': {
             c.moving = false;
-            if (ps.shelf > 0) {
-              ps.shelf--;
-              c.got++;
-              (c.bought = c.bought || []).push(c.want);
-              c.total += MSM.econ.price(c.want);
-              c.carry = c.got; c.carryP = c.want;
-              c.mood = 'happy';
+            // they want several of this one, lifted off the shelf one at a time
+            if (c.wantGot >= c.wantQty) {
               if (c.list.length) {
-                // more on the list — head for the next shelf
-                c.want = c.list.shift();
+                const nxt = c.list.shift();
+                c.want = nxt.n; c.wantQty = nxt.qty; c.wantGot = 0;
                 c.lane = MSM.econ.prod(c.want).lane;
                 c.phase = 'toNextLane';
-                break;
+              } else {
+                c.phase = 'toQueue'; c.viaLane = true;
               }
-              c.phase = 'toQueue'; c.viaLane = true;
               break;
             }
-            c.mood = 'wait';
+            if (ps.shelf <= 0) { c.mood = 'wait'; break; }
+
+            c.take = (c.take || 0) + dt;
+            if (c.take < CFG.TAKE_TIME) break;
+            c.take = 0;
+
+            ps.shelf--;
+            c.wantGot++;
+            c.got++;
+            (c.bought = c.bought || []).push(c.want);
+            c.total += MSM.econ.price(c.want);
+            c.carry = c.got; c.carryP = c.want;
+            c.mood = 'happy';
             break;
+          }
 
           /* Cross to the next item's lane at the current row, then walk the
              lane to its shelf — the same route a person would take. */

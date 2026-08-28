@@ -7,7 +7,7 @@ window.MSM = window.MSM || {};
 
   const E = MSM.ent = {
     player: null,
-    stocker: null,
+    stockers: [],
     customers: [],
     cash: [],
     queue: [],
@@ -24,17 +24,21 @@ window.MSM = window.MSM || {};
       this.cash.length = 0;
       this.queue.length = 0;
       this.spawnTimer = 1.5;
-      this.syncStocker();
+      this.syncStockers();
     },
 
-    syncStocker() {
-      const ss = MSM.econ.sstate();
-      if (!ss.stocker) { this.stocker = null; return; }
-      if (this.stocker) return;
-      this.stocker = {
-        x: P.stockLane, y: P.stockLane, hold: [], carry: 0, carryP: -1, only: -1,
-        phase: 'pick', target: 0, deliverTo: -1, leg: 0, walk: 0, moving: false, handle: 0,
-      };
+    /** Keep the crew on the floor matching how many you have hired. */
+    syncStockers() {
+      const want = MSM.econ.sstate().stockers || 0;
+      while (this.stockers.length > want) this.stockers.pop();
+      while (this.stockers.length < want) {
+        this.stockers.push({
+          x: P.stockLane + this.stockers.length * 0.7, y: P.stockLane,
+          hold: [], carry: 0, carryP: -1, only: -1,
+          phase: 'pick', target: 0, deliverTo: -1, want: 0, leg: 0, stuckT: 0,
+          walk: 0, moving: false, handle: 0,
+        });
+      }
     },
 
     /** Where a body stands to reach a source / a shelf. Offset to the right
@@ -182,9 +186,12 @@ window.MSM = window.MSM || {};
     },
 
     /* ----------------------------------------------------------- stocker */
-    updateStocker(dt) {
-      const s = this.stocker;
-      if (!s) return;
+    updateStockers(dt) {
+      this.stockers.forEach((s) => E.stepStocker(s, dt));
+    },
+
+    /** One stocker's turn. Others' claims are skipped so they spread out. */
+    stepStocker(s, dt) {
       const ss = MSM.econ.sstate();
       const spd = CFG.STAFF_SPEED;
 
@@ -199,17 +206,28 @@ window.MSM = window.MSM || {};
             break;
           }
           const prods = MSM.econ.store().products;
+          // do not chase a job a colleague is already on
+          const claimed = new Set();
+          E.stockers.forEach((o) => {
+            if (o === s || o.phase === 'pick') return;
+            claimed.add(o.deliverTo >= 0 ? 'f' + o.deliverTo : 's' + o.target);
+          });
+
           // a starved cow or oven is the most urgent thing in the shop
           let feedMe = -1;
           prods.forEach((prod, n) => {
             const inp = prod.source.inputIndex;
-            if (inp < 0 || feedMe >= 0) return;
-            if (ss.products[n].feed <= 1 && ss.products[inp].out > 0) feedMe = n;
+            if (inp < 0 || feedMe >= 0 || claimed.has('f' + n)) return;
+            // only divert for a station that has actually run dry, and only
+            // if it still has somewhere to put what it makes
+            if (ss.products[n].feed === 0 && ss.products[inp].out > 0 &&
+                ss.products[n].out < CFG.CRATE_CAP) feedMe = n;
           });
           if (feedMe >= 0) {
             s.target = prods[feedMe].source.inputIndex;
             s.only = s.target;
             s.deliverTo = feedMe;
+            s.want = Math.min(CFG.FEED_CAP - ss.products[feedMe].feed, CFG.CARRY_CAP);
             s.phase = 'toCrate';
             s.leg = 0;
             break;
@@ -218,12 +236,16 @@ window.MSM = window.MSM || {};
           let best = -1, worst = 1e9;
           ss.products.forEach((ps, n) => {
             if (!prods[n].sell || ps.out === 0 || ps.shelf >= CFG.SHELF_CAP) return;
+            if (claimed.has('s' + n)) return;
             if (ps.shelf < worst) { worst = ps.shelf; best = n; }
           });
           if (best < 0) { s.moving = false; break; }
           s.target = best;
           s.only = best;
           s.deliverTo = -1;
+          /* Carry only what the shelf has room for. Loading a full armful and
+             then finding nowhere to put the surplus is what wedged this. */
+          s.want = Math.min(CFG.SHELF_CAP - ss.products[best].shelf, CFG.CARRY_CAP);
           s.phase = 'toCrate';
           s.leg = 0;
           break;
@@ -241,9 +263,10 @@ window.MSM = window.MSM || {};
         case 'load':
           s.moving = false;
           this.handle(s, dt);
-          if (s.carry >= CFG.CARRY_CAP || ss.products[s.target].out === 0) {
+          if (s.carry >= (s.want || CFG.CARRY_CAP) || ss.products[s.target].out === 0) {
             s.phase = s.carry > 0 ? 'toShelf' : 'pick';
             s.leg = 0;
+            s.stuckT = 0;
           }
           break;
         case 'toShelf': {
@@ -255,13 +278,29 @@ window.MSM = window.MSM || {};
           } else if (W.seek(s, at.x, at.y, spd, dt, false)) s.phase = 'unload';
           break;
         }
-        case 'unload':
-          // If the shelf is full they wait here holding the rest, rather than
-          // walking away with it — a customer will free a slot soon enough.
+        case 'unload': {
           s.moving = false;
+          const held = s.carry;
           this.handle(s, dt);
-          if (s.carry === 0) { s.phase = 'pick'; s.leg = 0; s.deliverTo = -1; }
+          if (s.carry === 0) {
+            s.phase = 'pick'; s.leg = 0; s.deliverTo = -1; s.stuckT = 0;
+            break;
+          }
+          /* A full shelf used to strand them here forever, holding the rest —
+             and with nobody buying that product, the whole shop stopped. Put
+             the surplus back and move on. */
+          s.stuckT = s.carry === held ? (s.stuckT || 0) + dt : 0;
+          if (s.stuckT > 3) {
+            s.hold.forEach((n) => {
+              const ps = ss.products[n];
+              ps.out = Math.min(CFG.CRATE_CAP, ps.out + 1);
+            });
+            s.hold.length = 0;
+            E.sync(s);
+            s.phase = 'pick'; s.leg = 0; s.deliverTo = -1; s.stuckT = 0;
+          }
           break;
+        }
       }
     },
 

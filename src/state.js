@@ -16,7 +16,7 @@ window.MSM = window.MSM || {};
     served: 0,
     stores: CFG.STORES.map((s, i) => ({
       owned: i === 0,
-      stocker: false,
+      stockers: 0,
       cashier: false,
       products: s.products.map(() => ({ level: 1, shelf: 0, out: 0, feed: 0, t: 0, pay: 0 })),
     })),
@@ -70,7 +70,7 @@ window.MSM = window.MSM || {};
     /** Cash per second a store earns unattended — needs a stocker AND a cashier. */
     storeRate(i) {
       const ss = MSM.state.stores[i];
-      if (!ss.owned || !ss.stocker || !ss.cashier) return 0;
+      if (!ss.owned || !ss.stockers || !ss.cashier) return 0;
       let r = 0;
       CFG.STORES[i].products.forEach((p, n) => {
         if (p.sell) r += E.price(n, i) / E.restock(n, i);
@@ -131,7 +131,7 @@ window.MSM = window.MSM || {};
     data.stores.forEach((old, i) => {
       if (!s.stores[i] || !old) return;
       s.stores[i].owned = !!old.owned;
-      s.stores[i].stocker = !!old.stocker;
+      s.stores[i].stockers = Math.max(0, +old.stockers || (old.stocker ? 1 : 0));
       s.stores[i].cashier = !!old.cashier;
       (old.products || []).forEach((op, n) => {
         const ps = s.stores[i].products[n];

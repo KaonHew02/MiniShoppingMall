@@ -131,6 +131,61 @@ window.MSM = window.MSM || {};
       rr(ctx, x - s * 0.11, y - s * 0.24, s * 0.22, s * 0.08, s * 0.03, U.shade(c, -0.35));
     },
 
+    carrot(ctx, x, y, s, c) {
+      ctx.beginPath();
+      ctx.moveTo(x - s * 0.17, y - s * 0.5);
+      ctx.lineTo(x + s * 0.17, y - s * 0.5);
+      ctx.quadraticCurveTo(x + s * 0.07, y - s * 0.18, x, y);
+      ctx.quadraticCurveTo(x - s * 0.07, y - s * 0.18, x - s * 0.17, y - s * 0.5);
+      ctx.closePath();
+      fill(ctx, c);
+      ctx.strokeStyle = U.shade(c, -0.28); ctx.lineWidth = s * 0.028;
+      [0.14, 0.26, 0.38].forEach((t) => {
+        const half = s * 0.15 * (1 - t * 1.4);
+        ctx.beginPath();
+        ctx.moveTo(x - half, y - s * (0.5 - t));
+        ctx.lineTo(x + half, y - s * (0.5 - t) - s * 0.03);
+        ctx.stroke();
+      });
+      ctx.strokeStyle = '#4CAF50'; ctx.lineWidth = s * 0.05; ctx.lineCap = 'round';
+      [-0.5, 0, 0.5].forEach((a) => {
+        ctx.beginPath();
+        ctx.moveTo(x, y - s * 0.5);
+        ctx.quadraticCurveTo(x + a * s * 0.16, y - s * 0.66, x + a * s * 0.26, y - s * 0.76);
+        ctx.stroke();
+      });
+    },
+
+    eggplant(ctx, x, y, s, c) {
+      const cy = y - s * 0.3;
+      ctx.beginPath();
+      ctx.ellipse(x, cy, s * 0.25, s * 0.31, 0, 0, TAU);
+      fill(ctx, c);
+      ell(ctx, x - s * 0.09, cy - s * 0.09, s * 0.07, s * 0.12, -0.4, U.shade(c, 0.34));
+      ctx.fillStyle = '#4C9A3F';
+      for (let i = 0; i < 5; i++) {
+        const a = (i / 5) * TAU - Math.PI / 2;
+        ctx.beginPath();
+        ctx.ellipse(x + Math.cos(a) * s * 0.11, cy - s * 0.26 + Math.sin(a) * s * 0.04,
+                    s * 0.09, s * 0.04, a, 0, TAU);
+        ctx.fill();
+      }
+      rr(ctx, x - s * 0.03, cy - s * 0.44, s * 0.06, s * 0.14, s * 0.03, '#3B7C32');
+    },
+
+    cabbage(ctx, x, y, s, c) {
+      const cy = y - s * 0.29;
+      ell(ctx, x, cy + s * 0.04, s * 0.34, s * 0.27, 0, U.shade(c, -0.26));   // outer leaf
+      ell(ctx, x, cy, s * 0.27, s * 0.27, 0, c);
+      ctx.strokeStyle = U.shade(c, 0.42); ctx.lineWidth = s * 0.035; ctx.lineCap = 'round';
+      [-1, 0, 1].forEach((k) => {
+        ctx.beginPath();
+        ctx.arc(x + k * s * 0.09, cy + s * 0.05, s * 0.17, Math.PI * 1.15, Math.PI * 1.85);
+        ctx.stroke();
+      });
+      ell(ctx, x - s * 0.09, cy - s * 0.11, s * 0.08, s * 0.05, -0.5, U.shade(c, 0.3));
+    },
+
     /* An egg — a plain oval reads as one at any size. */
     egg(ctx, x, y, s, c) {
       const cy = y - s * 0.3;
@@ -140,6 +195,49 @@ window.MSM = window.MSM || {};
       ctx.fillStyle = c; ctx.fill();
       ctx.restore();
       ell(ctx, x - s * 0.07, cy - s * 0.1, s * 0.07, s * 0.05, -0.5, '#FFFFFF');
+    },
+
+    apple(ctx, x, y, s, c) {
+      const cy = y - s * 0.32;
+      ell(ctx, x, cy, s * 0.31, s * 0.30, 0, c);
+      ell(ctx, x - s * 0.1, cy - s * 0.09, s * 0.1, s * 0.07, -0.5, U.shade(c, 0.45));
+      rr(ctx, x - s * 0.025, cy - s * 0.42, s * 0.05, s * 0.14, s * 0.025, '#7A4A22');
+      ctx.save();
+      ctx.translate(x + s * 0.09, cy - s * 0.36); ctx.rotate(-0.5);
+      ctx.beginPath(); ctx.ellipse(0, 0, s * 0.11, s * 0.055, 0, 0, TAU);
+      ctx.fillStyle = '#4CAF50'; ctx.fill();
+      ctx.restore();
+    },
+
+    banana(ctx, x, y, s, c) {
+      ctx.save();
+      ctx.translate(x, y - s * 0.28);
+      [0.1, -0.06].forEach((off, i) => {
+        ctx.beginPath();
+        ctx.moveTo(-s * 0.3, -s * 0.06 + off * s);
+        ctx.quadraticCurveTo(0, s * 0.3 + off * s, s * 0.3, -s * 0.06 + off * s);
+        ctx.quadraticCurveTo(0, s * 0.12 + off * s, -s * 0.3, -s * 0.06 + off * s);
+        ctx.closePath();
+        fill(ctx, i ? U.shade(c, -0.12) : c);
+      });
+      ctx.fillStyle = '#6B5A22';
+      ctx.beginPath(); ctx.ellipse(-s * 0.3, -s * 0.05, s * 0.045, s * 0.035, 0, 0, TAU); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(s * 0.3, -s * 0.05, s * 0.045, s * 0.035, 0, 0, TAU); ctx.fill();
+      ctx.restore();
+    },
+
+    orange(ctx, x, y, s, c) {
+      const cy = y - s * 0.3;
+      ell(ctx, x, cy, s * 0.29, s * 0.29, 0, c);
+      ctx.strokeStyle = U.shade(c, -0.22); ctx.lineWidth = s * 0.022;
+      ctx.beginPath(); ctx.arc(x, cy, s * 0.2, -0.4, 1.4); ctx.stroke();
+      ell(ctx, x - s * 0.09, cy - s * 0.1, s * 0.08, s * 0.055, -0.5, U.shade(c, 0.4));
+      rr(ctx, x - s * 0.02, cy - s * 0.36, s * 0.04, s * 0.08, s * 0.02, '#6B4A1E');
+      ctx.save();
+      ctx.translate(x + s * 0.07, cy - s * 0.33); ctx.rotate(-0.6);
+      ctx.beginPath(); ctx.ellipse(0, 0, s * 0.09, s * 0.045, 0, 0, TAU);
+      ctx.fillStyle = '#3F8F3B'; ctx.fill();
+      ctx.restore();
     },
 
     /* ----------------------------------------------------------- coffee */

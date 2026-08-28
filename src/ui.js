@@ -99,7 +99,8 @@ window.MSM = window.MSM || {};
         if (s.cash >= MSM.econ.upgradeCost(n, 1)) up++;
       });
       let hire = 0;
-      if (!ss.stocker && s.cash >= MSM.econ.store().stockerCost) hire++;
+      if (ss.stockers < CFG.MAX_STOCKERS &&
+          s.cash >= MSM.econ.store().stockerCost(ss.stockers)) hire++;
       if (!ss.cashier && s.cash >= MSM.econ.store().cashierCost) hire++;
       let maps = 0;
       s.stores.forEach((st, i) => { if (!st.owned && s.cash >= CFG.STORES[i].unlock) maps++; });
@@ -196,9 +197,11 @@ window.MSM = window.MSM || {};
     </div>`;
 
     return `<div class="hint">Staff for ${store.name}. Hire both and it earns while you are elsewhere.</div>` +
-      row('📦', '#FFE9D6', 'Stocker',
-          ss.stocker ? 'Keeping every shelf filled' : 'Runs crate → shelf so you do not have to',
-          ss.stocker, 'stocker', store.stockerCost) +
+      row('📦', '#FFE9D6', `Stockers ${ss.stockers}/${CFG.MAX_STOCKERS}`,
+          ss.stockers
+            ? `${ss.stockers} on the floor — hire more to keep every section filled`
+            : 'Runs station → shelf so you do not have to',
+          ss.stockers >= CFG.MAX_STOCKERS, 'stocker', store.stockerCost(ss.stockers)) +
       row('🧾', '#FFE9AE', 'Cashier',
           ss.cashier ? 'Serving the queue without you' : 'Otherwise you must stand at the till',
           ss.cashier, 'cashier', store.cashierCost) +
@@ -270,7 +273,7 @@ window.MSM = window.MSM || {};
         <div class="row-ico" style="background:#E7EEFB">🎮</div>
         <div class="row-main">
           <div class="row-name">Controls</div>
-          <div class="row-sub">Tap where you want to go · WASD on desktop · scroll to zoom</div>
+          <div class="row-sub">Drag anywhere to walk · WASD on desktop · scroll to zoom</div>
         </div>
       </div>
       <div class="row">

@@ -34,38 +34,33 @@ window.MSM = window.MSM || {};
     },
 
     /* ------------------------------------------------------------ input */
-    /* Tap the floor and the character walks there. Tap a fixture and it walks
-       to the spot you would stand in to use it. WASD still works and takes
-       over the moment you press it. */
-    walkTo: null,
-    walkPath: [],
-    stuck: 0,
-
+    /* A floating joystick: put a finger down anywhere and drag. The stick
+       appears where you touched, so there is no fixed pad to reach for. */
     bindInput(canvas) {
-      let downAt = 0, moved = 0, last = null;
+      let stickId = null;
 
       canvas.addEventListener('pointerdown', (e) => {
-        downAt = performance.now();
-        moved = 0;
-        last = { x: e.clientX, y: e.clientY };
+        if (stickId !== null) return;
+        stickId = e.pointerId;
+        canvas.setPointerCapture(e.pointerId);
+        const r = canvas.getBoundingClientRect();
+        MSM.render.stick = { ox: e.clientX - r.left, oy: e.clientY - r.top, dx: 0, dy: 0 };
       });
 
       canvas.addEventListener('pointermove', (e) => {
-        if (!last) return;
-        moved += Math.abs(e.clientX - last.x) + Math.abs(e.clientY - last.y);
-        last = { x: e.clientX, y: e.clientY };
+        if (e.pointerId !== stickId || !MSM.render.stick) return;
+        const r = canvas.getBoundingClientRect();
+        MSM.render.stick.dx = e.clientX - r.left - MSM.render.stick.ox;
+        MSM.render.stick.dy = e.clientY - r.top - MSM.render.stick.oy;
       });
 
-      const up = (e) => {
-        if (!last) return;
-        const quick = performance.now() - downAt < 600;
-        last = null;
-        if (moved > 14 || !quick) return;          // a drag, not a tap
-        const r = canvas.getBoundingClientRect();
-        G.tapAt(e.clientX - r.left, e.clientY - r.top);
+      const drop = (e) => {
+        if (e.pointerId !== stickId) return;
+        stickId = null;
+        MSM.render.stick = null;
       };
-      canvas.addEventListener('pointerup', up);
-      canvas.addEventListener('pointercancel', () => { last = null; });
+      canvas.addEventListener('pointerup', drop);
+      canvas.addEventListener('pointercancel', drop);
 
       addEventListener('keydown', (e) => {
         G.keys.add(e.key.toLowerCase());
@@ -81,91 +76,26 @@ window.MSM = window.MSM || {};
       }, { passive: false });
     },
 
-    /** Undo the isometric projection: screen pixels -> a point on the floor. */
-    screenToWorld(px, py) {
-      const iso = MSM.iso;
-      const a = (px - iso.ox) / (iso.TW / 2);
-      const b = (py - iso.oy) / (iso.TH / 2);
-      return { x: (a + b) / 2, y: (b - a) / 2 };
-    },
-
-    tapAt(px, py) {
-      const w = G.screenToWorld(px, py);
-      const B = MSM.CFG.WORLD;
-      w.x = U.clamp(w.x, 0.3, B.W - 0.3);
-      w.y = U.clamp(w.y, 0.3, B.H + 0.3);
-
-      // tapping a fixture means "go and use that", not "walk into it"
-      let best = null, bestD = 1.2;
-      MSM.econ.store().products.forEach((prod, n) => {
-        [[prod.crate, MSM.ent.crateStand(n)],
-         prod.shelf ? [prod.shelf, prod.browse] : null,
-         [prod.pad, { x: (prod.pad.x0 + prod.pad.x1) / 2, y: (prod.pad.y0 + prod.pad.y1) / 2 }],
-        ].forEach((pair) => {
-          if (!pair) return;
-          const d = U.boxDist(w.x, w.y, pair[0]);
-          if (d < bestD) { bestD = d; best = pair[1]; }
-        });
-      });
-      [[P.till, P.serve],
-       // the bin sits against the bottom wall, so you approach it from inside
-       [P.bin, { x: (P.bin.x0 + P.bin.x1) / 2, y: P.bin.y0 - 0.55 }],
-       [P.door, { x: (P.door.x0 + P.door.x1) / 2, y: (P.door.y0 + P.door.y1) / 2 }],
-      ].forEach((pair) => {
-        const d = U.boxDist(w.x, w.y, pair[0]);
-        if (d < bestD) { bestD = d; best = pair[1]; }
-      });
-
-      const dest = best || w;
-      G.walkTo = { x: dest.x, y: dest.y, t: 0 };
-      const p = MSM.ent.player;
-      G.walkPath = MSM.world.path(p.x, p.y, dest.x, dest.y) || [{ x: dest.x, y: dest.y }];
-      G.stuck = 0;
-    },
-
-    /** Keys win over the tap target; otherwise steer toward where you tapped. */
-    input(dt) {
-      const k = G.keys;
+    /** Stick / keys -> a direction in world space. */
+    input() {
       let sx = 0, sy = 0;
+      const st = MSM.render.stick;
+      if (st) {
+        const d = Math.hypot(st.dx, st.dy);
+        if (d > 8) { sx = st.dx; sy = st.dy; }
+      }
+      const k = G.keys;
       if (k.has('a') || k.has('arrowleft'))  sx -= 60;
       if (k.has('d') || k.has('arrowright')) sx += 60;
       if (k.has('w') || k.has('arrowup'))    sy -= 60;
       if (k.has('s') || k.has('arrowdown'))  sy += 60;
+      if (!sx && !sy) return { x: 0, y: 0 };
 
-      if (sx || sy) {
-        G.walkTo = null;
-        G.walkPath = [];
-        const a = sx / (MSM.iso.TW / 2), b = sy / (MSM.iso.TH / 2);
-        const wx = (a + b) / 2, wy = (b - a) / 2;
-        const len = Math.hypot(wx, wy) || 1;
-        return { x: wx / len, y: wy / len };
-      }
-
-      const t = G.walkTo;
-      if (!t) return { x: 0, y: 0 };
-      t.t += dt;
-
-      const p = MSM.ent.player;
-      // follow the route corner by corner
-      while (G.walkPath.length > 1 &&
-             Math.hypot(G.walkPath[0].x - p.x, G.walkPath[0].y - p.y) < CFG.ARRIVE_R) {
-        G.walkPath.shift();
-      }
-      const leg = G.walkPath[0] || t;
-      const dx = leg.x - p.x, dy = leg.y - p.y;
-      const d = Math.hypot(dx, dy);
-      if (d < CFG.ARRIVE_R) {
-        G.walkPath.shift();
-        if (!G.walkPath.length) { G.walkTo = null; return { x: 0, y: 0 }; }
-      }
-
-      // walked into something and stopped making progress — give up on it
-      const step = Math.hypot(p.x - (G._lx || p.x), p.y - (G._ly || p.y));
-      G._lx = p.x; G._ly = p.y;
-      G.stuck = step < 0.004 ? G.stuck + dt : 0;
-      if (G.stuck > 0.5) { G.walkTo = null; G.walkPath = []; G.stuck = 0; return { x: 0, y: 0 }; }
-
-      return { x: dx / d, y: dy / d };
+      // undo the isometric projection so "up" on screen is up the shop
+      const a = sx / (MSM.iso.TW / 2), b = sy / (MSM.iso.TH / 2);
+      const wx = (a + b) / 2, wy = (b - a) / 2;
+      const len = Math.hypot(wx, wy) || 1;
+      return { x: wx / len, y: wy / len };
     },
 
     /* ---------------------------------------------------------- loop */
@@ -175,10 +105,10 @@ window.MSM = window.MSM || {};
       if (dt > 1.5) { G.catchUp(dt); dt = 0.05; }
       dt = U.clamp(dt, 0, 0.1);
 
-      const dir = G.input(dt);
+      const dir = G.input();
       MSM.ent.restock(dt);
       MSM.ent.movePlayer(dt, dir.x, dir.y);
-      MSM.ent.updateStocker(dt);
+      MSM.ent.updateStockers(dt);
       MSM.ent.updateCustomers(dt);
       MSM.ent.ageCash(dt);
       G.serve(dt);
@@ -353,11 +283,13 @@ window.MSM = window.MSM || {};
 
     hireStocker() {
       const store = MSM.econ.store(), ss = MSM.econ.sstate();
-      if (ss.stocker || MSM.state.cash < store.stockerCost) return;
-      MSM.state.cash -= store.stockerCost;
-      ss.stocker = true;
-      MSM.ent.syncStocker();
-      MSM.ui.toast('Stocker hired — shelves refill themselves');
+      if (ss.stockers >= CFG.MAX_STOCKERS) return;
+      const cost = store.stockerCost(ss.stockers);
+      if (MSM.state.cash < cost) return;
+      MSM.state.cash -= cost;
+      ss.stockers++;
+      MSM.ent.syncStockers();
+      MSM.ui.toast(`Stocker hired (${ss.stockers}/${CFG.MAX_STOCKERS})`);
       MSM.save();
     },
 

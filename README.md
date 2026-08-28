@@ -25,9 +25,8 @@ works if you just double-click it.
 
 | | |
 | --- | --- |
-| **Tap the floor** | the character walks there, routing round the shelves |
-| **Tap a fixture** | walks to the spot you stand in to use it |
-| **WASD / arrows** | manual steering; takes over the moment you press a key |
+| **Drag anywhere** | floating joystick — the stick appears where you touch |
+| **WASD / arrows** | same thing on desktop |
 | **Scroll wheel** | zoom |
 
 Walk up to the **bin** on the shop floor to empty your arms — useful when you
@@ -45,14 +44,18 @@ grabbed the wrong thing.
 
    | Product | Comes from | Needs |
    | --- | --- | --- |
-   | Potato, Tomato, Wheat | crop beds | just time |
-   | Milk | the cow | wheat in its trough |
-   | Bread | the oven | wheat |
-   | Eggs | the chicken coop | tomatoes |
+   | Potato, Tomato, Carrot, Eggplant, Cabbage, Wheat | crop beds along the back | just time |
+   | Apple, Banana, Orange | the orchard down the right | just time |
+   | Milk | the cow, in the farmyard down the left | wheat in its trough |
+   | Eggs | the chicken coop, below the cow | tomatoes |
+   | Bread | the oven, by the door | wheat |
+
+   The shop floor is laid out by department — **Vegetables**, **Fruit**, and
+   **Dairy & Bakery** — each a tinted block of floor with its name on it.
 
    So the chain is: harvest → carry to whatever eats it → carry what that
    makes to the shelf. Your arms hold **10 items of any mix**, stacked over
-   your head, so one trip can carry potatoes and tomatoes together.
+   your head (12 max), so one trip can carry potatoes and tomatoes together.
 4. **Level up in the world** — every station has a pad beside it. Stand on it
    and your cash drains into the next level, which raises that product's
    price and speeds up how fast it is made.
@@ -65,9 +68,11 @@ grabbed the wrong thing.
 Only the Grocery Store has the full farm chain so far — the other stores
 still make their goods without an input.
 
-**Staff** take over the parts you are tired of doing: a stocker hauls wheat to
-whatever is starving and then restocks the emptiest shelf, and the cashier
-works the till. A store only earns while you
+**Staff** take over the parts you are tired of doing. A stocker hauls feed to
+whatever is starving, then restocks the emptiest shelf; the cashier works the
+till. You can hire **up to four stockers** — each costs 3.2x the last — and
+they claim jobs so two never chase the same shelf. One alone cannot keep
+eleven shelves and four feed stations going. A store only earns while you
 are elsewhere — or offline, 2 hours max at half rate — with **both** hired.
 
 **Upgrades** raise the price per item. Levels 10 / 25 / 50 / 100 / 200 are
@@ -78,7 +83,7 @@ with your total product levels and pays gems; gems buy a ×2 Rush Hour.
 
 | Store | Unlock | Products |
 | --- | --- | --- |
-| Grocery Store | free | potato, tomato, milk, bread, eggs |
+| Grocery Store | free | 11 lines across vegetables, fruit, dairy and bakery |
 | Coffee Shop | $6K | espresso, latte, croissant, cake |
 | Sports Outlet | $180K | basketball, trainers, racket, jersey |
 | Fashion Boutique | $4.2M | t-shirt, dress, handbag, watch |

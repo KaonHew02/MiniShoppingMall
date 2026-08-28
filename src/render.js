@@ -8,6 +8,7 @@ window.MSM = window.MSM || {};
   const R = MSM.render = {
     canvas: null, ctx: null, w: 0, h: 0,
     pops: [],
+    stick: null,                 // {ox,oy,dx,dy} while a finger is down
 
     setup(canvas) {
       this.canvas = canvas;
@@ -53,6 +54,7 @@ window.MSM = window.MSM || {};
   }
 
   const box = (ctx, b, z0, z1, c) => iso.box(ctx, b.x0, b.y0, b.x1, b.y1, z0, z1, c);
+  const TAU2 = Math.PI * 2;
 
   function shadow(ctx, x, y, r) {
     const s = iso.s(x, y, 0);
@@ -76,12 +78,12 @@ window.MSM = window.MSM || {};
     iso.box(ctx, -M, -M, B.W + M, B.H + M, -0.5, 0, '#FFC53D');
     iso.tile(ctx, -M, -M, B.W + M, B.H + M, 0, '#EEF3FA');
 
-    /* Three zones rather than one flat checkerboard: the green back where
-       things grow, the warm sales floor, and a cool strip by the door. */
+    /* Zones, then departments on top: the green growing strip at the back,
+       the warm sales floor, a cool strip by the door. */
     const ZONES = [
-      { y0: -M,   y1: 2.65,    a: '#A9E4A2', b: '#9FDD98' },
-      { y0: 2.65, y1: 8.85,    a: '#FFD9C6', b: '#FBD1BC' },
-      { y0: 8.85, y1: B.H + M, a: '#DCE4EE', b: '#D3DCE8' },
+      { y0: -M,    y1: 2.95,     a: '#A9E4A2', b: '#9FDD98' },   // the crop beds
+      { y0: 2.95,  y1: 10.80,    a: '#FFE3D2', b: '#FBDBC8' },   // the shop floor
+      { y0: 10.80, y1: B.H + M,  a: '#DCE4EE', b: '#D3DCE8' },   // by the door
     ];
     ZONES.forEach((z) => {
       for (let x = 0; x < B.W; x++) {
@@ -92,6 +94,26 @@ window.MSM = window.MSM || {};
         }
       }
       iso.tile(ctx, -M, z.y1 - 0.05, B.W + M, z.y1, 0.006, '#FFFFFF');
+    });
+
+    // the farmyard runs down the left, grass rather than shop floor
+    iso.tile(ctx, -M, 2.95, 3.45, 9.00, 0.005, '#9FDD98');
+    iso.tile(ctx, 3.40, 2.95, 3.45, 9.00, 0.007, '#FFFFFF');
+    // and the orchard down the right
+    iso.tile(ctx, 13.55, 2.95, B.W + M, 9.00, 0.005, '#9FDD98');
+    iso.tile(ctx, 13.55, 2.95, 13.60, 9.00, 0.007, '#FFFFFF');
+
+    /* Departments: a tinted floor block per section with its name on it, so
+       the shop reads as vegetables / fruit / dairy rather than one big room. */
+    (P.sections || []).forEach((z) => {
+      iso.tile(ctx, z.x0, z.y0, z.x1, z.y1, 0.009, z.tint);
+      iso.tile(ctx, z.x0, z.y0, z.x1, z.y0 + 0.06, 0.011, '#FFFFFF');
+      iso.tile(ctx, z.x0, z.y1 - 0.06, z.x1, z.y1, 0.011, '#FFFFFF');
+      const c = iso.s(z.x0 + 0.9, z.y0 + 0.3, 0.012);
+      ctx.save();
+      ctx.transform(1, 0.5, -1, 0.5, c.x, c.y);          // lie the text on the floor
+      text(ctx, z.name, 0, 0, Math.max(11, iso.TW * 0.17), '#8A7566');
+      ctx.restore();
     });
 
     iso.box(ctx, -M, -M, 0, B.H + M, 0, WALL, '#F3F7FD');
@@ -108,7 +130,7 @@ window.MSM = window.MSM || {};
     text(ctx, store.name.toUpperCase(), (B.W / 2 - 1.4) * iso.ZH, 0.33 * iso.ZH, 0.26 * iso.ZH, '#FFFFFF');
     ctx.restore();
 
-    iso.tile(ctx, 3.4, B.H - 0.9, 4.6, B.H - 0.1, 0.008, '#FFC53D');
+    iso.tile(ctx, P.entrance.x - 0.7, B.H - 0.9, P.entrance.x + 0.7, B.H - 0.1, 0.008, '#FFC53D');
   }
 
   /* ------------------------------------------------------------ fixtures */
@@ -166,8 +188,19 @@ window.MSM = window.MSM || {};
         item(ctx, MSM.econ.prod(prod.source.inputIndex),
              b.x0 + 0.55 + k * 0.25, b.y1 - 0.4, 0.22, 0.2);
       }
-    } else {
+    } else if (kind === 'tree') {
+      drawTree(ctx, prod, ps, b);
+    } else if (kind === 'machine') {
       drawOven(ctx, b, ps);
+    } else {
+      /* Generic maker for the stores that have no farm behind them. */
+      iso.box(ctx, b.x0 + 0.08, b.y0 + 0.1, b.x1 - 0.08, b.y1 - 0.1, 0, 0.72, '#7A8494');
+      iso.tile(ctx, b.x0 + 0.14, b.y0 + 0.16, b.x1 - 0.14, b.y1 - 0.16, 0.722, '#9AA5B5');
+      iso.faceL(ctx, b.y1 - 0.1, b.x0 + 0.18, b.x1 - 0.18, 0.14, 0.5, U.shade(prod.color, -0.1));
+      iso.faceL(ctx, b.y1 - 0.1, b.x0 + 0.3, b.x1 - 0.3, 0.24, 0.42, '#CDEEFF');
+      for (let k = 0; k < Math.min(ps.out, 4); k++) {
+        item(ctx, prod, b.x0 + 0.35 + (k % 2) * 0.4, b.y0 + 0.3 + ((k / 2) | 0) * 0.3, 0.72, 0.28);
+      }
     }
 
     // finished goods waiting to be picked up
@@ -250,97 +283,154 @@ window.MSM = window.MSM || {};
     }
   }
 
-  /* Side-on cow: barrel body, black patches, a proper head with ears, muzzle
-     and horns, four legs and a tail. The old blob had none of that. */
-  function drawCow(ctx, gx, gy) {
-    const u = iso.TW / 64, s = iso.s(gx, gy, 0);
-    const bw = 34 * u, bh = 19 * u;
-    const bodyY = s.y - bh - 9 * u;
-    shadow(ctx, gx, gy, 0.62);
+  /* A fruit tree: trunk, a cluster canopy, and the crop hanging in it. */
+  function drawTree(ctx, prod, ps, b) {
+    const cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2;
+    iso.tile(ctx, b.x0, b.y0, b.x1, b.y1, 0.006, '#8FD48A');
+    iso.tile(ctx, cx - 0.42, cy - 0.34, cx + 0.42, cy + 0.34, 0.008, '#7A5228');
 
-    // back legs then front legs, so the body sits between them
-    [[-11, 0], [7, 0]].forEach(([dx]) => {
-      rrect(ctx, s.x + dx * u, bodyY + bh - 2 * u, 6 * u, 12 * u, 2.6 * u);
-      ctx.fillStyle = '#E4E9F0'; ctx.fill();
-      rrect(ctx, s.x + dx * u, bodyY + bh + 6 * u, 6 * u, 4 * u, 2 * u);
-      ctx.fillStyle = '#3A3F49'; ctx.fill();
+    const u = iso.TW / 64, s = iso.s(cx, cy, 0);
+    shadow(ctx, cx, cy, 0.7);
+    rrect(ctx, s.x - 5 * u, s.y - 34 * u, 10 * u, 34 * u, 3 * u);
+    ctx.fillStyle = '#8A5A2B'; ctx.fill();
+
+    const CANOPY = ['#3E8F3A', '#4CA544', '#57B84E'];
+    [[0, -46, 20], [-15, -39, 15], [15, -39, 15], [-8, -55, 13], [9, -55, 13]]
+      .forEach(([dx, dy, r], i) => {
+        ctx.beginPath();
+        ctx.arc(s.x + dx * u, s.y + dy * u, r * u, 0, TAU2);
+        ctx.fillStyle = CANOPY[i % 3]; ctx.fill();
+      });
+
+    for (let k = 0; k < Math.min(ps.out, 6); k++) {
+      const a = (k / 6) * TAU2;
+      MSM.art.draw(ctx, prod.art,
+        s.x + Math.cos(a) * 16 * u, s.y - 44 * u + Math.sin(a) * 11 * u,
+        iso.TW * 0.22, prod.color);
+    }
+  }
+
+  /* A Friesian seen from the side, facing left. Built big enough that the
+     head, muzzle, ears, horns, hooves and tail tuft all actually read — the
+     earlier one was a white lozenge with a lump on the end. */
+  function drawCow(ctx, gx, gy) {
+    const u = (iso.TW / 64) * 1.25;
+    const s = iso.s(gx, gy, 0);
+    const X = (n) => s.x + n * u, Y = (n) => s.y + n * u;
+    const WHITE = '#FFFFFF', DARK = '#33383F', SHADE = '#DFE5EC';
+
+    shadow(ctx, gx, gy, 0.85);
+
+    // far pair of legs, shaded so they sit behind
+    [[-11, SHADE], [10, SHADE]].forEach(([lx, col]) => {
+      rrect(ctx, X(lx), Y(-15), 6.5 * u, 15 * u, 3 * u);
+      ctx.fillStyle = col; ctx.fill();
+      rrect(ctx, X(lx), Y(-4), 6.5 * u, 4.5 * u, 2 * u);
+      ctx.fillStyle = DARK; ctx.fill();
     });
 
-    // tail
+    // tail, thrown back over the rump
     ctx.beginPath();
-    ctx.moveTo(s.x + bw / 2 - 2 * u, bodyY + 4 * u);
-    ctx.quadraticCurveTo(s.x + bw / 2 + 6 * u, bodyY + 10 * u, s.x + bw / 2 + 3 * u, bodyY + 18 * u);
-    ctx.strokeStyle = '#E4E9F0'; ctx.lineWidth = 2.6 * u; ctx.lineCap = 'round'; ctx.stroke();
+    ctx.moveTo(X(17), Y(-33));
+    ctx.quadraticCurveTo(X(26), Y(-27), X(24), Y(-13));
+    ctx.strokeStyle = WHITE; ctx.lineWidth = 3.2 * u; ctx.lineCap = 'round'; ctx.stroke();
+    ell2(ctx, X(24), Y(-11), 2.6 * u, 4 * u, DARK);
 
     // barrel
-    rrect(ctx, s.x - bw / 2, bodyY, bw, bh, bh * 0.46);
-    ctx.fillStyle = '#FFFFFF'; ctx.fill();
+    rrect(ctx, X(-19), Y(-40), 38 * u, 24 * u, 11 * u);
+    ctx.fillStyle = WHITE; ctx.fill();
     ctx.save();
-    rrect(ctx, s.x - bw / 2, bodyY, bw, bh, bh * 0.46);
+    rrect(ctx, X(-19), Y(-40), 38 * u, 24 * u, 11 * u);
     ctx.clip();
-    ctx.fillStyle = '#3A3F49';
-    [[-5, 4, 7, 5], [9, 11, 5.5, 4], [4, 2, 4, 3]].forEach(([dx, dy, rx, ry]) => {
-      ctx.beginPath();
-      ctx.ellipse(s.x + dx * u, bodyY + dy * u, rx * u, ry * u, 0.4, 0, 7);
-      ctx.fill();
-    });
+    ctx.fillStyle = DARK;
+    [[-8, -33, 8, 6, 0.5], [8, -25, 6.5, 5, -0.3], [2, -38, 5, 3.5, 0.2]].forEach(
+      ([px, py, rx, ry, rot]) => {
+        ctx.beginPath();
+        ctx.ellipse(X(px), Y(py), rx * u, ry * u, rot, 0, TAU2);
+        ctx.fill();
+      });
     ctx.restore();
+    ell2(ctx, X(9), Y(-17), 6 * u, 4.2 * u, '#FFB9C6');            // udder
 
-    // udder
-    ell2(ctx, s.x - 2 * u, bodyY + bh - 1 * u, 6 * u, 4 * u, '#FFB6C1');
+    // near pair of legs, in front of the body
+    [[-15], [4]].forEach(([lx]) => {
+      rrect(ctx, X(lx), Y(-18), 7 * u, 18 * u, 3.2 * u);
+      ctx.fillStyle = WHITE; ctx.fill();
+      rrect(ctx, X(lx), Y(-4.5), 7 * u, 5 * u, 2.2 * u);
+      ctx.fillStyle = DARK; ctx.fill();
+    });
 
     // head
-    const hx = s.x - bw / 2 - 6 * u, hy2 = bodyY + 2 * u;
-    ctx.fillStyle = '#3A3F49';
-    [[-4, -7], [7, -8]].forEach(([dx, dy]) => {              // ears
-      ctx.beginPath();
-      ctx.ellipse(hx + dx * u, hy2 + dy * u, 4 * u, 2.6 * u, dx < 0 ? -0.6 : 0.6, 0, 7);
-      ctx.fill();
+    const hx = -30, hy = -33;
+    ctx.fillStyle = DARK;                                          // ears
+    ctx.beginPath(); ctx.ellipse(X(hx - 6), Y(hy - 5), 5.5 * u, 3 * u, -0.7, 0, TAU2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(X(hx + 10), Y(hy - 7), 5.5 * u, 3 * u, 0.7, 0, TAU2); ctx.fill();
+    ctx.fillStyle = '#EDE6D4';                                     // horns
+    ctx.beginPath(); ctx.arc(X(hx - 1), Y(hy - 10), 2.8 * u, 0, TAU2); ctx.fill();
+    ctx.beginPath(); ctx.arc(X(hx + 6), Y(hy - 11), 2.8 * u, 0, TAU2); ctx.fill();
+
+    rrect(ctx, X(hx - 5), Y(hy - 8), 20 * u, 19 * u, 7 * u);
+    ctx.fillStyle = WHITE; ctx.fill();
+    ctx.save();
+    rrect(ctx, X(hx - 5), Y(hy - 8), 20 * u, 19 * u, 7 * u);
+    ctx.clip();
+    ctx.fillStyle = DARK;
+    ctx.beginPath(); ctx.ellipse(X(hx + 11), Y(hy - 4), 6 * u, 6 * u, 0, 0, TAU2); ctx.fill();
+    ctx.restore();
+
+    rrect(ctx, X(hx - 7), Y(hy + 4), 16 * u, 9 * u, 4.5 * u);      // muzzle
+    ctx.fillStyle = '#FFC2CE'; ctx.fill();
+    ctx.fillStyle = '#C4808F';
+    [[-2.5, 7.5], [3, 7]].forEach(([px, py]) => {
+      ctx.beginPath(); ctx.ellipse(X(hx + px), Y(hy + py), 1.6 * u, 1.2 * u, 0, 0, TAU2); ctx.fill();
     });
-    ctx.fillStyle = '#E8E2D2';                                // horns
-    [[-1, -10], [6, -11]].forEach(([dx, dy]) => {
-      ctx.beginPath(); ctx.arc(hx + dx * u, hy2 + dy * u, 2.2 * u, 0, 7); ctx.fill();
-    });
-    rrect(ctx, hx - 7 * u, hy2 - 7 * u, 17 * u, 16 * u, 6 * u);
-    ctx.fillStyle = '#FFFFFF'; ctx.fill();
-    rrect(ctx, hx - 6 * u, hy2 + 3 * u, 13 * u, 8 * u, 4 * u);
-    ctx.fillStyle = '#FFC9D4'; ctx.fill();
-    ctx.fillStyle = '#3A3F49';
-    [[-2.5, 7.5], [2.5, 7]].forEach(([dx, dy]) => {           // nostrils
-      ctx.beginPath(); ctx.ellipse(hx + dx * u, hy2 + dy * u, 1.3 * u, 1 * u, 0, 0, 7); ctx.fill();
-    });
-    [[-2, 0], [7, -0.5]].forEach(([dx, dy]) => {              // eyes
-      ctx.beginPath(); ctx.arc(hx + dx * u, hy2 + dy * u, 1.7 * u, 0, 7); ctx.fill();
+    ctx.fillStyle = DARK;                                          // eyes
+    [[-1, -1], [8, -2]].forEach(([px, py]) => {
+      ctx.beginPath(); ctx.arc(X(hx + px), Y(hy + py), 1.9 * u, 0, TAU2); ctx.fill();
     });
   }
 
-  /** A hen: plump body, comb, beak, tail feathers. */
+  /* A plump hen: body, folded wing, comb, wattle, beak and tail feathers. */
   function drawHen(ctx, gx, gy) {
-    const u = iso.TW / 64, s = iso.s(gx, gy, 0);
-    const by = s.y - 15 * u;
-    shadow(ctx, gx, gy, 0.34);
-    ctx.fillStyle = '#E8A33C';                                // legs
-    [[-3, 0], [3, 0]].forEach(([dx]) => {
-      rrect(ctx, s.x + dx * u - 1 * u, by + 11 * u, 2 * u, 5 * u, 1 * u); ctx.fill();
+    const u = (iso.TW / 64) * 1.15;
+    const s = iso.s(gx, gy, 0);
+    const X = (n) => s.x + n * u, Y = (n) => s.y + n * u;
+    const WHITE = '#FFFFFF', COMB = '#E0413C', BEAK = '#F0A32E';
+
+    shadow(ctx, gx, gy, 0.46);
+
+    ctx.strokeStyle = BEAK; ctx.lineWidth = 2.2 * u; ctx.lineCap = 'round';
+    [[-3], [4]].forEach(([lx]) => {                                 // legs
+      ctx.beginPath(); ctx.moveTo(X(lx), Y(-8)); ctx.lineTo(X(lx), Y(-1)); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(X(lx - 2.5), Y(-0.5)); ctx.lineTo(X(lx + 2.5), Y(-0.5)); ctx.stroke();
     });
-    ctx.beginPath();                                          // tail
-    ctx.moveTo(s.x + 7 * u, by + 6 * u);
-    ctx.quadraticCurveTo(s.x + 15 * u, by - 2 * u, s.x + 11 * u, by + 9 * u);
-    ctx.closePath(); ctx.fillStyle = '#E4E9F0'; ctx.fill();
-    ell2(ctx, s.x, by + 5 * u, 9 * u, 7.5 * u, '#FFFFFF');     // body
-    ell2(ctx, s.x - 6 * u, by - 3 * u, 5.5 * u, 5.5 * u, '#FFFFFF');  // head
-    ctx.fillStyle = '#E0413C';                                // comb
-    [[-7.5, -8], [-5, -9.5], [-2.5, -8.5]].forEach(([dx, dy]) => {
-      ctx.beginPath(); ctx.arc(s.x + dx * u, by + dy * u, 2.1 * u, 0, 7); ctx.fill();
+
+    ctx.fillStyle = '#EDF1F6';                                      // tail feathers
+    [[-0.5, 14], [0.1, 17], [0.7, 14]].forEach(([rot, len]) => {
+      ctx.save();
+      ctx.translate(X(10), Y(-17));
+      ctx.rotate(rot - 0.7);
+      ctx.beginPath(); ctx.ellipse(len * u * 0.5, 0, len * u * 0.5, 2.6 * u, 0, 0, TAU2);
+      ctx.fill();
+      ctx.restore();
     });
-    ctx.fillStyle = '#E8A33C';                                // beak
-    ctx.beginPath();
-    ctx.moveTo(s.x - 11 * u, by - 3 * u);
-    ctx.lineTo(s.x - 15 * u, by - 1.5 * u);
-    ctx.lineTo(s.x - 11 * u, by - 0.5 * u);
-    ctx.closePath(); ctx.fill();
-    ctx.fillStyle = '#3A3F49';
-    ctx.beginPath(); ctx.arc(s.x - 7 * u, by - 4 * u, 1.5 * u, 0, 7); ctx.fill();
+
+    ell2(ctx, X(0), Y(-14), 13 * u, 11.5 * u, WHITE);               // body
+    ell2(ctx, X(2.5), Y(-13), 8 * u, 6 * u, '#E7EDF4');             // folded wing
+    ell2(ctx, X(-11), Y(-25), 8.5 * u, 8.5 * u, WHITE);             // head
+
+    ctx.fillStyle = COMB;                                           // comb
+    [[-14, -33], [-10.5, -35], [-7, -33.5]].forEach(([px, py]) => {
+      ctx.beginPath(); ctx.arc(X(px), Y(py), 3 * u, 0, TAU2); ctx.fill();
+    });
+    ctx.beginPath();                                                // beak
+    ctx.moveTo(X(-18), Y(-25.5));
+    ctx.lineTo(X(-24), Y(-23.5));
+    ctx.lineTo(X(-18), Y(-21.5));
+    ctx.closePath(); ctx.fillStyle = BEAK; ctx.fill();
+    ell2(ctx, X(-17), Y(-19), 2.4 * u, 3.2 * u, COMB);              // wattle
+    ctx.fillStyle = '#33383F';
+    ctx.beginPath(); ctx.arc(X(-13), Y(-27), 1.9 * u, 0, TAU2); ctx.fill();
   }
 
   const ell2 = (ctx, x, y, rx, ry, c) => {
@@ -458,22 +548,18 @@ window.MSM = window.MSM || {};
     text(ctx, '🗑️', t.x, t.y, iso.TW * 0.26, '#000');
   }
 
-  /* Where you last tapped, fading out. */
-  function drawWalkMark(ctx) {
-    const m = MSM.game.walkTo;
-    if (!m) return;
-    const s = iso.s(m.x, m.y, 0.01);
-    const age = U.clamp(1 - (m.t || 0) / 0.7, 0, 1);
-    ctx.save();
-    ctx.globalAlpha = 0.35 + age * 0.4;
-    ctx.beginPath();
-    ctx.ellipse(s.x, s.y, iso.TW * (0.16 + (1 - age) * 0.06), iso.TH * (0.16 + (1 - age) * 0.06), 0, 0, 7);
-    ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 3.5; ctx.stroke();
-    ctx.globalAlpha = 0.5;
-    ctx.beginPath();
-    ctx.ellipse(s.x, s.y, iso.TW * 0.05, iso.TH * 0.05, 0, 0, 7);
+  function drawStick(ctx) {
+    const st = R.stick;
+    if (!st) return;
+    const r = 46, kr = 22;
+    const d = Math.hypot(st.dx, st.dy), k = d > r ? r / d : 1;
+    ctx.globalAlpha = 0.3;
+    ctx.beginPath(); ctx.arc(st.ox, st.oy, r, 0, 7);
+    ctx.fillStyle = '#0b1c3d'; ctx.fill();
+    ctx.globalAlpha = 0.9;
+    ctx.beginPath(); ctx.arc(st.ox + st.dx * k, st.oy + st.dy * k, kr, 0, 7);
     ctx.fillStyle = '#FFFFFF'; ctx.fill();
-    ctx.restore();
+    ctx.globalAlpha = 1;
   }
 
   function drawTill(ctx) {
@@ -639,17 +725,18 @@ window.MSM = window.MSM || {};
         drawBubble(ctx, c, head);
       },
     }));
-    if (MSM.ent.stocker) {
-      const st = MSM.ent.stocker;
+    const CREW = ['#2F80F0', '#12B4A6', '#F2A03D', '#B45CE0'];
+    MSM.ent.stockers.forEach((st, i) => {
       items.push({ d: st.x + st.y + 0.3,
-                   fn: () => drawBody(ctx, st, { body: '#2F80F0', cap: '#FFC53D', legs: '#1B4F9B' }) });
-    }
+                   fn: () => drawBody(ctx, st,
+                     { body: CREW[i % CREW.length], cap: '#FFC53D', legs: '#1B4F9B' }) });
+    });
     const p = MSM.ent.player;
     items.push({ d: p.x + p.y + 0.35,
                  fn: () => drawBody(ctx, p, { body: '#FF3D7F', cap: '#16295C', legs: '#B0264F' }) });
 
     items.sort((a, b) => a.d - b.d).forEach((it) => it.fn());
     drawPops(ctx, dt);
-    drawWalkMark(ctx);
+    drawStick(ctx);
   };
 })();

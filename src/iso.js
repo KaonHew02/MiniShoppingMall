@@ -26,6 +26,7 @@ MSM.iso = {
     const k = 1 - Math.pow(0.0015, dt);
     this.cx += (tx - this.cx) * k;
     this.cy += (ty - this.cy) * k;
+    this.tx = tx; this.ty = ty;
     this.apply();
   },
 
@@ -53,9 +54,19 @@ MSM.iso = {
     const bB = 0.84 * this.vh / this.TH;
     const near = (a + bT) / 2, far = (a + bB) / 2;
 
+    /* Containing the view completely is not always possible: the shop is a
+       rectangle in world space but a DIAMOND on screen, and the crop beds and
+       the wheat field sit right on its corners. Clamping hard to the contained
+       box put four stations somewhere the camera could never look.
+       So containment gives way to the player: the box is widened to include
+       wherever they are standing. In the shop you never see past the gold rim;
+       walk into a corner and the corner is what you get. */
+    const px = this.tx == null ? this.cx : this.tx;
+    const py = this.ty == null ? this.cy : this.ty;
     const fit = (v, lo, hi) => (lo > hi ? (lo + hi) / 2 : v < lo ? lo : v > hi ? hi : v);
-    this.cx = fit(this.cx, -M + near, B.W + M - far);
-    this.cy = fit(this.cy, -M + near, B.H + M - far);
+
+    this.cx = fit(this.cx, Math.min(-M + near, px), Math.max(B.W + M - far, px));
+    this.cy = fit(this.cy, Math.min(-M + near, py), Math.max(B.H + M - far, py));
   },
 
   /** Recompute the projection from the camera. */

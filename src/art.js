@@ -106,6 +106,38 @@ window.MSM = window.MSM || {};
       ell(ctx, x, bodyTop + bodyH * 0.45, s * 0.05, s * 0.065, 0, '#FFFFFF');
     },
 
+    /* A yogurt pot: a tapered tub with a flavour band round it and a foil
+       lid crimped a little wider than the rim. Like the milk carton the tint
+       is near-white, so the tub paints its own greys and the band carries
+       the colour. */
+    yogurt(ctx, x, y, s, c) {
+      const wt = s * 0.42, wb = s * 0.34, h = s * 0.46, top = y - h;
+      const tub = () => {
+        ctx.beginPath();
+        ctx.moveTo(x - wt / 2, top); ctx.lineTo(x + wt / 2, top);
+        ctx.lineTo(x + wb / 2, y);   ctx.lineTo(x - wb / 2, y);
+        ctx.closePath();
+      };
+
+      tub(); fill(ctx, '#FFFFFF');
+      ctx.beginPath();                                    // shaded right side
+      ctx.moveTo(x + wt * 0.14, top); ctx.lineTo(x + wt / 2, top);
+      ctx.lineTo(x + wb / 2, y);      ctx.lineTo(x + wb * 0.14, y);
+      ctx.closePath();
+      fill(ctx, '#E3EAF3');
+
+      ctx.save(); tub(); ctx.clip();
+      ctx.fillStyle = c;
+      ctx.fillRect(x - wt, top + h * 0.34, wt * 2, h * 0.36);
+      ctx.fillStyle = U.shade(c, -0.2);
+      ctx.fillRect(x - wt, top + h * 0.58, wt * 2, h * 0.12);
+      ctx.restore();
+
+      ell(ctx, x, top, wt * 0.54, s * 0.055, 0, '#C9D4E3');
+      ell(ctx, x, top - s * 0.014, wt * 0.47, s * 0.045, 0, '#F4F8FC');
+      ell(ctx, x - wt * 0.15, top - s * 0.026, wt * 0.15, s * 0.015, -0.3, '#FFFFFF');
+    },
+
     /* A loaf: domed crust, flat bottom, pale cut face at the near end. */
     bread(ctx, x, y, s, c) {
       const w = s * 0.62, h = s * 0.44;
@@ -147,34 +179,41 @@ window.MSM = window.MSM || {};
       ctx.translate(x, y);
       ctx.lineCap = 'round';
 
-      [-1, 0, 1].forEach((k) => {
-        const lean = k * 0.15, topY = -s * (0.44 - Math.abs(k) * 0.05);
-        const ex = lean * s * 1.3, ey = topY;
+      /* Five beads floating near a stick still reads as a stick. A real ear
+         is a DENSE spike — overlapping grains the whole way up, tapering to
+         the tip — and it is about half the height of the whole stalk. */
+      [[-1, 0.86], [0, 1], [1, 0.86]].forEach(([k, hh]) => {
+        const lean = k * 0.2;
+        const stemTop = -s * 0.3 * hh, ex = lean * s * 0.3;
 
-        ctx.strokeStyle = U.shade(c, -0.3); ctx.lineWidth = s * 0.03;
+        ctx.strokeStyle = '#B0913F'; ctx.lineWidth = s * 0.026;
         ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.quadraticCurveTo(lean * s * 0.5, topY * 0.6, ex, ey);
+        ctx.moveTo(0, -s * 0.02);
+        ctx.quadraticCurveTo(lean * s * 0.08, stemTop * 0.55, ex, stemTop);
         ctx.stroke();
 
-        for (let i = 0; i < 5; i++) {                     // the ear
-          const t = i / 4;
-          const gx = ex + lean * s * 0.3 * t, gy = ey - s * 0.06 - t * s * 0.17;
+        const earH = s * 0.32 * hh, tipX = ex + lean * s * 0.09, tipY = stemTop - earH;
+        for (let i = 0; i < 7; i++) {
+          const t = i / 6;
+          const gx = ex + (tipX - ex) * t, gy = stemTop - earH * t;
+          const gw = s * 0.058 * (1 - t * 0.42);
           [-1, 1].forEach((d) => {
             ctx.beginPath();
-            ctx.ellipse(gx + d * s * 0.042, gy, s * 0.04, s * 0.058,
-                        d * 0.5 + lean * 0.8, 0, TAU);
-            fill(ctx, i % 2 ? U.shade(c, 0.18) : c);
+            ctx.ellipse(gx + d * gw * 0.66, gy, gw, gw * 1.55, d * 0.4 + lean * 0.6, 0, TAU);
+            fill(ctx, d < 0 ? U.shade(c, -0.12) : c);
           });
         }
-        ctx.strokeStyle = U.shade(c, 0.3); ctx.lineWidth = s * 0.018;
-        ctx.beginPath();                                   // awn off the tip
-        ctx.moveTo(ex + lean * s * 0.3, ey - s * 0.23);
-        ctx.lineTo(ex + lean * s * 0.42, ey - s * 0.36);
-        ctx.stroke();
+        ctx.strokeStyle = U.shade(c, 0.3); ctx.lineWidth = s * 0.013;
+        [-0.55, 0, 0.55].forEach((a) => {                  // awns off the tip
+          ctx.beginPath();
+          ctx.moveTo(tipX, tipY + s * 0.02);
+          ctx.quadraticCurveTo(tipX + a * s * 0.04, tipY - s * 0.09,
+                               tipX + a * s * 0.1, tipY - s * 0.17);
+          ctx.stroke();
+        });
       });
 
-      rr(ctx, -s * 0.095, -s * 0.2, s * 0.19, s * 0.07, s * 0.03, U.shade(c, -0.45));
+      rr(ctx, -s * 0.08, -s * 0.13, s * 0.16, s * 0.055, s * 0.026, '#8A6E3A');
       ctx.restore();
     },
 
@@ -509,16 +548,51 @@ window.MSM = window.MSM || {};
       rr(ctx, x + s * 0.02, y - s * 0.82, s * 0.07, s * 0.24, s * 0.03, '#FF5C8A');
     },
 
+    /* An even arc with three blobs on it is a croquet hoop. A croissant is a
+       crescent that is FAT in the middle and tapers to curled horns, and the
+       rolled-up dough shows as fat segments across it, not dots on top. */
     croissant(ctx, x, y, s, c) {
-      const cy = y - s * 0.24;
-      ctx.beginPath();
-      ctx.arc(x, cy + s * 0.16, s * 0.34, Math.PI * 1.08, Math.PI * 1.92);
-      ctx.arc(x, cy + s * 0.3, s * 0.3, Math.PI * 1.9, Math.PI * 1.1, true);
-      ctx.closePath(); fill(ctx, c);
-      ctx.fillStyle = U.shade(c, -0.22);
-      [-0.16, 0, 0.16].forEach((o) => {
-        ctx.beginPath(); ctx.ellipse(x + o * s, cy - s * 0.05, s * 0.03, s * 0.09, o, 0, TAU); ctx.fill();
-      });
+      /* A smooth tapered band is a pasty. A croissant is built from ROLLS:
+         overlapping lobes along a crescent, biggest in the middle, shrinking
+         to a point at each horn. Draw the lobes and the silhouette comes out
+         right on its own. */
+      ctx.save();
+      ctx.translate(x, y - s * 0.03);
+      const R = s * 0.3, A0 = Math.PI * 1.05, A1 = Math.PI * 1.95;
+      const N = 11;
+      const at = (i) => {
+        const t = i / (N - 1), a = A0 + (A1 - A0) * t;
+        return {
+          t, a,
+          x: Math.cos(a) * R,
+          y: Math.sin(a) * R,
+          r: s * (0.022 + 0.108 * Math.sin(Math.PI * t)),
+        };
+      };
+
+      for (let i = 0; i < N; i++) {                       // bodies
+        const p = at(i);
+        ctx.beginPath();
+        ctx.ellipse(p.x, p.y, p.r * 1.16, p.r, p.a + Math.PI / 2, 0, TAU);
+        fill(ctx, c);
+      }
+      for (let i = 0; i < N; i++) {                       // lit crown per roll
+        const p = at(i);
+        ctx.beginPath();
+        ctx.ellipse(p.x - p.r * 0.18, p.y - p.r * 0.34, p.r * 0.78, p.r * 0.42,
+                    p.a + Math.PI / 2, 0, TAU);
+        fill(ctx, U.shade(c, 0.2));
+      }
+      for (let i = 1; i < N; i++) {                       // seams between rolls
+        const p = at(i), q = at(i - 1);
+        const mx = (p.x + q.x) / 2, my = (p.y + q.y) / 2;
+        const rr2 = Math.min(p.r, q.r) * 1.05;
+        ctx.beginPath();
+        ctx.moveTo(mx + Math.cos(p.a) * rr2, my + Math.sin(p.a) * rr2);
+        ctx.lineTo(mx - Math.cos(p.a) * rr2, my - Math.sin(p.a) * rr2);
+        stroke(ctx, U.shade(c, -0.24), s * 0.016);
+      }
+      ctx.restore();
     },
 
     cake(ctx, x, y, s, c) {
@@ -531,14 +605,28 @@ window.MSM = window.MSM || {};
     },
 
     /* ----------------------------------------------------------- sports */
+    /* A straight cross with one arc off to the side is a beach ball. The
+       basketball pattern is a horizontal seam, a vertical seam, and two more
+       curving pole to pole — and those two are one ellipse. */
     ball(ctx, x, y, s, c) {
-      const cy = y - s * 0.34;
-      ell(ctx, x, cy, s * 0.33, s * 0.33, 0, c);
-      ctx.beginPath(); ctx.moveTo(x - s * 0.33, cy); ctx.lineTo(x + s * 0.33, cy);
-      ctx.moveTo(x, cy - s * 0.33); ctx.lineTo(x, cy + s * 0.33);
-      stroke(ctx, U.shade(c, -0.45), s * 0.045);
-      ctx.beginPath(); ctx.arc(x - s * 0.42, cy, s * 0.3, -0.7, 0.7);
-      stroke(ctx, U.shade(c, -0.45), s * 0.045);
+      const R = s * 0.33, cy = y - R;
+      ell(ctx, x, cy, R, R, 0, c);
+
+      ctx.save();
+      ctx.beginPath(); ctx.arc(x, cy, R, 0, TAU); ctx.clip();
+      ell(ctx, x + R * 0.46, cy + R * 0.52, R * 0.92, R * 0.92, 0, U.shade(c, -0.15));
+      ell(ctx, x - R * 0.38, cy - R * 0.42, R * 0.26, R * 0.17, -0.6, U.shade(c, 0.3));
+      ctx.restore();
+
+      const seam = U.shade(c, -0.55), lw = s * 0.024;
+      ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(x - R, cy); ctx.lineTo(x + R, cy);
+      ctx.moveTo(x, cy - R); ctx.lineTo(x, cy + R);
+      stroke(ctx, seam, lw);
+      ctx.beginPath(); ctx.ellipse(x, cy, R * 0.62, R, 0, 0, TAU);
+      stroke(ctx, seam, lw);
+      ctx.beginPath(); ctx.arc(x, cy, R - lw * 0.35, 0, TAU);
+      stroke(ctx, U.shade(c, -0.28), lw * 0.6);
     },
 
     /* Side-on trainer: heel, instep, toe, thick white sole. */
@@ -619,28 +707,68 @@ window.MSM = window.MSM || {};
       rr(ctx, x - s * 0.26, y - s * 0.26, s * 0.52, s * 0.07, 0, U.shade(c, -0.25));
     },
 
+    /* A bar with a clock stuck on it. A watch reads from its parts: two strap
+       ends rather than one continuous band, a bezel around the dial, tick
+       marks, two hands of different lengths, and a crown on the right. */
     watch(ctx, x, y, s, c) {
-      rr(ctx, x - s * 0.055, y - s * 0.64, s * 0.11, s * 0.64, s * 0.035, U.shade(c, -0.42));
-      rr(ctx, x - s * 0.155, y - s * 0.5, s * 0.31, s * 0.27, s * 0.07, c);
-      ell(ctx, x, y - s * 0.365, s * 0.1, s * 0.1, 0, '#FFFFFF');
-      ctx.strokeStyle = '#3E4A66'; ctx.lineWidth = Math.max(0.7, s * 0.022); ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(x, y - s * 0.365); ctx.lineTo(x, y - s * 0.43);
-      ctx.moveTo(x, y - s * 0.365); ctx.lineTo(x + s * 0.05, y - s * 0.35);
-      ctx.stroke();
-      rr(ctx, x + s * 0.15, y - s * 0.44, s * 0.03, s * 0.06, s * 0.015, U.shade(c, -0.3));
+      const cw = s * 0.33, ch = s * 0.3, dy = y - s * 0.42, sw = s * 0.17;
+      const strap = U.shade(c, -0.5);
+
+      rr(ctx, x - sw / 2, y - s * 0.76, sw, s * 0.26, sw * 0.3, strap);
+      rr(ctx, x - sw / 2, y - s * 0.32, sw, s * 0.32, sw * 0.3, strap);
+      ctx.fillStyle = U.shade(c, -0.72);
+      [0.1, 0.17].forEach((d) => {
+        ctx.beginPath();
+        ctx.ellipse(x, y - s * d, s * 0.014, s * 0.014, 0, 0, TAU);
+        ctx.fill();
+      });
+      rr(ctx, x - sw * 0.66, y - s * 0.3, sw * 1.32, s * 0.05, s * 0.02, U.shade(c, 0.12));
+
+      rr(ctx, x + cw / 2 - s * 0.004, dy - s * 0.03, s * 0.032, s * 0.06, s * 0.014,
+         U.shade(c, -0.25));                                     // crown
+      rr(ctx, x - cw / 2, dy - ch / 2, cw, ch, s * 0.08, U.shade(c, -0.08));
+      rr(ctx, x - cw / 2 + s * 0.02, dy - ch / 2 + s * 0.02,
+         cw - s * 0.04, ch - s * 0.04, s * 0.062, '#F8FAFF');     // dial
+
+      ctx.fillStyle = '#9AA6BE';
+      for (let i = 0; i < 4; i++) {
+        const a = i * Math.PI / 2;
+        ctx.beginPath();
+        ctx.ellipse(x + Math.cos(a) * cw * 0.31, dy + Math.sin(a) * ch * 0.31,
+                    s * 0.013, s * 0.013, 0, 0, TAU);
+        ctx.fill();
+      }
+      ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(x, dy); ctx.lineTo(x, dy - ch * 0.27);
+      stroke(ctx, '#2B3450', s * 0.022);
+      ctx.beginPath(); ctx.moveTo(x, dy); ctx.lineTo(x + cw * 0.25, dy + ch * 0.09);
+      stroke(ctx, '#2B3450', s * 0.018);
+      ell(ctx, x, dy, s * 0.016, s * 0.016, 0, '#2B3450');
     },
 
     /* ------------------------------------------------------ electronics */
     /* Open case with the two buds sitting in it. The tint is near-white, so
        the case paints its own grey. */
+    /* Two white blobs in a grey box read as teeth. What makes it a case is
+       the lid standing open BEHIND the buds, and the body drawn over their
+       stems so they are sitting down in it rather than lying on it. */
     buds(ctx, x, y, s) {
-      rr(ctx, x - s * 0.22, y - s * 0.36, s * 0.44, s * 0.36, s * 0.11, '#C2CFE0');
-      rr(ctx, x - s * 0.22, y - s * 0.36, s * 0.44, s * 0.14, s * 0.1, '#A8B7CC');
+      const w = s * 0.44, h = s * 0.3, x0 = x - w / 2, top = y - h;
+
+      rr(ctx, x0 + w * 0.04, top - h * 0.82, w * 0.92, h * 0.9, s * 0.05, '#DCE4F0');
+      rr(ctx, x0 + w * 0.04, top - h * 0.82, w * 0.92, h * 0.34, s * 0.05, '#C3CFE0');
+      rr(ctx, x0 + w * 0.02, top - h * 0.16, w * 0.96, h * 0.18, s * 0.03, '#AFBDD2');
+
       [-1, 1].forEach((d) => {
-        ell(ctx, x + d * s * 0.09, y - s * 0.17, s * 0.058, s * 0.062, 0, '#FFFFFF');
-        rr(ctx, x + d * s * 0.09 - s * 0.022, y - s * 0.16, s * 0.044, s * 0.11, s * 0.02, '#FFFFFF');
+        const bx = x + d * w * 0.2;
+        rr(ctx, bx - s * 0.026, top - h * 0.5, s * 0.052, h * 0.9, s * 0.024, '#FFFFFF');
+        ell(ctx, bx, top - h * 0.54, s * 0.058, s * 0.052, 0, '#FFFFFF');
+        ell(ctx, bx + d * s * 0.02, top - h * 0.52, s * 0.024, s * 0.03, 0, '#D3DDEC');
       });
+
+      rr(ctx, x0, top, w, h, s * 0.085, '#F4F7FC');
+      rr(ctx, x0, top, w, h * 0.22, s * 0.085, '#E1E8F3');
+      ell(ctx, x, top + h * 0.62, s * 0.022, s * 0.022, 0, '#5FE08D');
     },
 
     /* A rounded rectangle in the product tint is a coloured card, not a

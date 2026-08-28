@@ -273,7 +273,7 @@ window.MSM = window.MSM || {};
     'prod.watermelon': '西瓜', 'prod.strawberry': '草莓', 'prod.blueberry': '蓝莓',
     'prod.apple': '苹果', 'prod.banana': '香蕉', 'prod.orange': '橙子',
     'prod.milk': '牛奶', 'prod.egg': '鸡蛋', 'prod.bread': '面包',
-    'prod.bacon': '培根', 'prod.wheat': '小麦',
+    'prod.bacon': '培根', 'prod.wheat': '小麦', 'prod.yogurt': '酸奶',
     'prod.espresso': '浓缩咖啡', 'prod.latte': '拿铁',
     'prod.croissant': '可颂', 'prod.cake': '蛋糕',
     'prod.ball': '篮球', 'prod.shoes': '跑鞋', 'prod.racket': '球拍',
@@ -286,7 +286,7 @@ window.MSM = window.MSM || {};
     'src.watermelon': '西瓜地', 'src.strawberry': '草莓地', 'src.blueberry': '蓝莓丛',
     'src.apple': '苹果树', 'src.banana': '香蕉树', 'src.orange': '橙子树',
     'src.milk': '奶牛', 'src.egg': '鸡舍', 'src.bread': '烤炉',
-    'src.bacon': '猪圈', 'src.wheat': '麦田',
+    'src.bacon': '猪圈', 'src.wheat': '麦田', 'src.yogurt': '酸奶槽',
   };
 
   /* ------------------------------------------------------------ zh-TW */
@@ -421,7 +421,7 @@ window.MSM = window.MSM || {};
     'prod.watermelon': '西瓜', 'prod.strawberry': '草莓', 'prod.blueberry': '藍莓',
     'prod.apple': '蘋果', 'prod.banana': '香蕉', 'prod.orange': '柳橙',
     'prod.milk': '牛奶', 'prod.egg': '雞蛋', 'prod.bread': '麵包',
-    'prod.bacon': '培根', 'prod.wheat': '小麥',
+    'prod.bacon': '培根', 'prod.wheat': '小麥', 'prod.yogurt': '優格',
     'prod.espresso': '濃縮咖啡', 'prod.latte': '拿鐵',
     'prod.croissant': '可頌', 'prod.cake': '蛋糕',
     'prod.ball': '籃球', 'prod.shoes': '跑鞋', 'prod.racket': '球拍',
@@ -434,7 +434,7 @@ window.MSM = window.MSM || {};
     'src.watermelon': '西瓜地', 'src.strawberry': '草莓地', 'src.blueberry': '藍莓叢',
     'src.apple': '蘋果樹', 'src.banana': '香蕉樹', 'src.orange': '柳橙樹',
     'src.milk': '乳牛', 'src.egg': '雞舍', 'src.bread': '烤爐',
-    'src.bacon': '豬圈', 'src.wheat': '麥田',
+    'src.bacon': '豬圈', 'src.wheat': '麥田', 'src.yogurt': '優格槽',
   };
 
   /* --------------------------------------------------------------- ms */
@@ -568,7 +568,7 @@ window.MSM = window.MSM || {};
     'prod.watermelon': 'Tembikai', 'prod.strawberry': 'Strawberi', 'prod.blueberry': 'Beri Biru',
     'prod.apple': 'Epal', 'prod.banana': 'Pisang', 'prod.orange': 'Oren',
     'prod.milk': 'Susu', 'prod.egg': 'Telur', 'prod.bread': 'Roti',
-    'prod.bacon': 'Bakon', 'prod.wheat': 'Gandum',
+    'prod.bacon': 'Bakon', 'prod.wheat': 'Gandum', 'prod.yogurt': 'Yogurt',
     'prod.espresso': 'Espresso', 'prod.latte': 'Latte',
     'prod.croissant': 'Croissant', 'prod.cake': 'Kek',
     'prod.ball': 'Bola Keranjang', 'prod.shoes': 'Kasut Sukan', 'prod.racket': 'Raket',
@@ -584,6 +584,7 @@ window.MSM = window.MSM || {};
     'src.apple': 'Pokok Epal', 'src.banana': 'Pokok Pisang', 'src.orange': 'Pokok Oren',
     'src.milk': 'Lembu', 'src.egg': 'Reban Ayam', 'src.bread': 'Ketuhar',
     'src.bacon': 'Kandang Babi', 'src.wheat': 'Ladang Gandum',
+    'src.yogurt': 'Tangki Yogurt',
   };
 
   const PACKS = { en: EN, 'zh-CN': ZH, 'zh-TW': TW, ms: MS };

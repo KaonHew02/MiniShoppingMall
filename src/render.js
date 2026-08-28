@@ -226,7 +226,9 @@ window.MSM = window.MSM || {};
     } else if (kind === 'tree') {
       drawTree(ctx, prod, ps, b);
     } else if (kind === 'machine') {
-      drawOven(ctx, b, ps);
+      drawOven(ctx, b, ps, prod);
+    } else if (kind === 'vat') {
+      drawVat(ctx, b, ps, prod);
     } else {
       /* Generic maker for the stores that have no farm behind them. */
       iso.box(ctx, b.x0 + 0.08, b.y0 + 0.1, b.x1 - 0.08, b.y1 - 0.1, 0, 0.72, '#7A8494');
@@ -251,7 +253,8 @@ window.MSM = window.MSM || {};
     const hungry = inp >= 0 && ps.feed <= 1;
     if (!hungry && ps.out === 0) return;
 
-    const t = iso.s((b.x0 + b.x1) / 2, b.y0 + 0.2, kind === 'machine' ? 1.5 : 1.2);
+    const t = iso.s((b.x0 + b.x1) / 2, b.y0 + 0.2,
+                    kind === 'machine' || kind === 'vat' ? 1.5 : 1.2);
     tag(ctx, t.x, t.y,
         hungry ? MSM.econ.prod(inp).glyph + ' ' + ps.feed : prod.glyph + ' ' + ps.out,
         hungry ? '#FFD6D6' : '#FFFFFF');
@@ -273,7 +276,43 @@ window.MSM = window.MSM || {};
   /* A stone baker's oven: plinth, arched mouth with the fire showing, a
      chimney, and loaves resting on the hot top. The flat grey box with a
      slot in it read as a photocopier. */
-  function drawOven(ctx, b, ps) {
+  /* The yogurt vat: a stainless tub with two hoop bands, a lid proud of the
+     rim, and a sight glass on the front that fills with the milk it is
+     holding — so you can see it is hungry without reading the tag. */
+  function drawVat(ctx, b, ps, prod) {
+    iso.box(ctx, b.x0, b.y0, b.x1, b.y1, 0, 0.18, '#6E7686');
+    iso.box(ctx, b.x0 + 0.12, b.y0 + 0.12, b.x1 - 0.12, b.y1 - 0.12, 0.18, 0.92, '#C3D0E0');
+    iso.tile(ctx, b.x0 + 0.16, b.y0 + 0.16, b.x1 - 0.16, b.y1 - 0.16, 0.922, '#E4EBF5');
+
+    [0.34, 0.72].forEach((z) => {
+      iso.faceL(ctx, b.y1 - 0.12, b.x0 + 0.12, b.x1 - 0.12, z, z + 0.05, '#98A7BC');
+      iso.faceR(ctx, b.x1 - 0.12, b.y0 + 0.12, b.y1 - 0.12, z, z + 0.05, '#8B9AB0');
+    });
+
+    iso.box(ctx, b.x0 + 0.22, b.y0 + 0.22, b.x1 - 0.22, b.y1 - 0.22, 0.92, 1.06, '#AFBED2');
+    iso.tile(ctx, b.x0 + 0.26, b.y0 + 0.26, b.x1 - 0.26, b.y1 - 0.26, 1.062, '#D7E1EE');
+    const mx = (b.x0 + b.x1) / 2, my = (b.y0 + b.y1) / 2;
+    iso.box(ctx, mx - 0.1, my - 0.1, mx + 0.1, my + 0.1, 1.06, 1.18, '#7E8DA3');
+
+    onFace(ctx, b.x0 + 0.12, b.y1 - 0.12, 0.9, (c, unit) => {
+      const w = (b.x1 - b.x0 - 0.24) * unit, h = 0.72 * unit;
+      const gx = w * 0.14, gw = w * 0.11, gy = h * 0.14, gh = h * 0.58;
+      c.fillStyle = '#8B9AB0'; c.fillRect(gx, gy, gw, gh);
+      const lvl = U.clamp(ps.feed / CFG.FEED_CAP, 0, 1);
+      c.fillStyle = '#F7FAFE';
+      c.fillRect(gx + gw * 0.2, gy + gh * (1 - lvl * 0.9), gw * 0.6, gh * lvl * 0.9);
+
+      c.fillStyle = '#7E8DA3';                                   // tap
+      c.fillRect(w * 0.6, h * 0.4, w * 0.2, h * 0.1);
+      c.fillRect(w * 0.74, h * 0.4, w * 0.06, h * 0.3);
+    });
+
+    for (let k = 0; k < Math.min(ps.out, 3); k++) {
+      item(ctx, prod, b.x0 + 0.45 + k * 0.35, b.y0 + 0.55, 1.18, 0.24);
+    }
+  }
+
+  function drawOven(ctx, b, ps, prod) {
     const w = b.x1 - b.x0, d = b.y1 - b.y0;
 
     iso.box(ctx, b.x0, b.y0, b.x1, b.y1, 0, 0.22, '#6E6257');            // plinth
@@ -314,7 +353,7 @@ window.MSM = window.MSM || {};
 
     // whatever it has baked, cooling on top
     for (let k = 0; k < Math.min(ps.out, 3); k++) {
-      item(ctx, MSM.econ.prod(3), b.x0 + 0.35 + k * 0.32, b.y0 + 0.55, 1.02, 0.26);
+      item(ctx, prod, b.x0 + 0.35 + k * 0.32, b.y0 + 0.55, 1.02, 0.26);
     }
   }
 

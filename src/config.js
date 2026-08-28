@@ -92,6 +92,7 @@ MSM.CFG = {
       { x0: 0.60,  y0: 11.00, x1: 2.40,  y1: 12.30 },  // 14 oven
       { x0: 0.60,  y0: 5.80,  x1: 3.10,  y1: 7.40 },   // 15 pig pen
       { x0: 21.30, y0: 0.60,  x1: 23.00, y1: 1.90 },   // 16 wheat field
+      { x0: 14.60, y0: 9.60,  x1: 16.40, y1: 11.00 },  // 17 yogurt vat
     ],
     pads: [
       { x0: 0.60,  y0: 2.20,  x1: 1.30,  y1: 2.90 },
@@ -111,8 +112,9 @@ MSM.CFG = {
       { x0: 2.70,  y0: 11.30, x1: 3.40,  y1: 12.00 },
       { x0: 3.45,  y0: 5.80,  x1: 4.15,  y1: 6.50 },
       { x0: 21.30, y0: 2.20,  x1: 22.00, y1: 2.90 },
+      { x0: 15.30, y0: 11.30, x1: 16.00, y1: 12.00 },
     ],
-    /* Six vegetables, six fruit, four dairy & bakery. */
+    /* Six vegetables, six fruit, five dairy & bakery. */
     shelves: [
       { x0: 4.60,  y0: 4.40, x1: 5.85,  y1: 5.30 },
       { x0: 6.55,  y0: 4.40, x1: 7.80,  y1: 5.30 },
@@ -130,14 +132,15 @@ MSM.CFG = {
       { x0: 6.55,  y0: 9.60, x1: 7.80,  y1: 10.50 },
       { x0: 8.50,  y0: 9.60, x1: 9.75,  y1: 10.50 },
       { x0: 10.45, y0: 9.60, x1: 11.70, y1: 10.50 },
+      { x0: 12.40, y0: 9.60, x1: 13.65, y1: 10.50 },
     ],
     lanes: [6.20, 8.15, 10.10, 12.05, 14.00, 16.20,
             6.20, 8.15, 10.10, 12.05, 14.00, 16.20,
-            6.20, 8.15, 10.10, 12.05],
+            6.20, 8.15, 10.10, 12.05, 14.00],
     sections: [
       { name: 'VEGETABLES',     x0: 4.35, y0: 4.10, x1: 16.00, y1: 6.30,  tint: '#BFEAB6' },
       { name: 'FRUIT',          x0: 4.35, y0: 6.70, x1: 16.00, y1: 8.90,  tint: '#FFDCA8' },
-      { name: 'DAIRY & BAKERY', x0: 4.35, y0: 9.30, x1: 12.10, y1: 11.50, tint: '#CFE2FF' },
+      { name: 'DAIRY & BAKERY', x0: 4.35, y0: 9.30, x1: 14.05, y1: 11.50, tint: '#CFE2FF' },
     ],
     stockLane: 3.40,
     walkway: 12.35,
@@ -165,6 +168,7 @@ MSM.CFG = {
         { id: 'wheat',      cost: 950 },
         { id: 'milk',       cost: 1600 },
         { id: 'bread',      cost: 2600 },
+        { id: 'yogurt',     cost: 3400 },
         { id: 'egg',        cost: 4200 },
         { id: 'bacon',      cost: 6000 },
         { id: 'eggplant',   cost: 8500 },
@@ -216,6 +220,10 @@ MSM.CFG = {
         /* Not sold — wheat is what the cow and the oven eat. */
         { id:'wheat',      name:'Wheat',      glyph:'\ud83c\udf3e', color:'#E8C86A', price:0,   restock:1.5, art:'wheat',
           sell:false, source:{ kind:'crop', label:'Wheat Field' } },
+
+        /* Made from milk, so it sits at the end of the array — see above. */
+        { id:'yogurt',     name:'Yogurt',     glyph:'🥣', color:'#EFD3E4', price:48,  restock:3.1, art:'yogurt',
+          source:{ kind:'vat', label:'Yogurt Vat', input:'milk' } },
       ],
     },
     {

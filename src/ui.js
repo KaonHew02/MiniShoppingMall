@@ -167,6 +167,60 @@ window.MSM = window.MSM || {};
   const chip = (glyph, color) =>
     `<div class="row-ico" style="background:${U.shade(color, 0.5)}">${glyph}</div>`;
 
+  /* An emoji is a picture of a tomato drawn by whoever made the font. The
+     shelf already has our own tomato, so the list shows THAT — the same
+     painter the world uses, rendered once per product into a data URL and
+     kept. Keyed on the tint too, so a recoloured product repaints. */
+  const thumbs = {};
+  function thumb(prod, px) {
+    px = px || 52;
+    const key = prod.art + '|' + prod.color + '|' + px;
+    if (thumbs[key]) return thumbs[key];
+    const dpr = Math.min(devicePixelRatio || 1, 3);
+    const cv = document.createElement('canvas');
+    cv.width = px * dpr; cv.height = px * dpr;
+    const c = cv.getContext('2d');
+
+    const ax = px / 2, ay = px * 0.9, S = px * 0.8;
+    const paint = (s, bx, by) => {
+      c.setTransform(dpr, 0, 0, dpr, 0, 0);
+      c.clearRect(0, 0, px, px);
+      MSM.art.draw(c, prod.art, bx, by, s, prod.color);
+    };
+
+    /* Painters stand their item ON the baseline, and they are all different
+       heights — a loaf of bread ended up stranded in the bottom corner while
+       a carton filled the tile. Paint once, measure the ink, then repaint it
+       centred and scaled to fill, so every tile in the list matches. */
+    paint(S, ax, ay);
+    const d = c.getImageData(0, 0, cv.width, cv.height).data;
+    let x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1;
+    for (let p = 0; p < cv.width * cv.height; p++) {
+      if (d[p * 4 + 3] < 10) continue;
+      const ix = p % cv.width, iy = (p / cv.width) | 0;
+      if (ix < x0) x0 = ix;
+      if (ix > x1) x1 = ix;
+      if (iy < y0) y0 = iy;
+      if (iy > y1) y1 = iy;
+    }
+    if (x1 > x0 && y1 > y0) {
+      const pad = px * 0.1;
+      const k = Math.min((px - pad * 2) / ((x1 - x0 + 1) / dpr),
+                         (px - pad * 2) / ((y1 - y0 + 1) / dpr));
+      const cxIn = (x0 + x1 + 1) / (2 * dpr), cyIn = (y0 + y1 + 1) / (2 * dpr);
+      paint(S * k, px / 2 - (cxIn - ax) * k, px / 2 - (cyIn - ay) * k);
+    }
+    return (thumbs[key] = cv.toDataURL());
+  }
+
+  const artChip = (prod) =>
+    `<div class="row-ico art" style="background:radial-gradient(circle at 50% 34%,#fff 4%,${
+      U.shade(prod.color, 0.72)} 100%)"><img src="${thumb(prod)}" alt=""></div>`;
+
+  const meter = (kind, label, have, cap) =>
+    `<div class="meter ${kind}"><i style="width:${Math.round(
+      U.clamp(have / cap, 0, 1) * 100)}%"></i><span>${label} ${have}/${cap}</span></div>`;
+
   /* ------------------------------------------------------------- bodies */
   function productsBody() {
     const seg = [t('buy.1'), t('buy.10'), t('buy.max')].map((l, k) => {
@@ -178,7 +232,7 @@ window.MSM = window.MSM || {};
       const ps = MSM.econ.pstate(n), cash = MSM.state.cash;
       if (!ps.built) {
         const next = MSM.econ.nextBuild() === n;
-        return `<div class="row locked">${chip(prod.glyph, prod.color)}
+        return `<div class="row prod locked">${artChip(prod)}
           <div class="row-main">
             <div class="row-name">${prod.name}</div>
             <div class="row-sub">${next
@@ -190,14 +244,16 @@ window.MSM = window.MSM || {};
       const count = UI.buyMode === 'max' ? Math.max(1, MSM.econ.maxBuy(n, cash)) : UI.buyMode;
       const cost = MSM.econ.upgradeCost(n, count);
       const ms = MSM.econ.nextMilestone(ps.level);
-      return `<div class="row">${chip(prod.glyph, prod.color)}
+      return `<div class="row prod">${artChip(prod)}
         <div class="row-main">
-          <div class="row-name">${prod.name} <span style="color:#42538C">${t('lv', { n: ps.level })}</span></div>
+          <div class="row-name">${prod.name}<span class="lvl">${t('lv', { n: ps.level })}</span></div>
           <div class="row-sub">${t('prod.price', {
-            price: '$' + U.money(MSM.econ.price(n)), sec: MSM.econ.restock(n).toFixed(2) })}</div>
-          <div class="row-sub">${t('prod.stock', {
-            a: ps.shelf, b: CFG.SHELF_CAP, c: ps.out, d: CFG.CRATE_CAP })}${
+            price: '$' + U.money(MSM.econ.price(n)), sec: MSM.econ.restock(n).toFixed(2) })}${
             ms ? t('prod.next', { n: ms.lvl }) : t('prod.maxed')}</div>
+          <div class="meters">
+            ${meter('shelf', t('meter.shelf'), ps.shelf, CFG.SHELF_CAP)}
+            ${meter('crate', t('meter.crate'), ps.out, CFG.CRATE_CAP)}
+          </div>
         </div>
         <button class="btn" data-act="upgrade" data-i="${n}" ${cash >= cost ? '' : 'disabled'}>
           ${t('btn.upgrade', { n: count })}<small>$${U.money(cost)}</small></button>

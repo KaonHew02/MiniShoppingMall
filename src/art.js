@@ -139,48 +139,98 @@ window.MSM = window.MSM || {};
     },
 
     /* A tied sheaf of wheat. */
+    /* Loose sticks with blobs floating near them. A sheaf reads far better:
+       three stalks rising from one point, each carrying a proper ear of
+       paired grains, all tied at the waist. */
     wheat(ctx, x, y, s, c) {
-      ctx.strokeStyle = c; ctx.lineWidth = s * 0.055; ctx.lineCap = 'round';
-      [-0.22, -0.08, 0.08, 0.22].forEach((o, i) => {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.lineCap = 'round';
+
+      [-1, 0, 1].forEach((k) => {
+        const lean = k * 0.15, topY = -s * (0.44 - Math.abs(k) * 0.05);
+        const ex = lean * s * 1.3, ey = topY;
+
+        ctx.strokeStyle = U.shade(c, -0.3); ctx.lineWidth = s * 0.03;
         ctx.beginPath();
-        ctx.moveTo(x + o * s * 0.5, y);
-        ctx.quadraticCurveTo(x + o * s, y - s * 0.32, x + o * s * 1.5, y - s * 0.58);
+        ctx.moveTo(0, 0);
+        ctx.quadraticCurveTo(lean * s * 0.5, topY * 0.6, ex, ey);
+        ctx.stroke();
+
+        for (let i = 0; i < 5; i++) {                     // the ear
+          const t = i / 4;
+          const gx = ex + lean * s * 0.3 * t, gy = ey - s * 0.06 - t * s * 0.17;
+          [-1, 1].forEach((d) => {
+            ctx.beginPath();
+            ctx.ellipse(gx + d * s * 0.042, gy, s * 0.04, s * 0.058,
+                        d * 0.5 + lean * 0.8, 0, TAU);
+            fill(ctx, i % 2 ? U.shade(c, 0.18) : c);
+          });
+        }
+        ctx.strokeStyle = U.shade(c, 0.3); ctx.lineWidth = s * 0.018;
+        ctx.beginPath();                                   // awn off the tip
+        ctx.moveTo(ex + lean * s * 0.3, ey - s * 0.23);
+        ctx.lineTo(ex + lean * s * 0.42, ey - s * 0.36);
         ctx.stroke();
       });
-      ctx.fillStyle = U.shade(c, 0.22);
-      [-0.33, -0.12, 0.12, 0.33].forEach((o) => {
-        for (let k = 0; k < 3; k++) {
-          ctx.beginPath();
-          ctx.ellipse(x + o * s * 1.5, y - s * (0.4 + k * 0.09), s * 0.05, s * 0.075, o * 0.8, 0, TAU);
-          ctx.fill();
-        }
-      });
-      rr(ctx, x - s * 0.11, y - s * 0.24, s * 0.22, s * 0.08, s * 0.03, U.shade(c, -0.35));
+
+      rr(ctx, -s * 0.095, -s * 0.2, s * 0.19, s * 0.07, s * 0.03, U.shade(c, -0.45));
+      ctx.restore();
     },
 
+    /* Straight sides and a tuft make a traffic cone, which is what this was.
+       A carrot is a broad rounded shoulder, a convex taper, a blunt tip, and
+       a feathery top of separate fronds. */
     carrot(ctx, x, y, s, c) {
-      ctx.beginPath();
-      ctx.moveTo(x - s * 0.17, y - s * 0.5);
-      ctx.lineTo(x + s * 0.17, y - s * 0.5);
-      ctx.quadraticCurveTo(x + s * 0.07, y - s * 0.18, x, y);
-      ctx.quadraticCurveTo(x - s * 0.07, y - s * 0.18, x - s * 0.17, y - s * 0.5);
-      ctx.closePath();
-      fill(ctx, c);
-      ctx.strokeStyle = U.shade(c, -0.28); ctx.lineWidth = s * 0.028;
-      [0.14, 0.26, 0.38].forEach((t) => {
-        const half = s * 0.15 * (1 - t * 1.4);
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(0.09);
+      const H = s * 0.56, W = s * 0.19;
+
+      const body = () => {
         ctx.beginPath();
-        ctx.moveTo(x - half, y - s * (0.5 - t));
-        ctx.lineTo(x + half, y - s * (0.5 - t) - s * 0.03);
+        ctx.moveTo(-W, -H);
+        ctx.quadraticCurveTo(0, -H * 1.22, W, -H);
+        ctx.quadraticCurveTo(W * 0.8, -H * 0.4, W * 0.12, -H * 0.02);
+        ctx.quadraticCurveTo(0, H * 0.03, -W * 0.13, -H * 0.06);
+        ctx.quadraticCurveTo(-W * 0.8, -H * 0.4, -W, -H);
+        ctx.closePath();
+      };
+      body(); fill(ctx, c);
+
+      ctx.save(); body(); ctx.clip();
+      ell(ctx, -W * 0.44, -H * 0.62, W * 0.32, H * 0.34, -0.08, U.shade(c, 0.32));
+      ell(ctx, W * 0.62, -H * 0.5, W * 0.55, H * 0.5, 0.1, U.shade(c, -0.17));
+      ctx.strokeStyle = U.shade(c, -0.3);
+      ctx.lineWidth = s * 0.022; ctx.lineCap = 'round';
+      [0.8, 0.6, 0.42, 0.26].forEach((t) => {
+        const half = W * t * 0.9;
+        ctx.beginPath();
+        ctx.moveTo(-half, -H * t);
+        ctx.quadraticCurveTo(0, -H * t + s * 0.028, half, -H * t - s * 0.008);
         ctx.stroke();
       });
-      ctx.strokeStyle = '#4CAF50'; ctx.lineWidth = s * 0.05; ctx.lineCap = 'round';
-      [-0.5, 0, 0.5].forEach((a) => {
+      ctx.restore();
+
+      ctx.lineCap = 'round';
+      [[-0.6, 0.82], [0.05, 1], [0.62, 0.86]].forEach(([a, len], i) => {
+        const tipX = a * s * 0.26, tipY = -H - s * 0.32 * len;
+        ctx.strokeStyle = i === 1 ? '#3F9B45' : '#54BC5C';
+        ctx.lineWidth = s * 0.038;
         ctx.beginPath();
-        ctx.moveTo(x, y - s * 0.5);
-        ctx.quadraticCurveTo(x + a * s * 0.16, y - s * 0.66, x + a * s * 0.26, y - s * 0.76);
+        ctx.moveTo(0, -H + s * 0.02);
+        ctx.quadraticCurveTo(tipX * 0.35, -H - s * 0.16 * len, tipX, tipY);
         ctx.stroke();
+        ctx.lineWidth = s * 0.024;                       // leaflets off each frond
+        [0.45, 0.76].forEach((f) => {
+          const px = tipX * f * 0.7, py = -H + (tipY + H) * f;
+          ctx.beginPath();
+          ctx.moveTo(px, py);
+          ctx.lineTo(px + (a >= 0 ? 1 : -1) * s * 0.075, py - s * 0.045);
+          ctx.stroke();
+        });
       });
+      ctx.restore();
     },
 
     eggplant(ctx, x, y, s, c) {
@@ -214,49 +264,71 @@ window.MSM = window.MSM || {};
     },
 
     /* An egg — a plain oval reads as one at any size. */
+    /* The shelf top is the same cream as an egg, so this one was a white
+       smudge. It needs a rim, a shaded side and a few speckles to exist. */
     egg(ctx, x, y, s, c) {
-      const cy = y - s * 0.3;
-      ctx.save();
-      ctx.translate(x, cy); ctx.scale(1, 1.28);
-      ctx.beginPath(); ctx.ellipse(0, 0, s * 0.24, s * 0.24, 0, 0, TAU);
-      ctx.fillStyle = c; ctx.fill();
+      const cy = y - s * 0.31, rx = s * 0.21, ry = s * 0.29;
+      /* Two beziers from tip to tip give a pointed almond. An egg needs four:
+         a circular bottom half and a narrower, taller top half. */
+      const shell = () => {
+        ctx.beginPath();
+        ctx.moveTo(x, cy + ry);
+        ctx.bezierCurveTo(x + rx * 0.86, cy + ry, x + rx, cy + ry * 0.46, x + rx, cy + ry * 0.04);
+        ctx.bezierCurveTo(x + rx, cy - ry * 0.46, x + rx * 0.6, cy - ry, x, cy - ry);
+        ctx.bezierCurveTo(x - rx * 0.6, cy - ry, x - rx, cy - ry * 0.46, x - rx, cy + ry * 0.04);
+        ctx.bezierCurveTo(x - rx, cy + ry * 0.46, x - rx * 0.86, cy + ry, x, cy + ry);
+        ctx.closePath();
+      };
+      shell(); fill(ctx, c);
+
+      ctx.save(); shell(); ctx.clip();
+      ell(ctx, x + rx * 0.8, cy + ry * 0.18, rx * 0.85, ry * 0.95, 0, U.shade(c, -0.14));
+      ctx.fillStyle = U.shade(c, -0.3);
+      [[-0.34, 0.3], [0.24, -0.14], [0.04, 0.54], [-0.12, -0.42]].forEach(([a, b]) => {
+        ctx.beginPath();
+        ctx.ellipse(x + a * rx, cy + b * ry, s * 0.014, s * 0.011, 0, 0, TAU);
+        ctx.fill();
+      });
       ctx.restore();
-      ell(ctx, x - s * 0.07, cy - s * 0.1, s * 0.07, s * 0.05, -0.5, '#FFFFFF');
+
+      shell(); stroke(ctx, U.shade(c, -0.33), s * 0.022);
+      ell(ctx, x - rx * 0.36, cy - ry * 0.4, rx * 0.3, ry * 0.16, -0.5, '#FFFFFF');
     },
 
-    /* A cucumber: long, gently curved, ridged, with a paler belly. */
+    /* Pointed at both ends with long veins down it, this read as a leaf —
+       and eight of them on a shelf read as a hedge. Blunt ends, a fatter
+       body, warts instead of veins, and a pale belly make it a cucumber. */
     cucumber(ctx, x, y, s, c) {
       ctx.save();
-      ctx.translate(x, y - s * 0.26);
-      ctx.rotate(-0.38);
+      ctx.translate(x, y - s * 0.24);
+      ctx.rotate(-0.24);
+      const L = s * 0.28, R = s * 0.2;
 
-      const L = s * 0.52, R = s * 0.135;
-      ctx.beginPath();
-      ctx.moveTo(-L, 0);
-      ctx.quadraticCurveTo(-L * 0.5, -R * 1.9, 0, -R * 1.25);
-      ctx.quadraticCurveTo(L * 0.55, -R * 0.7, L, R * 0.15);
-      ctx.quadraticCurveTo(L * 0.55, R * 1.5, 0, R * 1.35);
-      ctx.quadraticCurveTo(-L * 0.5, R * 1.2, -L, 0);
-      ctx.closePath();
-      fill(ctx, c);
-
-      ctx.beginPath();                                   // pale underside
-      ctx.moveTo(-L * 0.8, R * 0.5);
-      ctx.quadraticCurveTo(0, R * 1.35, L * 0.8, R * 0.15);
-      ctx.quadraticCurveTo(0, R * 0.75, -L * 0.8, R * 0.5);
-      ctx.closePath();
-      fill(ctx, U.shade(c, 0.36));
-
-      ctx.strokeStyle = U.shade(c, -0.3);                // ridges
-      ctx.lineWidth = s * 0.022; ctx.lineCap = 'round';
-      [-0.5, -0.16, 0.18, 0.5].forEach((t) => {
+      // stroking a curve with a round cap IS the blunt capsule silhouette
+      ctx.lineCap = 'round';
+      const spine = (lift) => {
         ctx.beginPath();
-        ctx.moveTo(L * t, -R * 1.15);
-        ctx.lineTo(L * t + s * 0.012, R * 0.85);
-        ctx.stroke();
+        ctx.moveTo(-L, R * 0.2 + lift);
+        ctx.quadraticCurveTo(0, -R * 0.6 + lift, L, R * 0.2 + lift);
+      };
+      spine(0); ctx.lineWidth = R * 2.0; ctx.strokeStyle = U.shade(c, -0.3); ctx.stroke();
+      spine(0); ctx.lineWidth = R * 1.76; ctx.strokeStyle = c; ctx.stroke();
+      spine(R * 0.34); ctx.lineWidth = R * 0.6; ctx.strokeStyle = U.shade(c, 0.34); ctx.stroke();
+      spine(-R * 0.44); ctx.lineWidth = R * 0.26; ctx.strokeStyle = U.shade(c, 0.22); ctx.stroke();
+
+      // warts, placed on the actual curve rather than guessed at
+      const pt = (t) => ({
+        x: L * (2 * t - 1),
+        y: R * 0.2 * ((1 - t) * (1 - t) + t * t) - R * 1.2 * t * (1 - t),
       });
-      ctx.fillStyle = U.shade(c, -0.42);                 // blossom end
-      ctx.beginPath(); ctx.ellipse(L * 0.97, R * 0.12, s * 0.028, s * 0.03, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = U.shade(c, -0.34);
+      [0.2, 0.36, 0.52, 0.68, 0.84].forEach((t, i) => {
+        const p = pt(t);
+        ctx.beginPath();
+        ctx.ellipse(p.x, p.y + (i % 2 ? R * 0.42 : R * 0.05), s * 0.016, s * 0.013, 0, 0, TAU);
+        ctx.fill();
+      });
+      rr(ctx, -L - R * 1.02, -R * 0.12, R * 0.4, R * 0.24, R * 0.11, U.shade(c, -0.42));
       ctx.restore();
     },
 
@@ -330,20 +402,38 @@ window.MSM = window.MSM || {};
       ctx.restore();
     },
 
+    /* Two thin crescents read as a smile. A hand of bananas is three FAT
+       fingers fanning out of one dark crown, each with a dried tip. */
     banana(ctx, x, y, s, c) {
       ctx.save();
-      ctx.translate(x, y - s * 0.28);
-      [0.1, -0.06].forEach((off, i) => {
+      ctx.translate(x, y - s * 0.32);
+      ctx.lineCap = 'round';
+
+      /* They have to fan wide enough to be three fingers — overlapped, the
+         back two vanish and their tips read as loose dots. */
+      const finger = (spread, col, w) => {
+        const ex = s * 0.26 - Math.abs(spread) * 0.5, ey = -s * 0.06 + spread * 2.1;
         ctx.beginPath();
-        ctx.moveTo(-s * 0.3, -s * 0.06 + off * s);
-        ctx.quadraticCurveTo(0, s * 0.3 + off * s, s * 0.3, -s * 0.06 + off * s);
-        ctx.quadraticCurveTo(0, s * 0.12 + off * s, -s * 0.3, -s * 0.06 + off * s);
-        ctx.closePath();
-        fill(ctx, i ? U.shade(c, -0.12) : c);
-      });
-      ctx.fillStyle = '#6B5A22';
-      ctx.beginPath(); ctx.ellipse(-s * 0.3, -s * 0.05, s * 0.045, s * 0.035, 0, 0, TAU); ctx.fill();
-      ctx.beginPath(); ctx.ellipse(s * 0.3, -s * 0.05, s * 0.045, s * 0.035, 0, 0, TAU); ctx.fill();
+        ctx.moveTo(-s * 0.24, -s * 0.04 + spread * 0.5);
+        ctx.quadraticCurveTo(-s * 0.02, s * 0.22 + spread * 1.5, ex, ey);
+        ctx.lineWidth = w; ctx.strokeStyle = col; ctx.stroke();
+        ctx.beginPath();                                   // dried tip
+        ctx.ellipse(ex + s * 0.01, ey + s * 0.006, s * 0.021, s * 0.025, 0.5, 0, TAU);
+        fill(ctx, '#6B5A22');
+      };
+      finger(s * 0.085, U.shade(c, -0.28), s * 0.125);     // back
+      finger(0, U.shade(c, -0.06), s * 0.14);
+      finger(-s * 0.085, U.shade(c, 0.16), s * 0.125);     // front
+
+      ctx.beginPath();                                     // the highlight ridge
+      ctx.moveTo(-s * 0.2, -s * 0.09);
+      ctx.quadraticCurveTo(-s * 0.01, s * 0.13, s * 0.22, -s * 0.14);
+      ctx.lineWidth = s * 0.026; ctx.strokeStyle = U.shade(c, 0.42); ctx.stroke();
+
+      ctx.beginPath();                                     // crown
+      ctx.ellipse(-s * 0.26, -s * 0.04, s * 0.055, s * 0.085, 0.18, 0, TAU);
+      fill(ctx, U.shade(c, -0.34));
+      rr(ctx, -s * 0.35, -s * 0.075, s * 0.1, s * 0.065, s * 0.03, '#6B5A22');
       ctx.restore();
     },
 
@@ -361,32 +451,29 @@ window.MSM = window.MSM || {};
       ctx.restore();
     },
 
-    /* Rashers of bacon: pink meat streaked with fat, wavy edges. */
+    /* Thin wavy stripes read as a ribbon or a flag. Rashers are THICK, they
+       have a darker edge, and the fat runs in bands down the length of each
+       one rather than across it. */
     bacon(ctx, x, y, s, c) {
-      [[-0.05, 0.02, -0.1], [0.05, -0.16, 0.06]].forEach(([ox, oy, rot], i) => {
-        ctx.save();
-        ctx.translate(x + ox * s, y + oy * s - s * 0.16);
-        ctx.rotate(rot);
-        const w = s * 0.62, h = s * 0.2;
-        ctx.beginPath();
-        ctx.moveTo(-w / 2, -h / 2);
-        ctx.bezierCurveTo(-w * 0.2, -h * 1.15, w * 0.2, h * 0.05, w / 2, -h * 0.5);
-        ctx.lineTo(w / 2, h * 0.5);
-        ctx.bezierCurveTo(w * 0.2, h * 1.05, -w * 0.2, -h * 0.05, -w / 2, h * 0.6);
-        ctx.closePath();
-        fill(ctx, i ? U.shade(c, 0.1) : c);
+      ctx.save();
+      ctx.translate(x, y - s * 0.2);
+      ctx.lineCap = 'round';
 
-        ctx.save(); ctx.clip();
-        ctx.strokeStyle = '#FFF0EC'; ctx.lineWidth = h * 0.26; ctx.lineCap = 'round';
-        [-0.22, 0.16].forEach((t) => {
+      const rasher = (oy, tint) => {
+        const path = (lift) => {
           ctx.beginPath();
-          ctx.moveTo(-w / 2, h * t);
-          ctx.bezierCurveTo(-w * 0.2, h * (t - 0.6), w * 0.2, h * (t + 0.5), w / 2, h * (t - 0.1));
-          ctx.stroke();
-        });
-        ctx.restore();
-        ctx.restore();
-      });
+          ctx.moveTo(-s * 0.28, oy + lift);
+          ctx.bezierCurveTo(-s * 0.09, oy - s * 0.075 + lift,
+                            s * 0.09, oy + s * 0.075 + lift, s * 0.28, oy + lift);
+        };
+        path(0);            ctx.lineWidth = s * 0.185; ctx.strokeStyle = U.shade(tint, -0.3); ctx.stroke();
+        path(0);            ctx.lineWidth = s * 0.15;  ctx.strokeStyle = tint; ctx.stroke();
+        path(-s * 0.043);   ctx.lineWidth = s * 0.034; ctx.strokeStyle = '#FFF1EC'; ctx.stroke();
+        path(s * 0.045);    ctx.lineWidth = s * 0.028; ctx.strokeStyle = '#FCE2DB'; ctx.stroke();
+      };
+      rasher(-s * 0.09, U.shade(c, -0.12));
+      rasher(s * 0.09, c);
+      ctx.restore();
     },
 
     /* ----------------------------------------------------------- coffee */
@@ -556,25 +643,68 @@ window.MSM = window.MSM || {};
       });
     },
 
+    /* A rounded rectangle in the product tint is a coloured card, not a
+       phone. A phone is a dark chassis with a LIT screen inset in it, a
+       notch at the top and a home bar at the bottom — those three details
+       are what the eye reads as "phone" at 24px. */
     phone(ctx, x, y, s, c) {
-      rr(ctx, x - s * 0.16, y - s * 0.58, s * 0.32, s * 0.58, s * 0.06, U.shade(c, -0.5));
-      rr(ctx, x - s * 0.12, y - s * 0.53, s * 0.24, s * 0.44, s * 0.03, c);
+      const w = s * 0.34, h = s * 0.6, x0 = x - w / 2, top = y - h;
+      rr(ctx, x0, top, w, h, s * 0.075, '#2B3450');
+      rr(ctx, x0 + w * 0.08, top + h * 0.055, w * 0.84, h * 0.83, s * 0.05, c);
+      rr(ctx, x0 + w * 0.08, top + h * 0.055, w * 0.84, h * 0.3, s * 0.05,
+         U.shade(c, 0.34));                                        // screen glare
+      rr(ctx, x - w * 0.15, top + h * 0.035, w * 0.3, h * 0.04, s * 0.02, '#2B3450');
+      rr(ctx, x - w * 0.17, y - h * 0.075, w * 0.34, h * 0.02, s * 0.012, '#FFFFFFCC');
     },
 
+    /* Landscape slate: bezel, camera dot, and a grid of app tiles — a blank
+       screen looked like a placemat. */
     tablet(ctx, x, y, s, c) {
-      rr(ctx, x - s * 0.28, y - s * 0.5, s * 0.56, s * 0.5, s * 0.05, U.shade(c, -0.5));
-      rr(ctx, x - s * 0.23, y - s * 0.45, s * 0.46, s * 0.36, s * 0.03, c);
+      const w = s * 0.6, h = s * 0.46, x0 = x - w / 2, top = y - h;
+      rr(ctx, x0, top, w, h, s * 0.05, '#2B3450');
+      rr(ctx, x0 + w * 0.08, top + h * 0.09, w * 0.84, h * 0.82, s * 0.025, c);
+      rr(ctx, x0 + w * 0.08, top + h * 0.09, w * 0.4, h * 0.82, s * 0.025,
+         U.shade(c, 0.2));
+      ell(ctx, x0 + w * 0.04, y - h * 0.5, s * 0.012, s * 0.012, 0, '#8FA0BC');
+      ctx.fillStyle = '#FFFFFF99';
+      for (let r = 0; r < 2; r++) {
+        for (let k = 0; k < 3; k++) {
+          rr(ctx, x0 + w * (0.2 + k * 0.22), top + h * (0.24 + r * 0.32),
+             w * 0.13, h * 0.2, s * 0.014);
+          ctx.fill();
+        }
+      }
     },
 
+    /* Screen on a pedestal, showing something: a sky, a hill and a sun. An
+       empty dark rectangle read as a doormat stood on its edge. */
     tv(ctx, x, y, s, c) {
-      rr(ctx, x - s * 0.06, y - s * 0.16, s * 0.12, s * 0.16, s * 0.02, U.shade(c, -0.5));
-      rr(ctx, x - s * 0.2, y - s * 0.08, s * 0.4, s * 0.06, s * 0.03, U.shade(c, -0.5));
-      rr(ctx, x - s * 0.34, y - s * 0.56, s * 0.68, s * 0.42, s * 0.04, U.shade(c, -0.5));
-      rr(ctx, x - s * 0.3, y - s * 0.52, s * 0.6, s * 0.34, s * 0.02, c);
+      const w = s * 0.72, h = s * 0.44, x0 = x - w / 2, top = y - s * 0.58;
+      rr(ctx, x - s * 0.16, y - s * 0.05, s * 0.32, s * 0.05, s * 0.025, '#3E4A66');
+      rr(ctx, x - s * 0.05, y - s * 0.16, s * 0.1, s * 0.13, s * 0.02, '#4E5D80');
+      rr(ctx, x0, top, w, h, s * 0.035, '#2B3450');
+
+      const ix = x0 + w * 0.05, iy = top + h * 0.1, iw = w * 0.9, ih = h * 0.72;
+      ctx.save();
+      rr(ctx, ix, iy, iw, ih, s * 0.02);
+      ctx.clip();
+      fill(ctx, U.shade(c, 0.42));                                 // sky
+      ell(ctx, ix + iw * 0.76, iy + ih * 0.28, iw * 0.1, iw * 0.1, 0, '#FFD65A');
+      ctx.beginPath();
+      ctx.moveTo(ix, iy + ih);
+      ctx.quadraticCurveTo(ix + iw * 0.34, iy + ih * 0.34, ix + iw * 0.7, iy + ih);
+      ctx.closePath(); fill(ctx, '#5FCB8B');
+      ctx.restore();
+      rr(ctx, ix, iy, iw, ih * 0.34, s * 0.02, '#FFFFFF22');       // glass sheen
     },
 
-    /* fallback */
-    box(ctx, x, y, s, c) { rr(ctx, x - s * 0.24, y - s * 0.42, s * 0.48, s * 0.42, s * 0.05, c); },
+    /* fallback: a taped cardboard carton, not a plain coloured slab */
+    box(ctx, x, y, s, c) {
+      const w = s * 0.5, h = s * 0.44, x0 = x - w / 2, top = y - h;
+      rr(ctx, x0, top, w, h, s * 0.04, c);
+      rr(ctx, x0, top, w, h * 0.26, s * 0.04, U.shade(c, 0.22));
+      rr(ctx, x - w * 0.06, top, w * 0.12, h, 0, U.shade(c, -0.18));
+    },
   };
 
   MSM.art = {

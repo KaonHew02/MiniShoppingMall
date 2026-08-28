@@ -23,11 +23,39 @@ MSM.iso = {
 
   /** Ease the camera toward a target, kept inside the mall. */
   follow(tx, ty, dt) {
-    const B = MSM.CFG.WORLD, c = MSM.util.clamp;
     const k = 1 - Math.pow(0.0015, dt);
-    this.cx += (c(tx, 1.6, B.W - 1.6) - this.cx) * k;
-    this.cy += (c(ty, 2.0, B.H - 1.6) - this.cy) * k;
+    this.cx += (tx - this.cx) * k;
+    this.cy += (ty - this.cy) * k;
     this.apply();
+  },
+
+  /**
+   * Keep the floor covering the whole window.
+   *
+   * The old limits were fixed numbers (1.6 world units from each edge), which
+   * say nothing about what the screen actually shows: on a wide window, or
+   * zoomed out, you could stand near a corner and look straight past the gold
+   * rim into the sky. Work out where the four screen corners land in world
+   * space instead and keep all four on the floor.
+   *
+   * Screen x of u = x - y is vw/2 + (u - cu)·TW/2, so the left and right
+   * edges sit at u = cu ± a with a = vw/TW. Screen y of v = x + y is
+   * vh·0.58 + (v - cv)·TH/2, so the top and bottom sit at v = cv - bT and
+   * cv + bB. Feeding those into x = (u + v)/2 and y = (v - u)/2, every corner
+   * is on the floor exactly when cx and cy are inside the ranges below — the
+   * asymmetry is the 0.58 anchor, which shows more floor below the camera
+   * than above it.
+   */
+  contain() {
+    const B = MSM.CFG.WORLD, M = 0.25;              // the floor's own overhang
+    const a = this.vw / this.TW;
+    const bT = 1.16 * this.vh / this.TH;
+    const bB = 0.84 * this.vh / this.TH;
+    const near = (a + bT) / 2, far = (a + bB) / 2;
+
+    const fit = (v, lo, hi) => (lo > hi ? (lo + hi) / 2 : v < lo ? lo : v > hi ? hi : v);
+    this.cx = fit(this.cx, -M + near, B.W + M - far);
+    this.cy = fit(this.cy, -M + near, B.H + M - far);
   },
 
   /** Recompute the projection from the camera. */
@@ -35,6 +63,7 @@ MSM.iso = {
     this.TW = this.baseTW * this.zoom;
     this.TH = this.TW * 0.55;
     this.ZH = this.TW * 0.66;
+    this.contain();
     this.ox = this.vw / 2 - (this.cx - this.cy) * (this.TW / 2);
     this.oy = this.vh * 0.58 - (this.cx + this.cy) * (this.TH / 2);
   },

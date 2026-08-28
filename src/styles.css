@@ -242,3 +242,41 @@ body {
 /* the language picker: four names do not fit on one row */
 .seg-wrap { flex-wrap:wrap; }
 .seg-wrap button { flex:1 1 44%; }
+
+/* --------------------------------------------------------- product rows */
+/* The list used to show the emoji for a tomato — a picture drawn by whoever
+   made the system font, next to our own tomato on the shelf. It now renders
+   the real painter from art.js, so the catalogue and the shop agree. */
+.row.prod { align-items:flex-start; padding:12px 12px 11px; }
+.row.prod .row-main { padding-top:1px; }
+
+.row-ico.art {
+  width:58px; height:58px; border-radius:17px; padding:0; overflow:hidden;
+  box-shadow:inset 0 0 0 1px #ffffffcc, inset 0 -4px 0 #0000000f;
+}
+.row-ico.art img { width:100%; height:100%; object-fit:contain; display:block; }
+
+.row-name .lvl {
+  display:inline-block; margin-left:7px; padding:1px 8px; border-radius:9px;
+  background:var(--panel-2); color:var(--ink-soft); font-size:11px; vertical-align:2px;
+}
+
+.meters { display:flex; gap:7px; margin-top:7px; }
+.meter {
+  flex:1; position:relative; height:17px; border-radius:9px;
+  background:#E3E9F4; overflow:hidden; box-shadow:inset 0 1px 2px #0b1c3d1a;
+}
+.meter i { position:absolute; left:0; top:0; bottom:0; border-radius:9px; transition:width .25s; }
+.meter.shelf i { background:linear-gradient(180deg,#7BEBA6,var(--green-d)); }
+.meter.crate i { background:linear-gradient(180deg,#FFD979,var(--gold-d)); }
+.meter span {
+  position:relative; display:block; text-align:center; font-size:10.5px;
+  line-height:17px; letter-spacing:.2px; color:var(--ink);
+}
+
+/* the sheet itself: a hairline under the title and a slimmer scrollbar */
+.sheet-head { border-bottom:1px solid #dfe6f2; }
+.sheet-body::-webkit-scrollbar { width:8px; }
+.sheet-body::-webkit-scrollbar-thumb { background:#c8d3e6; border-radius:4px; }
+.sheet-body::-webkit-scrollbar-track { background:transparent; }
+.btn:disabled { opacity:.45; box-shadow:none; transform:translateY(2px); }

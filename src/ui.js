@@ -69,6 +69,7 @@ window.MSM = window.MSM || {};
         case 'stocker': MSM.game.hireStocker(); break;
         case 'cashier': MSM.game.hireCashier(); break;
         case 'barista':
+        case 'chef':
         case 'server':
         case 'cleaner': MSM.game.hireCafe(act); break;
         case 'machine': MSM.game.upgradeMachine(i); break;
@@ -114,7 +115,7 @@ window.MSM = window.MSM || {};
           s.cash >= MSM.econ.store().stockerCost(ss.stockers)) hire++;
       if (!ss.cashier && s.cash >= MSM.econ.store().cashierCost) hire++;
       if (ss.cafe) {
-        ['barista', 'server', 'cleaner'].forEach((j) => {
+        ['barista', 'chef', 'server', 'cleaner'].forEach((j) => {
           if (!ss.cafe[j] && s.cash >= MSM.game.cafeCost(j)) hire++;
         });
       }
@@ -371,12 +372,15 @@ window.MSM = window.MSM || {};
              ${t('btn.hire')}<small>$${U.money(cost)}</small></button>`}
     </div>`;
 
-    /* The cafe's three extra jobs. Each one is a whole step of the loop you
+    /* The cafe's four extra jobs. Each one is a whole step of the loop you
        stop having to do yourself. */
     const cafeRows = !cs ? '' :
-      row('👨‍🍳', '#FFE0C4', t('staff.barista'),
+      row('☕', '#FFE0C4', t('staff.barista'),
           cs.barista ? t('staff.baristaOn') : t('staff.baristaOff'),
           cs.barista, 'barista', MSM.game.cafeCost('barista')) +
+      row('👨‍🍳', '#FFD9C9', t('staff.chef'),
+          cs.chef ? t('staff.chefOn') : t('staff.chefOff'),
+          cs.chef, 'chef', MSM.game.cafeCost('chef')) +
       row('🫖', '#D6ECFB', t('staff.server'),
           cs.server ? t('staff.serverOn') : t('staff.serverOff'),
           cs.server, 'server', MSM.game.cafeCost('server')) +

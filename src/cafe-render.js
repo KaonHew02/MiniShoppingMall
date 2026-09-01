@@ -331,10 +331,10 @@ window.MSM = window.MSM || {};
     const u = iso.TW / 64;
     const s = iso.s(c.x, c.y, 0);
 
-    // the drink in their hand, once you have handed it over
-    if (c.served && c.carry) {
-      MSM.art.draw(ctx, MSM.econ.prod(c.order).art, s.x + 12 * u, s.y - 9 * u, 15 * u,
-                   MSM.econ.prod(c.order).color);
+    // the last item put in their hand, once the order is complete
+    if (c.served && c.carry && c.carryP >= 0) {
+      const prod = MSM.econ.prod(c.carryP);
+      MSM.art.draw(ctx, prod.art, s.x + 12 * u, s.y - 9 * u, 15 * u, prod.color);
     }
 
     const showRing = c.phase === 'queue' || c.phase === 'toWait' || c.phase === 'wait';

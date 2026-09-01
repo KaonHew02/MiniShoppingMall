@@ -80,9 +80,14 @@ MSM.CFG = {
     MACHINE_SPEED: 0.34,      // brew speed gained per machine level
     MACHINE_CAP: (lvl) => MSM.util.clamp(1 + (((lvl - 1) / 3) | 0), 1, 4),
     MACHINE_GROWTH: 1.16,     // how fast a machine's own upgrades get dearer
-    /* Three jobs the mini mart never had, because there are three more things
-       to do: brew, run the drinks out, and clear the tables. */
+    /* An order is a drink, and sometimes food on top: the chance of the
+       first and of a second kitchen item joining the ticket. */
+    FOOD_ODDS: [0.45, 0.15],
+    /* Four jobs the mini mart never had, because there are four more things
+       to do: brew the drinks, cook the food, run it all out, and clear the
+       tables. The barista owns the drink machines; the chef owns the oven. */
     BARISTA_COST: (unlock) => Math.max(3200, Math.round(unlock * 1.1)),
+    CHEF_COST:    (unlock) => Math.max(4000, Math.round(unlock * 1.35)),
     SERVER_COST:  (unlock) => Math.max(4800, Math.round(unlock * 1.6)),
     CLEANER_COST: (unlock) => Math.max(2200, Math.round(unlock * 0.75)),
   },
@@ -259,15 +264,16 @@ MSM.CFG.PLANS.cafe = {
   storage: { x0: 0.60, y0: 5.60, x1: 3.20, y1: 6.90 },
 
   /* Each machine is a build plot first, then a fixture with its own level
-     pad: faster brewing, and more cups on the go at once. */
+     pad: faster brewing, and more cups on the go at once. `staff` names
+     whose station it is — the barista never touches the chef's oven. */
   machines: [
-    { id: 'coffee', label: 'Coffee Machine',    cost: 0,     base: 420,
+    { id: 'coffee', label: 'Coffee Machine',    cost: 0,     base: 420,  staff: 'barista',
       box: { x0: 4.40,  y0: 5.60, x1: 7.00,  y1: 6.80 },
       pad: { x0: 4.40,  y0: 7.10, x1: 5.10,  y1: 7.80 } },
-    { id: 'bar',    label: 'Matcha & Ice Bar',  cost: 4000,  base: 1500,
+    { id: 'bar',    label: 'Matcha & Ice Bar',  cost: 4000,  base: 1500, staff: 'barista',
       box: { x0: 8.00,  y0: 5.60, x1: 10.00, y1: 6.80 },
       pad: { x0: 8.00,  y0: 7.10, x1: 8.70,  y1: 7.80 } },
-    { id: 'oven',   label: 'Pastry Oven',       cost: 12000, base: 3400,
+    { id: 'oven',   label: 'Pastry Oven',       cost: 12000, base: 3400, staff: 'chef',
       box: { x0: 11.00, y0: 5.60, x1: 13.00, y1: 6.80 },
       pad: { x0: 11.00, y0: 7.10, x1: 11.70, y1: 7.80 } },
   ],
@@ -292,11 +298,13 @@ MSM.CFG.PLANS.cafe = {
   /* A section is a tinted band with its name lying on the floor, and the
      name is painted at the band's TOP edge — so each one starts on clear
      floor, not underneath the fixtures it belongs to. */
+  /* KITCHEN sits last so the older sections keep their translation index. */
   sections: [
     { name: 'BACK ROOM',  x0: 0.35,  y0: 2.95,  x1: 14.10, y1: 4.70,  tint: '#D6E4F4' },
     { name: 'MENU BOARD', x0: 14.70, y0: 5.30,  x1: 23.10, y1: 6.80,  tint: '#FBE3BE' },
-    { name: 'THE BAR',    x0: 0.35,  y0: 8.10,  x1: 13.40, y1: 8.90,  tint: '#C7E7D6' },
+    { name: 'THE BAR',    x0: 0.35,  y0: 8.10,  x1: 10.30, y1: 8.90,  tint: '#C7E7D6' },
     { name: 'CAFE',       x0: 0.60,  y0: 9.95,  x1: 9.50,  y1: 14.40, tint: '#FFD9E4' },
+    { name: 'KITCHEN',    x0: 10.60, y0: 8.10,  x1: 13.40, y1: 8.90,  tint: '#F6D2BE' },
   ],
   zones: [
     { y0: -0.25, y1: 5.20,  a: '#E8DBC9', b: '#E1D3BF' },   // the prep side

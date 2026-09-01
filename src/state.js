@@ -16,7 +16,7 @@ window.MSM = window.MSM || {};
       built: t.cost === 0, buildPaid: 0, dirty: false,
     })),
     ready: [],                  // finished drinks sitting on the pickup counter
-    barista: false, server: false, cleaner: false,
+    barista: false, chef: false, server: false, cleaner: false,
     tips: 0, walkouts: 0,
   });
 
@@ -147,7 +147,11 @@ window.MSM = window.MSM || {};
       if (ss.cafe && !(ss.cafe.barista && ss.cafe.server)) return 0;
       let r = 0;
       CFG.STORES[i].products.forEach((p, n) => {
-        if (p.sell && ss.products[n].built) r += E.price(n, i) / E.restock(n, i);
+        if (!p.sell || !ss.products[n].built) return;
+        /* Food is the chef's station — without one the kitchen earns nothing. */
+        if (ss.cafe && p.recipe && !ss.cafe.chef &&
+            CFG.STORES[i].plan.machines[p.machineIndex].staff === 'chef') return;
+        r += E.price(n, i) / E.restock(n, i);
       });
       return r * 0.5;             // customers, not supply, are the real limit
     },
@@ -232,6 +236,7 @@ window.MSM = window.MSM || {};
       const cs = s.stores[i].cafe, oc = old.cafe;
       if (!cs || !oc || fresh) return;
       cs.barista = !!oc.barista;
+      cs.chef = !!oc.chef;
       cs.server = !!oc.server;
       cs.cleaner = !!oc.cleaner;
       cs.tips = Math.max(0, +oc.tips || 0);

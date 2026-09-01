@@ -480,8 +480,9 @@ window.MSM = window.MSM || {};
       MSM.save();
     },
 
-    /* The cafe crew. A barista works the bar, a server runs the drinks out
-       and a cleaner clears the tables — the three jobs stage 2 adds. */
+    /* The cafe crew. A barista works the bar, a chef runs the kitchen, a
+       server carries it all out and a cleaner clears the tables — the four
+       jobs stage 2 adds. */
     hireCafe(job) {
       const store = MSM.econ.store(), cs = MSM.econ.cstate();
       if (!cs || cs[job]) return;
@@ -510,6 +511,7 @@ window.MSM = window.MSM || {};
     cafeCost(job) {
       const u = MSM.econ.store().unlock;
       return job === 'barista' ? CFG.CAFE.BARISTA_COST(u)
+        : job === 'chef' ? CFG.CAFE.CHEF_COST(u)
         : job === 'server' ? CFG.CAFE.SERVER_COST(u) : CFG.CAFE.CLEANER_COST(u);
     },
 

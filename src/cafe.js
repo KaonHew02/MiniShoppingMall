@@ -24,9 +24,9 @@ window.MSM = window.MSM || {};
   const CFG = MSM.CFG, U = MSM.util, W = MSM.world, P = MSM.CFG.PLAN, C = MSM.CFG.CAFE;
 
   const K = MSM.cafe = {
-    orders: [],        // tickets waiting to be brewed: {n, cust}
+    orders: [],        // tickets waiting to be made: {n, cust}, one per item
     jobs: [],          // per machine, the cups on the go: [{n, t, dur}]
-    crew: [],          // the barista, the server and the cleaner
+    crew: [],          // the barista, the chef, the server and the cleaner
     orderT: 0,
     cleanT: 0,
 
@@ -43,9 +43,10 @@ window.MSM = window.MSM || {};
     },
 
     /* ------------------------------------------------------------ crew */
-    /* Three jobs the mini mart never had. Each is one body with one idea in
+    /* Four jobs the mini mart never had. Each is one body with one idea in
        its head, which is enough — they only ever do the thing they were
-       hired for. */
+       hired for. The barista and the chef are the same routine pointed at
+       different machines: drinks are the bar's, food is the kitchen's. */
     syncCrew() {
       const cs = MSM.econ.cstate();
       K.crew.length = 0;
@@ -57,6 +58,7 @@ window.MSM = window.MSM || {};
         walk: 0, moving: false, handle: 0, t: 0, target: -1,
       });
       if (cs.barista) K.crew.push(mk('barista', '#C0632B'));
+      if (cs.chef)    K.crew.push(mk('chef',    '#EDEFF4'));
       if (cs.server)  K.crew.push(mk('server',  '#2B8FC0'));
       if (cs.cleaner) K.crew.push(mk('cleaner', '#7C4FC0'));
     },
@@ -89,17 +91,22 @@ window.MSM = window.MSM || {};
       K.orderT = 0;
 
       q.shift();
-      K.orders.push({ n: front.order, cust: front });
+      /* The doc's diagram, in one line: the ticket splits into one job per
+         item, and each job finds its own machine — latte to the barista,
+         cake to the chef. */
+      front.items.forEach((it) => K.orders.push({ n: it.n, cust: front }));
       front.spotIndex = spot;
       front.phase = 'toWait';
       front.mood = 'wait';
-      MSM.render.pop(front.x, front.y, 1.6, MSM.econ.prod(front.order).glyph, '#4FB0FF');
+      MSM.render.pop(front.x, front.y, 1.6,
+        front.items.map((it) => MSM.econ.prod(it.n).glyph).join(' '), '#4FB0FF');
     },
 
-    /** Drop a ticket — they gave up, or walked out of a full room. */
+    /** Drop every ticket — they gave up, or walked out of a full room. */
     cancel(c) {
-      const i = K.orders.findIndex((o) => o.cust === c);
-      if (i >= 0) K.orders.splice(i, 1);
+      for (let i = K.orders.length - 1; i >= 0; i--) {
+        if (K.orders[i].cust === c) K.orders.splice(i, 1);
+      }
     },
 
     /* ---------------------------------------------------------- machines */
@@ -149,8 +156,9 @@ window.MSM = window.MSM || {};
 
         const info = MSM.econ.machine(mi);
         if (jobs.length >= info.cap || cs.ready.length >= C.READY_CAP) return;
-        // somebody has to be working it — you, or the barista you hired
-        if (!cs.barista && !W.atBox(player, spec.box)) return;
+        // somebody has to be working it — you, or whoever's station it is:
+        // the barista for the drink machines, the chef for the oven
+        if (!cs[spec.staff] && !W.atBox(player, spec.box)) return;
 
         const order = K.nextOrder(mi);
         if (!order || !K.consume(order.n)) return;
@@ -173,10 +181,11 @@ window.MSM = window.MSM || {};
       }
     },
 
-    /** Is anybody still waiting for this drink, or is one on order? */
+    /** Is anybody still waiting for this item, or is one on order? */
     wanting(n) {
       if (K.orders.some((o) => o.n === n)) return true;
-      return MSM.ent.customers.some((c) => c.order === n && !c.served &&
+      return MSM.ent.customers.some((c) => !c.served && c.items &&
+        c.items.some((it) => !it.got && it.n === n) &&
         (c.phase === 'wait' || c.phase === 'toWait' || c.phase === 'queue' ||
          c.phase === 'toQueue' || c.phase === 'in'));
     },
@@ -190,13 +199,15 @@ window.MSM = window.MSM || {};
       const cs = MSM.econ.cstate();
       if (!cs) return false;
 
-      // hand a drink to somebody standing there waiting for exactly that
+      // hand an item to somebody standing there still owed exactly that
       if (body.hold.length) {
         for (const c of MSM.ent.customers) {
-          if (c.served || body.hold.indexOf(c.order) < 0) continue;
+          if (c.served || !c.items) continue;
           if (c.phase !== 'wait' && c.phase !== 'toWait') continue;
           if (Math.hypot(body.x - c.x, body.y - c.y) > C.SERVE_REACH) continue;
-          K.serve(body, c);
+          const it = c.items.find((o) => !o.got && body.hold.indexOf(o.n) >= 0);
+          if (!it) continue;
+          K.give(body, c, it);
           return true;
         }
       }
@@ -216,8 +227,8 @@ window.MSM = window.MSM || {};
     },
 
     /**
-     * Is somebody still waiting for this drink that nobody is already on the
-     * way to? Without the second half you pick up four lattes for one
+     * Is somebody still owed this item that nobody is already on the
+     * way to with? Without the second half you pick up four lattes for one
      * customer and the rest of the counter goes cold in your arms.
      */
     waiter(n) {
@@ -227,29 +238,38 @@ window.MSM = window.MSM || {};
       K.crew.forEach(count);
       let need = 0;
       MSM.ent.customers.forEach((c) => {
-        if (c.served || c.order !== n) return;
-        if (c.phase === 'wait' || c.phase === 'toWait') need++;
+        if (c.served || !c.items) return;
+        if (c.phase !== 'wait' && c.phase !== 'toWait') return;
+        c.items.forEach((it) => { if (!it.got && it.n === n) need++; });
       });
       return need > (carried[n] || 0);
     },
 
-    /* Payment is automatic — a cafe does not need a second queue at a till.
-       What you get on top is the tip, and that is where the stage's whole
-       balance sits: served fast, in a clean room, on a good machine. */
-    serve(body, c) {
+    /* Hand one item over. Payment is automatic — a cafe does not need a
+       second queue at a till — but it waits for the LAST item: a
+       latte-and-cake ticket pays once, like a real bill. The tip on top is
+       where the stage's whole balance sits: served fast, in a clean room,
+       on a good machine. */
+    give(body, c, it) {
       const cs = MSM.econ.cstate();
-      MSM.ent.takeOne(body, c.order);
+      MSM.ent.takeOne(body, it.n);
+      it.got = true;
+      c.carry = c.items.filter((o) => o.got).length;
+      c.carryP = it.n;
 
-      const price = MSM.econ.price(c.order);
-      const tip = Math.round(price * C.TIP_MAX * U.clamp(c.patience, 0, 1) * MSM.econ.clean());
+      if (c.items.some((o) => !o.got)) {
+        MSM.render.pop(c.x, c.y, 1.5, MSM.econ.prod(it.n).glyph + ' ✓', '#2CA85C');
+        return;
+      }
+
+      const total = c.items.reduce((a, o) => a + MSM.econ.price(o.n), 0);
+      const tip = Math.round(total * C.TIP_MAX * U.clamp(c.patience, 0, 1) * MSM.econ.clean());
       cs.tips += tip;
       MSM.state.served++;
-      MSM.ent.dropCash(price + tip, c.x, c.y - 0.35);
+      MSM.ent.dropCash(total + tip, c.x, c.y - 0.35);
       if (tip > 0) MSM.render.pop(c.x, c.y, 1.9, MSM.t('cafe.tip', { n: '$' + U.money(tip) }), '#FFB020');
 
       c.served = true;
-      c.carry = 1;
-      c.carryP = c.order;
       c.mood = 'happy';
       c.spotIndex = -1;
       c.phase = K.claimSeat(c) ? 'toTable' : 'leave';
@@ -367,7 +387,7 @@ window.MSM = window.MSM || {};
     update(dt) {
       const cs = MSM.econ.cstate();
       if (!cs) return;
-      if (K.crew.length !== (cs.barista + cs.server + cs.cleaner)) K.syncCrew();
+      if (K.crew.length !== (cs.barista + cs.chef + cs.server + cs.cleaner)) K.syncCrew();
 
       K.takeOrders(dt);
       K.machines(dt);
@@ -401,25 +421,30 @@ window.MSM = window.MSM || {};
         return;
       }
 
-      if (s.job === 'barista') {
-        /* The bar is worked wherever there is most to do — it looks like a
-           barista even though the machines already run on their own. */
-        let best = 0, work = -1;
+      if (s.job === 'barista' || s.job === 'chef') {
+        /* Each works whichever of THEIR OWN machines has most to do — it
+           looks like a barista or a chef even though the machines already
+           run on their own. Neither ever touches the other's station. */
+        let best = -1, work = -1;
         P.machines.forEach((spec, mi) => {
-          if (!cs.machines[mi].built) return;
+          if (spec.staff !== s.job || !cs.machines[mi].built) return;
           const n = (K.jobs[mi] || []).length +
             K.orders.filter((o) => MSM.econ.prod(o.n).machineIndex === mi).length;
           if (n > work) { work = n; best = mi; }
         });
-        const b = P.machines[best].box;
+        // hired before their station is built — wait by its plot
+        const spec = best >= 0 ? P.machines[best]
+          : P.machines.find((m) => m.staff === s.job) || P.machines[0];
+        const b = spec.box;
         W.seek(s, (b.x0 + b.x1) / 2, b.y1 + 0.55, spd, dt, false);
         return;
       }
 
-      /* The server: fetch what is ready, walk it to whoever ordered it. */
+      /* The server: fetch what is ready, walk it to whoever is owed it. */
       if (s.hold.length) {
-        const c = MSM.ent.customers.find((o) => !o.served && s.hold.indexOf(o.order) >= 0 &&
-          (o.phase === 'wait' || o.phase === 'toWait'));
+        const c = MSM.ent.customers.find((o) => !o.served && o.items &&
+          (o.phase === 'wait' || o.phase === 'toWait') &&
+          o.items.some((it) => !it.got && s.hold.indexOf(it.n) >= 0));
         if (!c) {
           // nobody wants it any more — put it back rather than hoard it
           if (W.atBox(s, P.pickup)) {
@@ -450,9 +475,23 @@ window.MSM = window.MSM || {};
         p.drink && ss.products[p.index].built && ss.cafe.machines[p.machineIndex].built);
       if (!menu.length) return;
 
-      const pick = menu[(Math.random() * menu.length) | 0];
+      /* An order is a drink, plus food once the kitchen exists: sometimes a
+         cake, occasionally a cake AND a croissant. Each item is its own
+         ticket, so one customer can keep both stations busy at once. */
+      const drinks = menu.filter((p) => P.machines[p.machineIndex].staff !== 'chef');
+      const foods  = menu.filter((p) => P.machines[p.machineIndex].staff === 'chef');
+      const items = [];
+      const take = (list) => {
+        const open = list.filter((p) => !items.some((it) => it.n === p.index));
+        if (!open.length) return;
+        items.push({ n: open[(Math.random() * open.length) | 0].index, got: false });
+      };
+      take(drinks.length ? drinks : foods);
+      C.FOOD_ODDS.forEach((odds) => { if (Math.random() < odds) take(foods); });
+      if (!items.length) return;
+
       MSM.ent.customers.push({
-        order: pick.index, want: pick.index,
+        items, want: items[0].n,
         wantQty: 1, wantGot: 0, list: [], total: 0, got: 0,
         color: ['#FF7BA6', '#4FB0FF', '#8B62FF', '#FF9E4D', '#2FCB9E', '#FF5C5C'][(Math.random() * 6) | 0],
         shade: '#F2F5FA',

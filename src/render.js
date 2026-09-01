@@ -925,9 +925,10 @@ window.MSM = window.MSM || {};
   function drawBubble(ctx, c, head) {
     /* In the mini mart the bubble is a shopping list, so it goes away once
        they join the queue. In a cafe it is the ORDER — the one thing you
-       have to read — so it stays up until the drink is in their hand. */
+       have to read — so it stays up until everything is in their hands. */
     if (MSM.cafe.active()) {
       if (c.served || c.phase === 'leave' || c.phase === 'sit' || c.phase === 'toTable') return;
+      if (c.items) return drawOrderBubble(ctx, c, head);
     } else if (c.phase === 'queue' || c.phase === 'toQueue') return;
     const prod = MSM.econ.prod(c.want);
     const r = Math.max(17, iso.TW * 0.21);
@@ -956,6 +957,35 @@ window.MSM = window.MSM || {};
       ctx.fillStyle = '#16295C'; ctx.fill();
       text(ctx, String(left), bx, by, rp * 0.52, '#FFFFFF');
     }
+  }
+
+  /** A cafe order: every item still owed, side by side in one bubble — the
+      latte AND the cake, so both halves of the ticket read at a glance.
+      Delivered items drop out, so the bubble narrows as the order lands. */
+  function drawOrderBubble(ctx, c, head) {
+    const items = c.items.filter((it) => !it.got);
+    if (!items.length) return;
+    const r = Math.max(17, iso.TW * 0.21);
+    const pulse = c.mood === 'wait' ? 1 + Math.sin(performance.now() / 260) * 0.07 : 1;
+    const rp = r * pulse;
+    const step = rp * 1.35;
+    const w = rp * 2 + step * (items.length - 1);
+    const x = head.x, y = head.y - r - 4 * (iso.TW / 64);
+
+    ctx.save();
+    ctx.shadowColor = '#0b1c3d33'; ctx.shadowBlur = 7; ctx.shadowOffsetY = 2;
+    rrect(ctx, x - w / 2, y - rp, w, rp * 2, rp);
+    ctx.fillStyle = '#FFFFFF'; ctx.fill();
+    ctx.restore();
+    ctx.beginPath();
+    ctx.arc(x - rp * 0.25, y + rp * 0.95, rp * 0.22, 0, TAU2);
+    ctx.fillStyle = '#FFFFFF'; ctx.fill();
+
+    items.forEach((it, k) => {
+      const prod = MSM.econ.prod(it.n);
+      MSM.art.draw(ctx, prod.art, x - w / 2 + rp + k * step, y + rp * 0.62,
+                   rp * 1.3, prod.color);
+    });
   }
 
   function drawCash(ctx, c) {

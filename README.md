@@ -121,6 +121,13 @@ takes and which of the three machines makes it — the **Coffee Machine**, the
 **Matcha & Ice Bar** or the **Pastry Oven**. Machines level up on their own
 pads: faster, and more cups on the go at once.
 
+The drink machines are the bar; the oven is the **kitchen**, and it is a
+different job. Once the oven is built, customers start ordering **food with
+their drink** — a latte and a cake on one ticket, shown side by side in their
+bubble. The ticket splits into one job per item, each routed to its own
+station, and the customer pays the whole bill (and tips on it) when the last
+item reaches their hands.
+
 **Patience** is the ring round a customer's bubble. It starts draining after a
 few seconds in the queue, and from the moment you take their order. Run it out
 and they walk. Serve them fast, in a clean room, and they **tip** — that is
@@ -131,9 +138,13 @@ customer takes a seat, drinks for ten seconds or so, and leaves the table
 dirty; a dirty table cannot be sat at and drags your tips down. If every table
 is dirty or taken they take the drink away instead.
 
-The café has three jobs the mini mart never had, on top of runners and a
-cashier: a **Barista** works the bar, a **Server** runs the drinks out, and a
-**Cleaner** clears the tables. It only earns unattended with all five hired.
+The café has four jobs the mini mart never had, on top of runners and a
+cashier: a **Barista** works the drink machines, a **Chef** works the oven, a
+**Server** runs the orders out, and a **Cleaner** clears the tables. A machine
+only runs when its own person is hired — or you stand at it yourself; the
+barista never bakes and the chef never brews. It earns unattended once the
+runner, cashier, barista and server are hired; the food lines pay only with
+the chef too.
 
 ## Stores
 

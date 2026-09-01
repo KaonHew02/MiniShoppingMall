@@ -1233,6 +1233,96 @@ window.MSM = window.MSM || {};
       }
     },
 
+    /* A smart speaker: a rounded fabric drum, the grille dots, and a lit
+       ring on top so it reads as electronics and not a pepper mill. */
+    speaker(ctx, x, y, s, c) {
+      const w = s * 0.40, h = s * 0.56, x0 = x - w / 2, top = y - h;
+      rr(ctx, x0, top, w, h, w * 0.24, c);
+      rr(ctx, x + w * 0.08, top, w * 0.42, h, w * 0.20, U.shade(c, -0.18));
+      // the grille: rows of pinholes across the fabric
+      ctx.fillStyle = U.shade(c, -0.34);
+      for (let ry = 0; ry < 5; ry++) {
+        for (let rx = 0; rx < 4; rx++) {
+          ctx.beginPath();
+          ctx.arc(x0 + w * (0.18 + rx * 0.21), top + h * (0.26 + ry * 0.14),
+                  s * 0.014, 0, TAU);
+          ctx.fill();
+        }
+      }
+      ell(ctx, x, top + h * 0.06, w * 0.44, h * 0.055, 0, U.shade(c, 0.16));  // the lid
+      ctx.beginPath();                                    // the light ring
+      ctx.ellipse(x, top + h * 0.06, w * 0.30, h * 0.038, 0, 0, TAU);
+      stroke(ctx, '#7FD4FF', s * 0.024);
+      rr(ctx, x0 + w * 0.28, top + h * 0.13, w * 0.44, h * 0.05, s * 0.01, U.shade(c, -0.28));
+    },
+
+    /* A laptop, open and three-quarter on: the lid with a glowing screen
+       leaning back, the keyboard deck coming forward to the baseline. */
+    laptop(ctx, x, y, s, c) {
+      const w = s * 0.66, x0 = x - w / 2;
+      const deckH = s * 0.16, lidH = s * 0.42, lidTop = y - deckH - lidH;
+      ctx.beginPath();                                    // the deck
+      ctx.moveTo(x0 - w * 0.05, y);
+      ctx.lineTo(x0 + w * 1.05, y);
+      ctx.lineTo(x0 + w * 0.94, y - deckH);
+      ctx.lineTo(x0 + w * 0.06, y - deckH);
+      ctx.closePath(); fill(ctx, U.shade(c, -0.12));
+      // key rows suggested, not drawn one by one
+      ctx.beginPath();
+      for (let k = 0; k < 3; k++) {
+        const ky = y - deckH * (0.28 + k * 0.24);
+        ctx.moveTo(x0 + w * 0.14, ky); ctx.lineTo(x0 + w * 0.86, ky);
+      }
+      stroke(ctx, U.shade(c, -0.35), s * 0.014);
+      rr(ctx, x - w * 0.12, y - deckH * 0.30, w * 0.24, deckH * 0.22, s * 0.01,
+         U.shade(c, -0.30));                              // trackpad
+
+      rr(ctx, x0 + w * 0.05, lidTop, w * 0.9, lidH, s * 0.02, c);   // the lid
+      const ix = x0 + w * 0.10, iy = lidTop + lidH * 0.09;
+      const iw = w * 0.80, ih = lidH * 0.80;
+      ctx.save();
+      rr(ctx, ix, iy, iw, ih, s * 0.012);
+      ctx.clip();
+      fill(ctx, '#16295C');                               // the screen
+      ctx.beginPath();                                    // a code window glow
+      ctx.moveTo(ix, iy + ih);
+      ctx.quadraticCurveTo(ix + iw * 0.4, iy + ih * 0.3, ix + iw, iy + ih * 0.85);
+      ctx.lineTo(ix + iw, iy + ih); ctx.closePath();
+      fill(ctx, '#2E6FB0');
+      rr(ctx, ix + iw * 0.08, iy + ih * 0.12, iw * 0.36, ih * 0.08, s * 0.008, '#7FD4FF');
+      rr(ctx, ix + iw * 0.08, iy + ih * 0.28, iw * 0.52, ih * 0.08, s * 0.008, '#5FE08D');
+      rr(ctx, ix + iw * 0.08, iy + ih * 0.44, iw * 0.28, ih * 0.08, s * 0.008, '#FFC53D');
+      ctx.restore();
+    },
+
+    /* A desktop monitor: thinner bezel than the TV, a proper stand with a
+       foot, and a splash of game on the panel rather than a sunny hill. */
+    monitor(ctx, x, y, s, c) {
+      const w = s * 0.62, h = s * 0.40, x0 = x - w / 2, top = y - s * 0.60;
+      rr(ctx, x - s * 0.14, y - s * 0.04, s * 0.28, s * 0.04, s * 0.02, '#3E4A66');
+      rr(ctx, x - s * 0.035, y - s * 0.20, s * 0.07, s * 0.17, s * 0.015, '#4E5D80');
+      rr(ctx, x0, top, w, h, s * 0.025, '#2B3450');
+
+      const ix = x0 + w * 0.04, iy = top + h * 0.08, iw = w * 0.92, ih = h * 0.78;
+      ctx.save();
+      rr(ctx, ix, iy, iw, ih, s * 0.015);
+      ctx.clip();
+      fill(ctx, U.shade(c, -0.35));                       // a night level
+      ctx.beginPath();                                    // far hills
+      ctx.moveTo(ix, iy + ih);
+      ctx.lineTo(ix + iw * 0.3, iy + ih * 0.45);
+      ctx.lineTo(ix + iw * 0.55, iy + ih * 0.8);
+      ctx.lineTo(ix + iw * 0.8, iy + ih * 0.35);
+      ctx.lineTo(ix + iw, iy + ih * 0.7);
+      ctx.lineTo(ix + iw, iy + ih);
+      ctx.closePath(); fill(ctx, U.shade(c, 0.1));
+      ell(ctx, ix + iw * 0.2, iy + ih * 0.28, iw * 0.06, iw * 0.06, 0, '#FFC53D');
+      ctx.restore();
+      rr(ctx, ix, iy, iw, ih * 0.3, s * 0.015, '#FFFFFF18');
+      // the racing stripe under the panel that says "gaming, honest"
+      rr(ctx, x - w * 0.12, top + h * 0.90, w * 0.24, h * 0.06, s * 0.01, U.shade(c, 0.3));
+    },
+
     /* Screen on a pedestal, showing something: a sky, a hill and a sun. An
        empty dark rectangle read as a doormat stood on its edge. */
     tv(ctx, x, y, s, c) {

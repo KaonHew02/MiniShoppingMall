@@ -41,6 +41,14 @@ window.MSM = window.MSM || {};
     sold: 0, lost: 0, fetched: 0,
   });
 
+  /* Stage 5 keeps the demo benches you have built, whether a tech advisor is
+     on the floor, and the tallies the Staff sheet reports. */
+  const blankTech = (store) => ({
+    areas: store.plan.areas.map((a) => ({ built: a.cost === 0, buildPaid: 0 })),
+    advisor: false,
+    sold: 0, lost: 0, advised: 0, compared: 0,
+  });
+
   const blank = () => ({
     cash: CFG.START_CASH,
     gems: 0,
@@ -65,6 +73,7 @@ window.MSM = window.MSM || {};
       cafe: s.mode === 'cafe' ? blankCafe(s) : null,
       sports: s.mode === 'sports' ? blankSports(s) : null,
       boutique: s.mode === 'boutique' ? blankBoutique(s) : null,
+      tech: s.mode === 'tech' ? blankTech(s) : null,
     })),
   });
 
@@ -169,6 +178,31 @@ window.MSM = window.MSM || {};
       return seen ? bs.sold / seen : 0;
     },
 
+    /* --------------------------------------------------- the techhub */
+    tstate: (i) => MSM.state.stores[i ?? MSM.state.current].tech,
+
+    /** Is this line's demo bench built? Cold spec sheets barely sell. */
+    bench(n, i) {
+      const ts = E.tstate(i), prod = E.prod(n, i);
+      if (!ts || prod.areaIndex == null || prod.areaIndex < 0) return false;
+      return !!ts.areas[prod.areaIndex].built;
+    },
+
+    /** What share of shoppers a tech line closes, unattended. */
+    techRate(n, i) {
+      const T = CFG.TECH;
+      const chance = T.BASE_BUY + T.ADVICE_BONUS +
+        (E.bench(n, i) ? T.DEMO_BONUS + T.COMPARE_BONUS : 0);
+      return Math.min(chance, T.MAX_BUY) * 0.85;
+    },
+
+    techConversion(i) {
+      const ts = E.tstate(i);
+      if (!ts) return 1;
+      const seen = ts.sold + ts.lost;
+      return seen ? ts.sold / seen : 0;
+    },
+
     /** A machine's brew speed and how many cups it can have on at once. */
     machine(mi, i) {
       const cs = E.cstate(i);
@@ -242,6 +276,9 @@ window.MSM = window.MSM || {};
       /* Nobody to find a size or work the cubicles is the same problem in a
          different shop: the clothes stay on the rail. */
       if (ss.boutique && !ss.boutique.assistant) return 0;
+      /* Nobody to translate the spec sheets is the same problem again: the
+         boxes stay sealed on the stands. */
+      if (ss.tech && !ss.tech.advisor) return 0;
       let r = 0;
       CFG.STORES[i].products.forEach((p, n) => {
         if (!p.sell || !ss.products[n].built) return;
@@ -252,6 +289,7 @@ window.MSM = window.MSM || {};
         let rate = E.price(n, i) / E.restock(n, i);
         if (ss.sports) rate *= E.closeRate(n, i);
         if (ss.boutique) rate *= E.fitRate(n, i);
+        if (ss.tech) rate *= E.techRate(n, i);
         r += rate;
       });
       return r * 0.5;             // customers, not supply, are the real limit
@@ -389,6 +427,22 @@ window.MSM = window.MSM || {};
           const each = Math.floor(ps.shelf / 4);
           bs.racks[n] = [each, each, each, each];
           for (let k = 0; k < ps.shelf - each * 4; k++) bs.racks[n][k]++;
+        });
+      }
+
+      /* The techhub's demo benches, its advisor, and its tallies. */
+      const ts = s.stores[i].tech, ot = old.tech;
+      if (ts && ot && !fresh) {
+        ts.advisor = !!ot.advisor;
+        ts.sold = Math.max(0, +ot.sold || 0);
+        ts.lost = Math.max(0, +ot.lost || 0);
+        ts.advised = Math.max(0, +ot.advised || 0);
+        ts.compared = Math.max(0, +ot.compared || 0);
+        (ot.areas || []).forEach((oa, k) => {
+          const a = ts.areas[k];
+          if (!a || !oa) return;
+          a.built = !!oa.built;
+          a.buildPaid = Math.max(0, +oa.buildPaid || 0);
         });
       }
 

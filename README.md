@@ -217,6 +217,49 @@ all curtained shut the queue outside starts losing people:
 | 2 | 41% |
 | 5 | 66% |
 
+## Stage 5 — TechHub
+
+The boutique asks whether you have the right size. TechHub asks the question
+electronics actually turn on: **which one?** Nobody comes in for "the
+TechPhone" — they come in for *a phone*, with a priority and a budget, and
+the shop stocks a PAIR in every department that pulls opposite ways:
+
+| Department | The pair | The argument |
+| --- | --- | --- |
+| 🎧 Audio | TechBuds vs TechSound Max | battery life vs room-filling sound |
+| 📱 Phones | TechPhone vs TechPhone Pro | all-week battery vs the camera |
+| 💻 Laptops | TechBook Air vs TechBook Pro | thin and long-lived vs fast and hungry |
+| 📺 Screens | TechView 144 vs TechVision TV | refresh rate vs sheer size |
+
+```
+they come in wanting a KIND of thing  ->  💻 + ⚡ floats over their head
+they find the first display           ->  look it over
+they carry it to the demo bench       ->  hands-on, a few seconds
+then the other one                    ->  same again
+they weigh the two                    ->  ⚖️ against THEIR priority
+the winner they can afford            ->  a sealed box off the stand
+```
+
+**Demoing is free; selling needs a box.** Fifty people can try the floor
+unit, but the sale takes a sealed box on the stand — that is what the
+stockers haul, and a shopper who has already said yes will stand and wait at
+an empty stand exactly as long as their patience lasts.
+
+**A spec sheet is noise until somebody translates it.** Cold — no bench, no
+advice — barely a quarter of shoppers buy. Each department's **demo bench**
+is a build plot; a hired **Tech Advisor** (or you, standing with a ❓
+shopper) hears the priority, points at the right one, finds the budget for
+it, and sends them to the bench with their answer:
+
+| Shop floor | Conversion |
+| --- | --- |
+| Cold — no benches, nobody advising | 28% |
+| All four benches | 62% |
+| Benches + Tech Advisor | 70% |
+
+Electronics money makes it worth the trouble: a grocery basket is worth tens,
+a TechVision TV is worth millions.
+
 ## Stores
 
 | Store | Unlock | Products |
@@ -225,7 +268,7 @@ all curtained shut the queue outside starts losing people:
 | Coffee Shop | $6K | 6 ingredients, 10 recipes, 3 machines — made to order |
 | Sport Outlet | $180K | 4 sports, 8 lines, 4 courts — tried before they are bought |
 | Fashion Boutique | $4.2M | 8 lines in 4 sizes, 5 fitting rooms — tried on before they are bought |
-| Electronics | $95M | earbuds, phone, tablet, TV |
+| TechHub | $95M | 4 departments, 8 lines in rival pairs, 4 demo benches — compared before they are bought |
 
 Unlock a store once, then travel between them freely from the Map.
 
@@ -259,6 +302,8 @@ src/sports.js      stage 3: browsing, the trial, advice, the buy decision
 src/sports-render.js stage 3's fixtures — the stockroom and the four courts
 src/boutique.js    stage 4: sizes, size requests, the cubicles, trying on
 src/boutique-render.js stage 4's fixtures — hanging rails and fitting rooms
+src/tech.js        stage 5: needs, demos, the comparison, advice
+src/tech-render.js stage 5's fixtures — lit displays and the demo benches
 src/render.js      canvas scene + the joystick
 src/art.js         one painter per product — potatoes, tomatoes, cups...
 src/ui.js          HUD, bottom sheets, toasts
@@ -277,8 +322,8 @@ modules, so the file:// path keeps working.
 Sound, prestige, per-store decoration, and a tutorial past the first sale.
 Customers and staff do not collide with anything — only the player does — so
 they clip through fixtures on the diagonal. The café has no day cycle, so
-there is no end-of-day summary and no missions yet. Electronics still
-borrows the mini mart's floor plan.
+there is no end-of-day summary and no missions yet. All five stores now have
+their own floor plan and their own game.
 
 The Sport Outlet has the trial and the advice, but not yet per-product
 **quality tiers** and brands, setting your own **prices**, seasonal
@@ -291,6 +336,12 @@ The Boutique has sizes, the size request and the cubicles, but not **colours**
 as a second axis, **outfit style matching** (casual / smart / winter), fashion
 **trends** and seasons that move demand week to week, **promotions** and
 bundles, VIP shoppers, or assistant levels. Every shop still has one till.
+
+TechHub has the demo, the comparison and the advisor, but not the late-game
+retail systems its design sketches: **delivery** for the big boxes, a
+**service desk** with warranty, repairs and a technician, **trade-ins**,
+setup/installation, storage-and-colour variants, product **launch events**
+with queues round the block, or a supplier tier system.
 
 ## Brand
 

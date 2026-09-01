@@ -144,6 +144,7 @@ window.MSM = window.MSM || {};
       else {
         if (MSM.sports.active()) MSM.sports.update(dt);
         if (MSM.boutique.active()) MSM.boutique.update(dt);
+        if (MSM.tech.active()) MSM.tech.update(dt);
         G.serve(dt);
       }
       G.tillPad(dt);
@@ -153,6 +154,7 @@ window.MSM = window.MSM || {};
       if (MSM.cafe.active()) { G.tutTarget = null; G.tutText = MSM.cafe.guide(); }
       if (MSM.sports.active()) { G.tutTarget = null; G.tutText = MSM.sports.guide(); }
       if (MSM.boutique.active()) { G.tutTarget = null; G.tutText = MSM.boutique.guide(); }
+      if (MSM.tech.active()) { G.tutTarget = null; G.tutText = MSM.tech.guide(); }
       G.levelPads(dt);
       G.doors(dt);
       G.passive(dt);
@@ -546,6 +548,21 @@ window.MSM = window.MSM || {};
     },
 
     assistantCost: () => CFG.BOUTIQUE.ASSISTANT_COST(MSM.econ.store().unlock),
+
+    /* Stage 5's one hire: the person who reads the spec sheet FOR them. */
+    hireTechAdvisor() {
+      const ts = MSM.econ.tstate();
+      if (!ts || ts.advisor) return;
+      const cost = G.techAdvisorCost();
+      if (MSM.state.cash < cost) return;
+      MSM.state.cash -= cost;
+      ts.advisor = true;
+      MSM.tech.syncCrew();
+      MSM.ui.toast(MSM.t('toast.techAdvisor'));
+      MSM.save();
+    },
+
+    techAdvisorCost: () => CFG.TECH.ADVISOR_COST(MSM.econ.store().unlock),
 
     cafeCost(job) {
       const u = MSM.econ.store().unlock;

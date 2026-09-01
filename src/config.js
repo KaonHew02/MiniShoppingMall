@@ -147,6 +147,35 @@ MSM.CFG = {
     ASSISTANT_COST: (unlock) => Math.max(12000, Math.round(unlock * 1.3)),
   },
 
+  /* --------------------------------------------------------- the techhub */
+  /* Stage 5 is a COMPARISON game. Everywhere else the customer wants one
+     thing; here they want a KIND of thing — "a laptop", "a phone" — with a
+     priority and a budget, and the shop stocks two of each kind that pull in
+     opposite directions. They demo both, weigh the specs against what THEY
+     care about, and pick a winner. Advice matters because a spec sheet is
+     noise until somebody translates it. */
+  TECH: {
+    /* The stats a product can be good at, and the badge each shows as. */
+    STATS: { perf: '⚡', battery: '🔋', camera: '📷', display: '🖼️', sound: '🎵' },
+    BROWSE_TIME: 0.9,        // seconds looking it over at the display
+    DEMO_TIME: [2.5, 4.5],   // seconds hands-on at the demo bench
+    PATIENCE: 60,            // seconds waiting on a sold-out box
+    QUEUE_GRACE: 6,
+    ADVISE_REACH: 1.6,
+    ADVISE_TIME: 0.9,
+    /* The buy roll. Cold, a spec sheet convinces almost nobody; a demo, a
+       real comparison and a human recommendation stack up to nearly always. */
+    BASE_BUY: 0.30,
+    DEMO_BONUS: 0.18,        // they had it in their hands
+    COMPARE_BONUS: 0.16,     // they weighed it against the other one and it won
+    ADVICE_BONUS: 0.24,      // somebody translated the spec sheet for them
+    LEVEL_BONUS: 0.008,
+    MAX_BUY: 0.96,
+    BUDGET: [0.70, 2.20],    // what they will pay, over their category's prices
+    ADVICE_BUDGET: 1.30,     // good advice finds the money for the right one
+    ADVISOR_COST: (unlock) => Math.max(30000, Math.round(unlock * 1.2)),
+  },
+
   /* --------------------------------------------------------- floor plans */
   /* MSM.CFG.PLAN is the ACTIVE plan. usePlan() copies the current store's
      layout into it IN PLACE, so every module can keep the
@@ -573,6 +602,102 @@ MSM.CFG.PLANS.boutique = {
   bin:      { x0: 21.40, y0: 13.00, x1: 22.10, y1: 13.70 },
 };
 
+/* The techhub:
+     back wall     eight stock crates — the boxed units, sealed
+     mid           four departments, two display stands each
+     centre        the demo zone: one bench per department, hands-on
+     front         the cashier, the queue running back to the door
+
+   The displays are for looking; the BOXES are what sells. A demo never
+   consumes stock — you can let fifty people try the floor unit — but a sale
+   needs a sealed box on the stand, and that is what the stockers carry. */
+MSM.CFG.PLANS.tech = {
+  id: 'tech',
+  stations: [
+    { x0: 1.10,  y0: 0.55, x1: 2.90,  y1: 1.70 },   // 0 earbuds
+    { x0: 3.50,  y0: 0.55, x1: 5.30,  y1: 1.70 },   // 1 speaker
+    { x0: 6.90,  y0: 0.55, x1: 8.70,  y1: 1.70 },   // 2 phone
+    { x0: 9.30,  y0: 0.55, x1: 11.10, y1: 1.70 },   // 3 phone pro
+    { x0: 12.70, y0: 0.55, x1: 14.50, y1: 1.70 },   // 4 laptop
+    { x0: 15.10, y0: 0.55, x1: 16.90, y1: 1.70 },   // 5 gaming laptop
+    { x0: 18.50, y0: 0.55, x1: 20.30, y1: 1.70 },   // 6 monitor
+    { x0: 20.90, y0: 0.55, x1: 22.70, y1: 1.70 },   // 7 tv
+  ],
+  pads: [
+    { x0: 1.10,  y0: 2.00, x1: 1.80,  y1: 2.70 },
+    { x0: 3.50,  y0: 2.00, x1: 4.20,  y1: 2.70 },
+    { x0: 6.90,  y0: 2.00, x1: 7.60,  y1: 2.70 },
+    { x0: 9.30,  y0: 2.00, x1: 10.00, y1: 2.70 },
+    { x0: 12.70, y0: 2.00, x1: 13.40, y1: 2.70 },
+    { x0: 15.10, y0: 2.00, x1: 15.80, y1: 2.70 },
+    { x0: 18.50, y0: 2.00, x1: 19.20, y1: 2.70 },
+    { x0: 20.90, y0: 2.00, x1: 21.60, y1: 2.70 },
+  ],
+  /* Display stands, two to a department — the pair the customer compares. */
+  shelves: [
+    { x0: 1.20,  y0: 4.20, x1: 2.80,  y1: 5.15 },
+    { x0: 3.60,  y0: 4.20, x1: 5.20,  y1: 5.15 },
+    { x0: 7.00,  y0: 4.20, x1: 8.60,  y1: 5.15 },
+    { x0: 9.40,  y0: 4.20, x1: 11.00, y1: 5.15 },
+    { x0: 12.80, y0: 4.20, x1: 14.40, y1: 5.15 },
+    { x0: 15.20, y0: 4.20, x1: 16.80, y1: 5.15 },
+    { x0: 18.60, y0: 4.20, x1: 20.20, y1: 5.15 },
+    { x0: 21.00, y0: 4.20, x1: 22.60, y1: 5.15 },
+  ],
+  lanes: [2.00, 4.40, 7.80, 10.20, 13.60, 16.00, 19.40, 21.80],
+
+  /* The demo benches — the stage's whole point. One per department, a build
+     plot like everything else. A department with no bench sells cold, and
+     cold sells badly. Only the bench itself is solid; the floor around it is
+     where the customer stands with the thing in their hands. */
+  areas: [
+    { id: 'audiobar',  cat: 'audio',  label: 'Audio Demo',  cost: 0,
+      box:  { x0: 0.80,  y0: 6.60, x1: 5.60,  y1: 9.60 },
+      prop: { x0: 2.10,  y0: 6.85, x1: 4.30,  y1: 8.05 },
+      stand: { x: 3.20,  y: 8.95 } },
+    { id: 'phonebar',  cat: 'phone',  label: 'Phone Demo',  cost: 30000000,
+      box:  { x0: 6.40,  y0: 6.60, x1: 11.20, y1: 9.60 },
+      prop: { x0: 7.70,  y0: 6.85, x1: 9.90,  y1: 8.05 },
+      stand: { x: 8.80,  y: 8.95 } },
+    { id: 'laptopbar', cat: 'laptop', label: 'Laptop Demo', cost: 90000000,
+      box:  { x0: 12.00, y0: 6.60, x1: 16.80, y1: 9.60 },
+      prop: { x0: 13.30, y0: 6.85, x1: 15.50, y1: 8.05 },
+      stand: { x: 14.40, y: 8.95 } },
+    { id: 'screenbar', cat: 'screen', label: 'Screen Demo', cost: 220000000,
+      box:  { x0: 17.60, y0: 6.60, x1: 22.40, y1: 9.60 },
+      prop: { x0: 18.90, y0: 6.85, x1: 21.10, y1: 8.05 },
+      stand: { x: 20.00, y: 8.95 } },
+  ],
+
+  sections: [
+    { name: 'AUDIO',       x0: 0.90,  y0: 3.60, x1: 5.50,  y1: 5.80, tint: '#D9D2F4' },
+    { name: 'SMARTPHONES', x0: 6.70,  y0: 3.60, x1: 11.30, y1: 5.80, tint: '#C4E2FF' },
+    { name: 'LAPTOPS',     x0: 12.50, y0: 3.60, x1: 17.10, y1: 5.80, tint: '#C9EEE4' },
+    { name: 'SCREENS',     x0: 18.30, y0: 3.60, x1: 22.90, y1: 5.80, tint: '#FFDBC4' },
+    { name: 'DEMO ZONE',   x0: 0.60,  y0: 6.20, x1: 22.60, y1: 9.90, tint: '#B7C4E8' },
+  ],
+  zones: [
+    { y0: -0.25, y1: 2.95,  a: '#DCE4EE', b: '#D3DCE8' },   // the stockroom
+    { y0: 2.95,  y1: 6.20,  a: '#EEF2FA', b: '#E5EBF6' },   // the shop floor
+    { y0: 6.20,  y1: 10.10, a: '#C7D2EC', b: '#BCC9E7' },   // the demo zone
+    { y0: 10.10, y1: 15.45, a: '#E4E9F4', b: '#DBE1EF' },   // the front
+  ],
+  patches: [],
+
+  stockLane: 3.30,
+  walkway: 10.15,
+
+  till:  { x0: 9.60, y0: 11.20, x1: 12.40, y1: 12.05 },
+  serve: { x: 11.00, y: 10.75 },
+  queue: [{ x: 11.00, y: 12.55 }, { x: 11.00, y: 13.15 },
+          { x: 11.00, y: 13.75 }, { x: 11.00, y: 14.35 }],
+  entrance: { x: 11.00, y: 14.90 },
+  spawn:    { x: 7.60,  y: 10.70 },
+  door:     { x0: 0.80,  y0: 12.60, x1: 2.20,  y1: 14.00 },
+  sign:     { x0: 13.20, y0: 13.70, x1: 13.90, y1: 14.40 },
+  bin:      { x0: 21.40, y0: 13.20, x1: 22.10, y1: 13.90 },
+};
+
 MSM.CFG.STORES = [
   {
     id: 'grocery', name: 'Grocery Store', glyph: '🥕', color: '#5FCBB6', unlock: 0,
@@ -802,13 +927,54 @@ MSM.CFG.STORES = [
         garment:false, source:{ kind:'wardrobe', label:'Handbag Stock' } },
     ],
   },
+  /* ------------------------------------------------------- STAGE 5 ---- */
+  /* Four departments, and in each one a PAIR that pulls opposite ways: the
+     phone with the battery against the phone with the camera, the thin
+     laptop against the fast one. A customer's priority decides which of the
+     two is "better", and that is the entire point of the store. */
   {
-    id: 'tech', name: 'Electronics', glyph: '📱', color: '#4FB0FF', unlock: 95000000,
+    id: 'tech', name: 'TechHub', glyph: '📱', color: '#4FB0FF', unlock: 95000000,
+    mode: 'tech',
+    plan: MSM.CFG.PLANS.tech,
+    unlocks: [
+      { id: 'buds',     cost: 0 },
+      { id: 'phone',    cost: 2000000 },
+      { id: 'speaker',  cost: 5000000 },
+      { id: 'phonepro', cost: 12000000 },
+      { id: 'laptop',   cost: 26000000 },
+      { id: 'monitor',  cost: 55000000 },
+      { id: 'gambook',  cost: 120000000 },
+      { id: 'tv',       cost: 260000000 },
+    ],
     products: [
-      { id:'buds',   name:'Earbuds', glyph:'🎧', color:'#E7EEF7', price:900000,   restock:2.0, art:'buds' },
-      { id:'phone',  name:'Phone',   glyph:'📱', color:'#4FB0FF', price:1400000,  restock:2.4, art:'phone' },
-      { id:'tablet', name:'Tablet',  glyph:'💻', color:'#8B62FF', price:2100000,  restock:2.8, art:'tablet' },
-      { id:'tv',     name:'TV',      glyph:'📺', color:'#4E5D80', price:3200000,  restock:3.3, art:'tv' },
+      /* --- 🎧 audio: long-life buds against the big loud speaker -------- */
+      { id:'buds',     name:'TechBuds',       glyph:'🎧', color:'#E7EEF7', price:900000,   restock:2.0, art:'buds',
+        cat:'audio',  specs:{ sound:3, battery:4 },
+        source:{ kind:'techstock', label:'TechBuds Stock' } },
+      { id:'speaker',  name:'TechSound Max',  glyph:'🔊', color:'#5A6472', price:1900000,  restock:2.4, art:'speaker',
+        cat:'audio',  specs:{ sound:5, battery:1 },
+        source:{ kind:'techstock', label:'Speaker Stock' } },
+      /* --- 📱 phones: the battery phone against the camera phone -------- */
+      { id:'phone',    name:'TechPhone',      glyph:'📱', color:'#4FB0FF', price:1400000,  restock:2.2, art:'phone',
+        cat:'phone',  specs:{ camera:3, battery:5 },
+        source:{ kind:'techstock', label:'TechPhone Stock' } },
+      { id:'phonepro', name:'TechPhone Pro',  glyph:'📱', color:'#2B3450', price:2600000,  restock:2.6, art:'phone',
+        cat:'phone',  specs:{ camera:5, battery:3 },
+        source:{ kind:'techstock', label:'Pro Stock' } },
+      /* --- 💻 laptops: all-day thin against all-out fast ---------------- */
+      { id:'laptop',   name:'TechBook Air',   glyph:'💻', color:'#C9D2DC', price:3400000,  restock:2.8, art:'laptop',
+        cat:'laptop', specs:{ perf:3, battery:5 },
+        source:{ kind:'techstock', label:'TechBook Stock' } },
+      { id:'gambook',  name:'TechBook Pro',   glyph:'💻', color:'#8B62FF', price:6000000,  restock:3.0, art:'laptop',
+        cat:'laptop', specs:{ perf:5, battery:2 },
+        source:{ kind:'techstock', label:'Pro Book Stock' } },
+      /* --- 📺 screens: the fast monitor against the huge TV ------------- */
+      { id:'monitor',  name:'TechView 144',   glyph:'🖥️', color:'#5FCBB6', price:4500000,  restock:3.0, art:'monitor',
+        cat:'screen', specs:{ display:4, perf:4, sound:1 },
+        source:{ kind:'techstock', label:'Monitor Stock' } },
+      { id:'tv',       name:'TechVision TV',  glyph:'📺', color:'#4E5D80', price:8000000,  restock:3.4, art:'tv',
+        cat:'screen', specs:{ display:5, perf:1, sound:4 },
+        source:{ kind:'techstock', label:'TV Stock' } },
     ],
   },
 ];
@@ -845,11 +1011,13 @@ MSM.CFG.STORES.forEach((store) => {
       shelfN++;
     }
 
-    /* Which court this line is tried out on. -1 means the sport has no test
-       area in the plan at all; an area that is merely unbuilt is a state,
-       not a layout, so the sim checks that separately. */
-    if (store.mode === 'sports') {
-      p.areaIndex = (P.areas || []).findIndex((a) => a.sport === p.sport);
+    /* Which court or demo bench this line is tried out on. -1 means its
+       group has no area in the plan at all; an area that is merely unbuilt
+       is a state, not a layout, so the sim checks that separately. */
+    if (P.areas) {
+      const key = p.sport || p.cat;
+      p.areaIndex = key == null ? -1
+        : P.areas.findIndex((a) => (a.sport || a.cat) === key);
     }
 
     p.upgradeBase = Math.max(60, (p.price || 12) * 7);

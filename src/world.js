@@ -47,6 +47,12 @@ window.MSM = window.MSM || {};
         const P = CFG.PLAN;
         bs.rooms.forEach((r, k) => { if (r.built) list.push(P.rooms[k].box); });
       }
+      // the techhub's demo counters — the bench, never the floor around it
+      const ts = MSM.econ.tstate();
+      if (ts) {
+        const P = CFG.PLAN;
+        ts.areas.forEach((a, k) => { if (a.built) list.push(P.areas[k].prop); });
+      }
       this._solids = list;
       return list;
     },

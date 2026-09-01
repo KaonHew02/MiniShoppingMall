@@ -177,9 +177,10 @@ window.MSM = window.MSM || {};
 
     // the coffee shop's supply crates and menu plaques paint themselves
     if (kind === 'supply' || kind === 'menu') { MSM.cafe.drawSource(ctx, n); return; }
-    // and so does the sport outlet's stockroom, and the boutique's
+    // and so does the sport outlet's stockroom, the boutique's, the techhub's
     if (kind === 'stock') { MSM.sports.drawSource(ctx, n); return; }
     if (kind === 'wardrobe') { MSM.boutique.drawSource(ctx, n); return; }
+    if (kind === 'techstock') { MSM.tech.drawSource(ctx, n); return; }
 
     if (kind === 'crop') {
       iso.box(ctx, b.x0, b.y0, b.x1, b.y1, 0, 0.16, '#8A5A2B');
@@ -942,6 +943,8 @@ window.MSM = window.MSM || {};
       if (c.phase === 'leave') return;
       return drawOrderBubble(ctx, c, head);
     }
+    // the techhub's overlay owns its need pill — no round bubble on top of it
+    if (MSM.tech.active()) return;
     const prod = MSM.econ.prod(c.want);
     const r = Math.max(17, iso.TW * 0.21);
     const x = head.x, y = head.y - r - 4 * (iso.TW / 64);
@@ -1037,7 +1040,7 @@ window.MSM = window.MSM || {};
     drawFloor(ctx);
 
     const cafe = MSM.cafe.active(), sports = MSM.sports.active();
-    const boutique = MSM.boutique.active();
+    const boutique = MSM.boutique.active(), tech = MSM.tech.active();
     const items = [];
     MSM.econ.store().products.forEach((prod, n) => {
       const built = MSM.econ.pstate(n).built;
@@ -1047,13 +1050,16 @@ window.MSM = window.MSM || {};
         // every cafe ingredient shares one storage unit — MSM.cafe draws it once
         if (prod.shelf && !cafe) {
           items.push({ d: prod.shelf.x1 + prod.shelf.y1,
-                       fn: () => (boutique ? MSM.boutique.drawRack(ctx, n) : drawShelf(ctx, n)) });
+                       fn: () => (boutique ? MSM.boutique.drawRack(ctx, n)
+                                : tech ? MSM.tech.drawDisplay(ctx, n)
+                                : drawShelf(ctx, n)) });
         }
       }
     });
     if (cafe) MSM.cafe.collect(items, ctx);
     if (sports) MSM.sports.collect(items, ctx);
     if (boutique) MSM.boutique.collect(items, ctx);
+    if (tech) MSM.tech.collect(items, ctx);
     items.push({ d: P.till.x1 + P.till.y1, fn: () => drawTill(ctx) });
     items.push({ d: P.door.x1 + P.door.y1, fn: () => drawDoor(ctx) });
     items.push({ d: P.bin.x1 + P.bin.y1, fn: () => drawBin(ctx) });
@@ -1074,6 +1080,7 @@ window.MSM = window.MSM || {};
         if (cafe) MSM.cafe.overlay(ctx, c, head);
         if (sports) MSM.sports.overlay(ctx, c, head);
         if (boutique) MSM.boutique.overlay(ctx, c, head);
+        if (tech) MSM.tech.overlay(ctx, c, head);
       },
     }));
     // staff are pink; the player is the blue one you drive
@@ -1092,6 +1099,10 @@ window.MSM = window.MSM || {};
                    fn: () => drawBody(ctx, s, { body: s.color, cap: '#FFFFFF', accent: s.color }) });
     });
     MSM.boutique.crew.forEach((s) => {
+      items.push({ d: s.x + s.y + 0.3,
+                   fn: () => drawBody(ctx, s, { body: s.color, cap: '#FFFFFF', accent: s.color }) });
+    });
+    MSM.tech.crew.forEach((s) => {
       items.push({ d: s.x + s.y + 0.3,
                    fn: () => drawBody(ctx, s, { body: s.color, cap: '#FFFFFF', accent: s.color }) });
     });

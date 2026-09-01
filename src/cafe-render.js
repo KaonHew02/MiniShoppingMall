@@ -6,7 +6,7 @@
 window.MSM = window.MSM || {};
 
 (function () {
-  const CFG = MSM.CFG, U = MSM.util, P = MSM.CFG.PLAN, C = MSM.CFG.CAFE;
+  const CFG = MSM.CFG, U = MSM.util, P = MSM.CFG.PLAN;
   const iso = MSM.iso, K = MSM.cafe;
   const fx = () => MSM.render.fx;
   const TAU = Math.PI * 2;
@@ -110,7 +110,7 @@ window.MSM = window.MSM || {};
       for (let s = 0; s < Math.min(ps.shelf, 3); s++) {
         MSM.render.fx.item(ctx, prod, gx, gy, 1.03 + s * 0.10, 0.24);
       }
-      if (ps.shelf > 0) continue;
+      if (ps.shelf > 0) return;
       const e = iso.s(gx, gy, 1.06);
       ctx.globalAlpha = 0.35;
       MSM.art.draw(ctx, prod.art, e.x, e.y, iso.TW * 0.2, '#B9C4D6');

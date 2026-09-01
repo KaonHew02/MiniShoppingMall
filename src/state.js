@@ -251,9 +251,11 @@ window.MSM = window.MSM || {};
         t.buildPaid = Math.max(0, +ot.buildPaid || 0);
         t.dirty = !!ot.dirty;
       });
+      /* Drinks already made and standing on the pickup counter. Each is
+         {n, t}: which drink, and how long it has been sitting there. */
       cs.ready = (oc.ready || [])
-        .map((n) => +n)
-        .filter((n) => n >= 0 && n < s.stores[i].products.length)
+        .map((r) => ({ n: +(r && r.n != null ? r.n : r), t: Math.max(0, +(r && r.t) || 0) }))
+        .filter((r) => r.n >= 0 && r.n < s.stores[i].products.length)
         .slice(0, CFG.CAFE.READY_CAP);
     });
     if (!s.stores[s.current].owned) s.current = 0;

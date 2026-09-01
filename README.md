@@ -79,8 +79,9 @@ down; the bin is where mistakes go.
    themselves, so idling still pays.
 7. **Expand** — open the Map and buy the next store.
 
-Only the Grocery Store has the full farm chain so far — the other stores
-still make their goods without an input.
+Only the Grocery Store has the full farm chain so far — the Sports Outlet,
+the Boutique and Electronics still make their goods without an input. The
+Coffee Shop is a different game entirely — see below.
 
 **Staff** take over the parts you are tired of doing. A stocker hauls feed to
 whatever is starving, then restocks the emptiest shelf; the cashier works the
@@ -93,12 +94,53 @@ are elsewhere — or offline, 2 hours max at half rate — with **both** hired.
 milestones that multiply the price and speed up deliveries. Mall level rises
 with your total product levels and pays gems; gems buy a ×2 Rush Hour.
 
+## Stage 2 — the Coffee Shop
+
+The mini mart is a *stocking* game: you fill a shelf and the customer takes
+one off it. The café is a *service* game, and nothing is ready in advance:
+
+```
+they queue at the counter  ->  you take the order        (a ticket)
+you fetch beans and milk from the back room into the bar's storage
+you stand at the machine   ->  it brews their drink      (a few seconds)
+the drink lands on the pickup counter
+you carry it over          ->  they pay, and they tip
+they sit down, drink it, and leave a dirty table behind
+you wipe it, or nobody can sit there
+```
+
+**Six ingredients** — beans, milk, matcha, cocoa, ice, pastry dough — refill in
+crates along the back wall. Carry them to the **ingredient storage** by the
+bar; the machines draw on that, never on the crates. An empty bin is why
+nothing is brewing.
+
+**Ten recipes** live on the **menu board** in the back right, each its own
+plaque you walk onto and pay for: Espresso, Americano, Latte, Cappuccino, Iced
+Coffee, Mocha, Matcha Latte, Iced Matcha, Croissant, Cake. Each names what it
+takes and which of the three machines makes it — the **Coffee Machine**, the
+**Matcha & Ice Bar** or the **Pastry Oven**. Machines level up on their own
+pads: faster, and more cups on the go at once.
+
+**Patience** is the ring round a customer's bubble. It starts draining after a
+few seconds in the queue, and from the moment you take their order. Run it out
+and they walk. Serve them fast, in a clean room, and they **tip** — that is
+where the café's real money is.
+
+**Seating** is six tables, two free and the rest build plots. A served
+customer takes a seat, drinks for ten seconds or so, and leaves the table
+dirty; a dirty table cannot be sat at and drags your tips down. If every table
+is dirty or taken they take the drink away instead.
+
+The café has three jobs the mini mart never had, on top of runners and a
+cashier: a **Barista** works the bar, a **Server** runs the drinks out, and a
+**Cleaner** clears the tables. It only earns unattended with all five hired.
+
 ## Stores
 
 | Store | Unlock | Products |
 | --- | --- | --- |
 | Grocery Store | free | 11 lines across vegetables, fruit, dairy and bakery |
-| Coffee Shop | $6K | espresso, latte, croissant, cake |
+| Coffee Shop | $6K | 6 ingredients, 10 recipes, 3 machines — made to order |
 | Sports Outlet | $180K | basketball, trainers, racket, jersey |
 | Fashion Boutique | $4.2M | t-shirt, dress, handbag, watch |
 | Electronics | $95M | earbuds, phone, tablet, TV |
@@ -124,11 +166,13 @@ Restoring always **replaces, never merges**, confirms first, and reloads.
 ## Layout
 
 ```
-src/config.js      balance, the store list with their products, floor plan  <- tune here
+src/config.js      balance, the store list, and one floor plan per shop  <- tune here
 src/iso.js         isometric projection + the camera that trails you
 src/state.js       game state, economy maths, save/load, offline
 src/world.js       what is solid, and how bodies move and slide
 src/entities.js    player, stocker, customers and their wants, cash
+src/cafe.js        stage 2: orders, brewing, serving, tips, tables, crew
+src/cafe-render.js stage 2's fixtures — crates, menu board, machines, tables
 src/render.js      canvas scene + the joystick
 src/art.js         one painter per product — potatoes, tomatoes, cups...
 src/ui.js          HUD, bottom sheets, toasts
@@ -144,9 +188,11 @@ modules, so the file:// path keeps working.
 
 ## Not built yet
 
-Sound, prestige, per-store decoration, and a tutorial. Customers and staff do
-not collide with anything — only the player does — so they clip through
-fixtures on the diagonal. Every store currently shares one floor plan.
+Sound, prestige, per-store decoration, and a tutorial past the first sale.
+Customers and staff do not collide with anything — only the player does — so
+they clip through fixtures on the diagonal. The café has no day cycle, so
+there is no end-of-day summary and no missions yet. The Sports Outlet, the
+Boutique and Electronics still borrow the mini mart's floor plan.
 
 ## Brand
 

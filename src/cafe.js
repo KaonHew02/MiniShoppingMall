@@ -22,7 +22,6 @@ window.MSM = window.MSM || {};
 
 (function () {
   const CFG = MSM.CFG, U = MSM.util, W = MSM.world, P = MSM.CFG.PLAN, C = MSM.CFG.CAFE;
-  const iso = MSM.iso;
 
   const K = MSM.cafe = {
     orders: [],        // tickets waiting to be brewed: {n, cust}
@@ -166,8 +165,9 @@ window.MSM = window.MSM || {};
       const cs = MSM.econ.cstate();
       for (let k = cs.ready.length - 1; k >= 0; k--) {
         const r = cs.ready[k];
+        if (K.wanting(r.n)) { r.t = 0; continue; }
         r.t += dt;
-        if (r.t < 30 || K.wanting(r.n)) { if (K.wanting(r.n)) r.t = 0; continue; }
+        if (r.t < 30) continue;
         cs.ready.splice(k, 1);
         MSM.render.pop(P.pickupStand.x, P.pickupStand.y, 1.2, MSM.t('cafe.cold'), '#98A6C4');
       }
@@ -204,7 +204,7 @@ window.MSM = window.MSM || {};
       // take a finished drink off the pickup counter — but only one that
       // somebody actually ordered, or your arms fill up with cold coffee
       if (cs.ready.length && body.hold.length < CFG.CARRY_CAP && W.atBox(body, P.pickup)) {
-        const k = cs.ready.findIndex((r) => K.waiter(r.n, body));
+        const k = cs.ready.findIndex((r) => K.waiter(r.n));
         if (k >= 0) {
           body.hold.push(cs.ready[k].n);
           cs.ready.splice(k, 1);
@@ -215,13 +215,16 @@ window.MSM = window.MSM || {};
       return false;
     },
 
-    /** A waiting customer for this drink that nobody is already carrying to. */
-    waiter(n, body) {
+    /**
+     * Is somebody still waiting for this drink that nobody is already on the
+     * way to? Without the second half you pick up four lattes for one
+     * customer and the rest of the counter goes cold in your arms.
+     */
+    waiter(n) {
       const carried = {};
       const count = (b) => b.hold.forEach((h) => { carried[h] = (carried[h] || 0) + 1; });
       count(MSM.ent.player);
       K.crew.forEach(count);
-      if (body) { /* the one asking is included above */ }
       let need = 0;
       MSM.ent.customers.forEach((c) => {
         if (c.served || c.order !== n) return;
@@ -431,7 +434,7 @@ window.MSM = window.MSM || {};
         return;
       }
 
-      if (cs.ready.some((r) => K.waiter(r.n, s))) {
+      if (cs.ready.some((r) => K.waiter(r.n))) {
         if (W.seek(s, P.pickupStand.x, P.pickupStand.y, spd, dt, false)) s.moving = false;
         MSM.ent.handle(s, dt);
         return;

@@ -289,11 +289,14 @@ MSM.CFG.PLANS.cafe = {
     { x: 13.20, y: 12.00 }, { x: 14.40, y: 12.00 }, { x: 15.60, y: 12.00 },
   ],
 
+  /* A section is a tinted band with its name lying on the floor, and the
+     name is painted at the band's TOP edge — so each one starts on clear
+     floor, not underneath the fixtures it belongs to. */
   sections: [
-    { name: 'BACK ROOM',  x0: 0.35,  y0: 0.35,  x1: 14.10, y1: 3.05,  tint: '#D6E4F4' },
-    { name: 'MENU BOARD', x0: 14.70, y0: 0.35,  x1: 23.10, y1: 5.25,  tint: '#FBE3BE' },
-    { name: 'THE BAR',    x0: 0.35,  y0: 5.30,  x1: 13.40, y1: 8.10,  tint: '#C7E7D6' },
-    { name: 'CAFE',       x0: 0.60,  y0: 10.20, x1: 9.50,  y1: 14.40, tint: '#FFD9E4' },
+    { name: 'BACK ROOM',  x0: 0.35,  y0: 2.95,  x1: 14.10, y1: 4.70,  tint: '#D6E4F4' },
+    { name: 'MENU BOARD', x0: 14.70, y0: 5.30,  x1: 23.10, y1: 6.80,  tint: '#FBE3BE' },
+    { name: 'THE BAR',    x0: 0.35,  y0: 8.10,  x1: 13.40, y1: 8.90,  tint: '#C7E7D6' },
+    { name: 'CAFE',       x0: 0.60,  y0: 9.95,  x1: 9.50,  y1: 14.40, tint: '#FFD9E4' },
   ],
   zones: [
     { y0: -0.25, y1: 5.20,  a: '#E8DBC9', b: '#E1D3BF' },   // the prep side

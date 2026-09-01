@@ -362,6 +362,7 @@ window.MSM = window.MSM || {};
 
     'sec.grocery.0': '蔬菜', 'sec.grocery.1': '水果', 'sec.grocery.2': '乳品与烘焙',
     'sec.cafe.0': '后厨', 'sec.cafe.1': '菜单板', 'sec.cafe.2': '吧台', 'sec.cafe.3': '咖啡厅',
+    'mach.coffee': '咖啡机', 'mach.bar': '抹茶冰饮台', 'mach.oven': '烘焙烤箱',
     'store.grocery': '杂货店', 'store.coffee': '咖啡店',
     'store.sports': '运动用品店', 'store.fashion': '时装精品店',
     'store.tech': '电子产品店',
@@ -571,6 +572,7 @@ window.MSM = window.MSM || {};
 
     'sec.grocery.0': '蔬菜', 'sec.grocery.1': '水果', 'sec.grocery.2': '乳品與烘焙',
     'sec.cafe.0': '後場', 'sec.cafe.1': '菜單板', 'sec.cafe.2': '吧台', 'sec.cafe.3': '咖啡廳',
+    'mach.coffee': '咖啡機', 'mach.bar': '抹茶冰飲台', 'mach.oven': '烘焙烤箱',
     'store.grocery': '雜貨店', 'store.coffee': '咖啡店',
     'store.sports': '運動用品店', 'store.fashion': '時裝精品店',
     'store.tech': '電子產品店',
@@ -780,6 +782,8 @@ window.MSM = window.MSM || {};
     'sec.grocery.0': 'SAYUR', 'sec.grocery.1': 'BUAH', 'sec.grocery.2': 'SUSU & ROTI',
     'sec.cafe.0': 'STOR BELAKANG', 'sec.cafe.1': 'PAPAN MENU',
     'sec.cafe.2': 'KAUNTER BAR', 'sec.cafe.3': 'KAFE',
+    'mach.coffee': 'Mesin Kopi', 'mach.bar': 'Kaunter Matcha & Ais',
+    'mach.oven': 'Ketuhar Pastri',
     'store.grocery': 'Kedai Runcit', 'store.coffee': 'Kedai Kopi',
     'store.sports': 'Kedai Sukan', 'store.fashion': 'Butik Fesyen',
     'store.tech': 'Kedai Elektronik',
@@ -868,9 +872,15 @@ window.MSM = window.MSM || {};
       /* Section names belong to a FLOOR PLAN, and there is one per store
          shape now — so they are keyed by plan, not by a bare index. */
       Object.keys(CFG.PLANS).forEach((planId) => {
-        (CFG.PLANS[planId].sections || []).forEach((z, n) => {
+        const plan = CFG.PLANS[planId];
+        (plan.sections || []).forEach((z, n) => {
           if (z.__en == null) z.__en = z.name;
           z.name = I.name('sec.' + planId + '.' + n, z.__en);
+        });
+        // the cafe's machines are named in the plan, not on a product
+        (plan.machines || []).forEach((m) => {
+          if (m.__en == null) m.__en = m.label;
+          m.label = I.name('mach.' + m.id, m.__en);
         });
       });
       CFG.STORES.forEach((store) => {

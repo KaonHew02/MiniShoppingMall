@@ -27,6 +27,7 @@ window.MSM = window.MSM || {};
       this.syncStockers();
       if (MSM.cafe) MSM.cafe.reset();
       if (MSM.sports) MSM.sports.reset();
+      if (MSM.boutique) MSM.boutique.reset();
     },
 
     /** Keep the crew on the floor matching how many you have hired. */
@@ -133,6 +134,9 @@ window.MSM = window.MSM || {};
       /* The coffee shop has its own things to pick up and put down — a
          drink off the pickup counter, a drink into a customer's hand. */
       if (store.mode === 'cafe' && MSM.cafe.handle(body)) { body.handle = 0; return; }
+      /* The boutique hangs stock on a rail INTO a size, and hands a fetched
+         size straight to whoever asked for it. Both are its own business. */
+      if (store.mode === 'boutique' && MSM.boutique.handle(body)) { body.handle = 0; return; }
 
       store.products.some((prod, n) => {
         const ps = ss.products[n];
@@ -333,6 +337,7 @@ window.MSM = window.MSM || {};
       const ss = MSM.econ.sstate();
       if (store.mode === 'cafe') { MSM.cafe.spawn(); return; }
       if (store.mode === 'sports') { MSM.sports.spawn(); return; }
+      if (store.mode === 'boutique') { MSM.boutique.spawn(); return; }
 
       /* During the tutorial, customers keep it simple: one item, and always
          something that is actually on a shelf — the first customer walking
@@ -411,11 +416,13 @@ window.MSM = window.MSM || {};
 
       const mode = MSM.econ.store().mode;
       const cafe = mode === 'cafe', sports = mode === 'sports';
+      const boutique = mode === 'boutique';
 
       for (let k = this.customers.length - 1; k >= 0; k--) {
         const c = this.customers[k];
         if (cafe) { MSM.cafe.stepCustomer(c, k, dt); continue; }
         if (sports) { MSM.sports.stepCustomer(c, k, dt); continue; }
+        if (boutique) { MSM.boutique.stepCustomer(c, k, dt); continue; }
         const prod = MSM.econ.prod(c.want);
         const ps = ss.products[c.want];
 

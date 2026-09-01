@@ -41,6 +41,12 @@ window.MSM = window.MSM || {};
         const P = CFG.PLAN;
         sp.areas.forEach((a, k) => { if (a.built) list.push(P.areas[k].prop); });
       }
+      // a fitting room is a box you can only get into through its curtain
+      const bs = MSM.econ.bstate();
+      if (bs) {
+        const P = CFG.PLAN;
+        bs.rooms.forEach((r, k) => { if (r.built) list.push(P.rooms[k].box); });
+      }
       this._solids = list;
       return list;
     },

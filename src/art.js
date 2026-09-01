@@ -952,6 +952,171 @@ window.MSM = window.MSM || {};
       rr(ctx, x - w * 0.14, y0 + h * 0.34, w * 0.28, h * 0.3, s * 0.03, U.shade(c, 0.3));
     },
 
+    /* ---------------------------------------------------------- boutique */
+    /* Jeans: two legs with a gap between them, a waistband, and the seam and
+       pocket stitching that stop a blue trouser shape reading as a envelope. */
+    jeans(ctx, x, y, s, c) {
+      const w = s * 0.46, h = s * 0.62, top = y - h, x0 = x - w / 2;
+      const gap = w * 0.10;
+      ctx.beginPath();                                   // the two legs
+      ctx.moveTo(x0, top);
+      ctx.lineTo(x0 + w, top);
+      ctx.lineTo(x0 + w, y);
+      ctx.lineTo(x0 + w * 0.5 + gap / 2, y);
+      ctx.lineTo(x0 + w * 0.5 + gap / 2, top + h * 0.46);
+      ctx.lineTo(x0 + w * 0.5 - gap / 2, top + h * 0.46);
+      ctx.lineTo(x0 + w * 0.5 - gap / 2, y);
+      ctx.lineTo(x0, y);
+      ctx.closePath(); fill(ctx, c);
+      ctx.beginPath();                                   // the shaded right leg
+      ctx.moveTo(x0 + w * 0.5 + gap / 2, top + h * 0.46);
+      ctx.lineTo(x0 + w, top + h * 0.2);
+      ctx.lineTo(x0 + w, y);
+      ctx.lineTo(x0 + w * 0.5 + gap / 2, y);
+      ctx.closePath(); fill(ctx, U.shade(c, -0.16));
+
+      rr(ctx, x0, top, w, h * 0.14, s * 0.015, U.shade(c, -0.30));   // waistband
+      rr(ctx, x0 + w * 0.44, top + h * 0.14, w * 0.04, h * 0.30, 0, U.shade(c, -0.34));
+      // back pockets, in the lighter thread colour
+      [[0.16, 0.20], [0.66, 0.20]].forEach(([px, py]) => {
+        rr(ctx, x0 + w * px, top + h * py, w * 0.18, h * 0.13, s * 0.012, U.shade(c, 0.24));
+      });
+      rr(ctx, x0 + w * 0.86, top + h * 0.04, w * 0.08, h * 0.06, s * 0.01, '#E8C86A');
+    },
+
+    /* Shorts: the same trouser logic, cut off at the thigh and cuffed. */
+    shorts(ctx, x, y, s, c) {
+      const w = s * 0.50, h = s * 0.40, top = y - h, x0 = x - w / 2;
+      const gap = w * 0.12;
+      ctx.beginPath();
+      ctx.moveTo(x0, top);
+      ctx.lineTo(x0 + w, top);
+      ctx.lineTo(x0 + w, y);
+      ctx.lineTo(x0 + w * 0.5 + gap / 2, y);
+      ctx.lineTo(x0 + w * 0.5 + gap / 2, top + h * 0.56);
+      ctx.lineTo(x0 + w * 0.5 - gap / 2, top + h * 0.56);
+      ctx.lineTo(x0 + w * 0.5 - gap / 2, y);
+      ctx.lineTo(x0, y);
+      ctx.closePath(); fill(ctx, c);
+      ctx.beginPath();
+      ctx.moveTo(x0 + w * 0.5 + gap / 2, top + h * 0.56);
+      ctx.lineTo(x0 + w, top + h * 0.22);
+      ctx.lineTo(x0 + w, y);
+      ctx.lineTo(x0 + w * 0.5 + gap / 2, y);
+      ctx.closePath(); fill(ctx, U.shade(c, -0.16));
+
+      rr(ctx, x0, top, w, h * 0.18, s * 0.015, U.shade(c, -0.28));      // waistband
+      rr(ctx, x0, y - h * 0.10, w * 0.44, h * 0.10, 0, U.shade(c, 0.26)); // cuffs
+      rr(ctx, x0 + w * 0.56, y - h * 0.10, w * 0.44, h * 0.10, 0, U.shade(c, 0.14));
+      // the drawstring
+      ctx.beginPath();
+      ctx.moveTo(x - w * 0.06, top + h * 0.14); ctx.lineTo(x - w * 0.12, top + h * 0.30);
+      ctx.moveTo(x + w * 0.06, top + h * 0.14); ctx.lineTo(x + w * 0.12, top + h * 0.30);
+      stroke(ctx, U.shade(c, 0.45), s * 0.022);
+    },
+
+    /* A knitted sweater: wider than a tee, ribbed hem and cuffs, and a cable
+       up the middle so it reads as wool rather than cotton. */
+    sweater(ctx, x, y, s, c) {
+      const w = s * 0.60, h = s * 0.50, top = y - h, x0 = x - w / 2;
+      ctx.beginPath();
+      ctx.moveTo(x0, top + h * 0.22);
+      ctx.lineTo(x - w * 0.20, top);
+      ctx.quadraticCurveTo(x, top + h * 0.14, x + w * 0.20, top);
+      ctx.lineTo(x0 + w, top + h * 0.22);
+      ctx.lineTo(x0 + w, top + h * 0.56);
+      ctx.lineTo(x + w * 0.30, top + h * 0.50);
+      ctx.lineTo(x + w * 0.30, y);
+      ctx.lineTo(x - w * 0.30, y);
+      ctx.lineTo(x - w * 0.30, top + h * 0.50);
+      ctx.lineTo(x0, top + h * 0.56);
+      ctx.closePath(); fill(ctx, c);
+
+      // ribbing at the hem and both cuffs
+      rr(ctx, x - w * 0.30, y - h * 0.12, w * 0.60, h * 0.12, s * 0.012, U.shade(c, -0.22));
+      rr(ctx, x0, top + h * 0.44, w * 0.14, h * 0.12, s * 0.012, U.shade(c, -0.22));
+      rr(ctx, x0 + w * 0.86, top + h * 0.44, w * 0.14, h * 0.12, s * 0.012, U.shade(c, -0.22));
+      rr(ctx, x - w * 0.19, top + h * 0.02, w * 0.38, h * 0.10, s * 0.02, U.shade(c, -0.28));
+
+      // a cable pattern: two lines of chevrons up the front
+      ctx.beginPath();
+      for (let k = 0; k < 4; k++) {
+        const cy = top + h * (0.26 + k * 0.16);
+        ctx.moveTo(x - w * 0.13, cy);
+        ctx.lineTo(x, cy + h * 0.06);
+        ctx.lineTo(x + w * 0.13, cy);
+      }
+      stroke(ctx, U.shade(c, 0.30), s * 0.022);
+    },
+
+    /* A zipped jacket: collar, two front panels, a zip line and a chest seam. */
+    jacket(ctx, x, y, s, c) {
+      const w = s * 0.58, h = s * 0.56, top = y - h, x0 = x - w / 2;
+      ctx.beginPath();
+      ctx.moveTo(x0, top + h * 0.20);
+      ctx.lineTo(x - w * 0.22, top + h * 0.04);
+      ctx.lineTo(x + w * 0.22, top + h * 0.04);
+      ctx.lineTo(x0 + w, top + h * 0.20);
+      ctx.lineTo(x0 + w, top + h * 0.58);
+      ctx.lineTo(x + w * 0.31, top + h * 0.52);
+      ctx.lineTo(x + w * 0.31, y);
+      ctx.lineTo(x - w * 0.31, y);
+      ctx.lineTo(x - w * 0.31, top + h * 0.52);
+      ctx.lineTo(x0, top + h * 0.58);
+      ctx.closePath(); fill(ctx, c);
+      // the right front panel, a shade darker so the jacket has a front seam
+      ctx.beginPath();
+      ctx.moveTo(x, top + h * 0.08);
+      ctx.lineTo(x + w * 0.22, top + h * 0.04);
+      ctx.lineTo(x0 + w, top + h * 0.20);
+      ctx.lineTo(x0 + w, top + h * 0.58);
+      ctx.lineTo(x + w * 0.31, top + h * 0.52);
+      ctx.lineTo(x + w * 0.31, y);
+      ctx.lineTo(x, y);
+      ctx.closePath(); fill(ctx, U.shade(c, -0.15));
+
+      // collar, zip and pull
+      ctx.beginPath();
+      ctx.moveTo(x - w * 0.24, top + h * 0.05);
+      ctx.lineTo(x, top + h * 0.20);
+      ctx.lineTo(x + w * 0.24, top + h * 0.05);
+      ctx.lineTo(x + w * 0.20, top - h * 0.03);
+      ctx.lineTo(x - w * 0.20, top - h * 0.03);
+      ctx.closePath(); fill(ctx, U.shade(c, -0.32));
+      rr(ctx, x - w * 0.022, top + h * 0.18, w * 0.044, h * 0.80, 0, U.shade(c, 0.40));
+      rr(ctx, x - w * 0.05, top + h * 0.30, w * 0.10, h * 0.08, s * 0.012, '#E7EDF6');
+      // pockets
+      [[-0.27, 0.62], [0.17, 0.62]].forEach(([px, py]) => {
+        rr(ctx, x + w * px, top + h * py, w * 0.10, h * 0.18, s * 0.012, U.shade(c, -0.34));
+      });
+    },
+
+    /* A baseball cap, side on: a domed crown and a peak off the front. */
+    cap(ctx, x, y, s, c) {
+      const R = s * 0.26, cy = y - R * 0.62;
+      ctx.beginPath();                                   // the peak
+      ctx.ellipse(x + R * 0.86, cy + R * 0.50, R * 0.72, R * 0.20, -0.10, 0, TAU);
+      fill(ctx, U.shade(c, -0.26));
+      ctx.beginPath();                                   // the crown
+      ctx.arc(x, cy + R * 0.48, R, Math.PI, 0);
+      ctx.closePath(); fill(ctx, c);
+      ctx.save();                                        // panel shading
+      ctx.beginPath(); ctx.arc(x, cy + R * 0.48, R, Math.PI, 0); ctx.closePath(); ctx.clip();
+      ctx.beginPath();
+      ctx.moveTo(x + R * 0.10, cy - R * 0.6); ctx.lineTo(x + R * 1.1, cy + R * 0.6);
+      ctx.lineTo(x + R * 0.10, cy + R * 0.6); ctx.closePath();
+      fill(ctx, U.shade(c, -0.15));
+      ctx.beginPath();                                   // the seams
+      for (let k = -1; k <= 1; k++) {
+        ctx.moveTo(x + k * R * 0.40, cy + R * 0.48);
+        ctx.lineTo(x + k * R * 0.62, cy - R * 0.42);
+      }
+      stroke(ctx, U.shade(c, -0.34), s * 0.016);
+      ctx.restore();
+      rr(ctx, x - R, cy + R * 0.38, R * 2, R * 0.16, s * 0.01, U.shade(c, -0.34));
+      ell(ctx, x, cy - R * 0.44, R * 0.11, R * 0.11, 0, U.shade(c, 0.34));   // the button
+    },
+
     dress(ctx, x, y, s, c) {
       ctx.beginPath();
       ctx.moveTo(x - s * 0.13, y - s * 0.55);

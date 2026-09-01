@@ -143,6 +143,7 @@ window.MSM = window.MSM || {};
       if (MSM.cafe.active()) MSM.cafe.update(dt);
       else {
         if (MSM.sports.active()) MSM.sports.update(dt);
+        if (MSM.boutique.active()) MSM.boutique.update(dt);
         G.serve(dt);
       }
       G.tillPad(dt);
@@ -151,6 +152,7 @@ window.MSM = window.MSM || {};
       G.tutorial();
       if (MSM.cafe.active()) { G.tutTarget = null; G.tutText = MSM.cafe.guide(); }
       if (MSM.sports.active()) { G.tutTarget = null; G.tutText = MSM.sports.guide(); }
+      if (MSM.boutique.active()) { G.tutTarget = null; G.tutText = MSM.boutique.guide(); }
       G.levelPads(dt);
       G.doors(dt);
       G.passive(dt);
@@ -529,6 +531,21 @@ window.MSM = window.MSM || {};
     },
 
     advisorCost: () => CFG.SPORTS.ADVISOR_COST(MSM.econ.store().unlock),
+
+    /* Stage 4's one hire: the person who walks a size out from the back. */
+    hireAssistant() {
+      const bs = MSM.econ.bstate();
+      if (!bs || bs.assistant) return;
+      const cost = G.assistantCost();
+      if (MSM.state.cash < cost) return;
+      MSM.state.cash -= cost;
+      bs.assistant = true;
+      MSM.boutique.syncCrew();
+      MSM.ui.toast(MSM.t('toast.assistant'));
+      MSM.save();
+    },
+
+    assistantCost: () => CFG.BOUTIQUE.ASSISTANT_COST(MSM.econ.store().unlock),
 
     cafeCost(job) {
       const u = MSM.econ.store().unlock;

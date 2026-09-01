@@ -117,6 +117,36 @@ MSM.CFG = {
     ADVISOR_COST: (unlock) => Math.max(9000, Math.round(unlock * 1.4)),
   },
 
+  /* ----------------------------------------------- the fashion boutique */
+  /* Stage 4 is a MATCHING game. The outlet asks whether you can talk somebody
+     into a sale; the boutique asks whether you have the thing they need, in
+     their size, and somewhere for them to try it on. Two scarce resources —
+     a size on the rail and a free cubicle — and the player's job is to keep
+     both of them from running out. */
+  BOUTIQUE: {
+    SIZES: ['S', 'M', 'L', 'XL'],
+    /* Who walks in wearing what. Middle sizes sell out first, which is the
+       whole reason the back room ever gets a visit. */
+    SIZE_ODDS: [0.20, 0.34, 0.30, 0.16],
+    BROWSE_TIME: 1.0,        // seconds at the rail before it is off the hanger
+    FIT_TIME: [3.5, 6.0],    // seconds behind the curtain
+    PATIENCE: 70,            // seconds queueing for a cubicle
+    ASK_PATIENCE: 45,        // a shorter fuse while waiting on a size
+    QUEUE_GRACE: 6,
+    OUTFIT_ODDS: 0.42,       // chance they are shopping for two pieces, not one
+    HAND_REACH: 1.4,         // how close you stand to hand them a size
+
+    /* The buy roll. Trying a thing on is worth a lot, and so is being handed
+       the size you asked for — that is service, and it closes sales. */
+    BASE_BUY: 0.46,
+    FIT_BONUS: 0.26,
+    HELP_BONUS: 0.22,
+    LEVEL_BONUS: 0.008,
+    MAX_BUY: 0.96,
+    BUDGET: [0.80, 2.40],
+    ASSISTANT_COST: (unlock) => Math.max(12000, Math.round(unlock * 1.3)),
+  },
+
   /* --------------------------------------------------------- floor plans */
   /* MSM.CFG.PLAN is the ACTIVE plan. usePlan() copies the current store's
      layout into it IN PLACE, so every module can keep the
@@ -456,6 +486,93 @@ MSM.CFG.PLANS.sports = {
   bin:      { x0: 21.40, y0: 13.20, x1: 22.10, y1: 13.90 },
 };
 
+/* The fashion boutique:
+     back wall     eight wardrobe crates — the stockroom you fetch sizes from
+     mid           four departments, two hanging rails each
+     centre        the fitting rooms, in a row, curtains facing the floor
+     front         the cashier, the queue running back to the door
+
+   The rails carry a count PER SIZE, and that is the stage: a full rail with
+   no L on it is an empty rail to the customer standing in front of it. */
+MSM.CFG.PLANS.boutique = {
+  id: 'boutique',
+  stations: [
+    { x0: 1.10,  y0: 0.55, x1: 2.90,  y1: 1.70 },   // 0 t-shirts
+    { x0: 3.50,  y0: 0.55, x1: 5.30,  y1: 1.70 },   // 1 sweaters
+    { x0: 6.90,  y0: 0.55, x1: 8.70,  y1: 1.70 },   // 2 jeans
+    { x0: 9.30,  y0: 0.55, x1: 11.10, y1: 1.70 },   // 3 shorts
+    { x0: 12.70, y0: 0.55, x1: 14.50, y1: 1.70 },   // 4 dresses
+    { x0: 15.10, y0: 0.55, x1: 16.90, y1: 1.70 },   // 5 jackets
+    { x0: 18.50, y0: 0.55, x1: 20.30, y1: 1.70 },   // 6 caps
+    { x0: 20.90, y0: 0.55, x1: 22.70, y1: 1.70 },   // 7 handbags
+  ],
+  pads: [
+    { x0: 1.10,  y0: 2.00, x1: 1.80,  y1: 2.70 },
+    { x0: 3.50,  y0: 2.00, x1: 4.20,  y1: 2.70 },
+    { x0: 6.90,  y0: 2.00, x1: 7.60,  y1: 2.70 },
+    { x0: 9.30,  y0: 2.00, x1: 10.00, y1: 2.70 },
+    { x0: 12.70, y0: 2.00, x1: 13.40, y1: 2.70 },
+    { x0: 15.10, y0: 2.00, x1: 15.80, y1: 2.70 },
+    { x0: 18.50, y0: 2.00, x1: 19.20, y1: 2.70 },
+    { x0: 20.90, y0: 2.00, x1: 21.60, y1: 2.70 },
+  ],
+  /* Hanging rails, two to a department. */
+  shelves: [
+    { x0: 1.20,  y0: 4.20, x1: 2.80,  y1: 5.15 },
+    { x0: 3.60,  y0: 4.20, x1: 5.20,  y1: 5.15 },
+    { x0: 7.00,  y0: 4.20, x1: 8.60,  y1: 5.15 },
+    { x0: 9.40,  y0: 4.20, x1: 11.00, y1: 5.15 },
+    { x0: 12.80, y0: 4.20, x1: 14.40, y1: 5.15 },
+    { x0: 15.20, y0: 4.20, x1: 16.80, y1: 5.15 },
+    { x0: 18.60, y0: 4.20, x1: 20.20, y1: 5.15 },
+    { x0: 21.00, y0: 4.20, x1: 22.60, y1: 5.15 },
+  ],
+  lanes: [2.00, 4.40, 7.80, 10.20, 13.60, 16.00, 19.40, 21.80],
+
+  /* The cubicles. Two come with the shop; the rest are build plots, and
+     every one of them is a customer who does not have to stand and wait. */
+  rooms: [
+    { cost: 0,       box: { x0: 5.40,  y0: 6.60, x1: 7.30,  y1: 8.10 } },
+    { cost: 0,       box: { x0: 8.10,  y0: 6.60, x1: 10.00, y1: 8.10 } },
+    { cost: 120000,  box: { x0: 10.80, y0: 6.60, x1: 12.70, y1: 8.10 } },
+    { cost: 400000,  box: { x0: 13.50, y0: 6.60, x1: 15.40, y1: 8.10 } },
+    { cost: 900000,  box: { x0: 16.20, y0: 6.60, x1: 18.10, y1: 8.10 } },
+  ],
+  /* Where they stand when every cubicle is taken. */
+  waits: [
+    { x: 6.35,  y: 9.55 }, { x: 9.05,  y: 9.55 }, { x: 11.75, y: 9.55 },
+    { x: 14.45, y: 9.55 }, { x: 17.15, y: 9.55 }, { x: 3.60,  y: 9.55 },
+  ],
+
+  sections: [
+    { name: 'TOPS',          x0: 0.90,  y0: 3.60, x1: 5.50,  y1: 5.80, tint: '#FFD3E2' },
+    { name: 'BOTTOMS',       x0: 6.70,  y0: 3.60, x1: 11.30, y1: 5.80, tint: '#CFE0FF' },
+    { name: 'DRESSES',       x0: 12.50, y0: 3.60, x1: 17.10, y1: 5.80, tint: '#E7D6FF' },
+    { name: 'ACCESSORIES',   x0: 18.30, y0: 3.60, x1: 22.90, y1: 5.80, tint: '#FFE6C2' },
+    { name: 'FITTING ROOMS', x0: 4.90,  y0: 6.20, x1: 18.60, y1: 8.90, tint: '#F6C6D8' },
+  ],
+  zones: [
+    { y0: -0.25, y1: 2.95,  a: '#DCE4EE', b: '#D3DCE8' },   // the stockroom
+    { y0: 2.95,  y1: 6.20,  a: '#FBF3F6', b: '#F5EAEF' },   // the shop floor
+    { y0: 6.20,  y1: 10.00, a: '#F7DCE6', b: '#F0D0DC' },   // the fitting rooms
+    { y0: 10.00, y1: 15.45, a: '#F3EFF7', b: '#EAE4F1' },   // the front
+  ],
+  patches: [],
+
+  stockLane: 3.30,
+  walkway: 10.30,
+
+  till:  { x0: 9.60, y0: 11.10, x1: 12.40, y1: 11.95 },
+  serve: { x: 11.00, y: 10.65 },
+  queue: [{ x: 11.00, y: 12.45 }, { x: 11.00, y: 13.05 },
+          { x: 11.00, y: 13.65 }, { x: 11.00, y: 14.25 }],
+  entrance: { x: 11.00, y: 14.80 },
+  spawn:    { x: 7.60,  y: 10.60 },
+  door:     { x0: 0.80,  y0: 12.40, x1: 2.20,  y1: 13.80 },
+  sign:     { x0: 13.10, y0: 13.60, x1: 13.80, y1: 14.30 },
+  bin:      { x0: 21.40, y0: 13.00, x1: 22.10, y1: 13.70 },
+};
+
 MSM.CFG.STORES = [
   {
     id: 'grocery', name: 'Grocery Store', glyph: '🥕', color: '#5FCBB6', unlock: 0,
@@ -644,13 +761,45 @@ MSM.CFG.STORES = [
         sport:'bad',    source:{ kind:'stock', label:'Shuttle Stock' } },
     ],
   },
+  /* ------------------------------------------------------- STAGE 4 ---- */
+  /* Four departments, two rails each. Six of the eight lines are garments —
+     they carry sizes and they get tried on. The two accessories do neither,
+     which is exactly why they are the quick sale on a busy afternoon. */
   {
     id: 'fashion', name: 'Fashion Boutique', glyph: '👗', color: '#FF7BA6', unlock: 4200000,
+    mode: 'boutique',
+    plan: MSM.CFG.PLANS.boutique,
+    unlocks: [
+      { id: 'tshirt',  cost: 0 },
+      { id: 'jeans',   cost: 40000 },
+      { id: 'cap',     cost: 90000 },
+      { id: 'shorts',  cost: 180000 },
+      { id: 'sweater', cost: 350000 },
+      { id: 'dress',   cost: 700000 },
+      { id: 'jacket',  cost: 1400000 },
+      { id: 'handbag', cost: 2600000 },
+    ],
     products: [
-      { id:'tshirt', name:'T-Shirt', glyph:'👕', color:'#7FD4FF', price:46000,  restock:1.9, art:'shirt' },
-      { id:'dress',  name:'Dress',   glyph:'👗', color:'#FF7BA6', price:72000,  restock:2.2, art:'dress' },
-      { id:'bag',    name:'Handbag', glyph:'👜', color:'#C98B4B', price:110000, restock:2.6, art:'bag' },
-      { id:'watch',  name:'Watch',   glyph:'⌚', color:'#B9C4D6', price:165000, restock:3.1, art:'watch' },
+      /* --- 👕 tops --------------------------------------------------- */
+      { id:'tshirt',  name:'T-Shirt',  glyph:'👕', color:'#7FD4FF', price:46000,  restock:1.9, art:'shirt',
+        garment:true,  source:{ kind:'wardrobe', label:'T-Shirt Stock' } },
+      { id:'sweater', name:'Sweater',  glyph:'🧶', color:'#E8845C', price:88000,  restock:2.6, art:'sweater',
+        garment:true,  source:{ kind:'wardrobe', label:'Sweater Stock' } },
+      /* --- 👖 bottoms ------------------------------------------------ */
+      { id:'jeans',   name:'Jeans',    glyph:'👖', color:'#5A78C4', price:62000,  restock:2.2, art:'jeans',
+        garment:true,  source:{ kind:'wardrobe', label:'Jeans Stock' } },
+      { id:'shorts',  name:'Shorts',   glyph:'🩳', color:'#5FCBB6', price:54000,  restock:2.0, art:'shorts',
+        garment:true,  source:{ kind:'wardrobe', label:'Shorts Stock' } },
+      /* --- 👗 dresses & coats ---------------------------------------- */
+      { id:'dress',   name:'Dress',    glyph:'👗', color:'#FF7BA6', price:145000, restock:2.8, art:'dress',
+        garment:true,  source:{ kind:'wardrobe', label:'Dress Stock' } },
+      { id:'jacket',  name:'Jacket',   glyph:'🧥', color:'#8B62FF', price:230000, restock:3.0, art:'jacket',
+        garment:true,  source:{ kind:'wardrobe', label:'Jacket Stock' } },
+      /* --- 🧢 accessories: no size, no cubicle, straight to the till -- */
+      { id:'cap',     name:'Cap',      glyph:'🧢', color:'#F0384F', price:38000,  restock:1.7, art:'cap',
+        garment:false, source:{ kind:'wardrobe', label:'Cap Stock' } },
+      { id:'handbag', name:'Handbag',  glyph:'👜', color:'#C98B4B', price:380000, restock:3.2, art:'bag',
+        garment:false, source:{ kind:'wardrobe', label:'Handbag Stock' } },
     ],
   },
   {

@@ -30,6 +30,17 @@ window.MSM = window.MSM || {};
     bought: 0, rejected: 0, walkouts: 0,
   });
 
+  /* Stage 4 keeps the cubicles you have built, whether an assistant is on the
+     floor, and — the stage's whole point — how many of each SIZE is hanging
+     on every rail. `products[n].shelf` stays the total, so the stockers, the
+     meters and the world all keep working without knowing about sizes. */
+  const blankBoutique = (store) => ({
+    rooms: store.plan.rooms.map((r) => ({ built: r.cost === 0, buildPaid: 0 })),
+    racks: store.products.map(() => [0, 0, 0, 0]),
+    assistant: false,
+    sold: 0, lost: 0, fetched: 0,
+  });
+
   const blank = () => ({
     cash: CFG.START_CASH,
     gems: 0,
@@ -53,6 +64,7 @@ window.MSM = window.MSM || {};
       })),
       cafe: s.mode === 'cafe' ? blankCafe(s) : null,
       sports: s.mode === 'sports' ? blankSports(s) : null,
+      boutique: s.mode === 'boutique' ? blankBoutique(s) : null,
     })),
   });
 
@@ -106,6 +118,55 @@ window.MSM = window.MSM || {};
       if (!sp) return 1;
       const seen = sp.bought + sp.rejected + sp.walkouts;
       return seen ? sp.bought / seen : 0;
+    },
+
+    /* -------------------------------------------- the fashion boutique */
+    bstate: (i) => MSM.state.stores[i ?? MSM.state.current].boutique,
+
+    /** How many of this line are hanging in that size. */
+    sizeStock(n, size, i) {
+      const bs = E.bstate(i);
+      if (!bs || !E.prod(n, i).garment) return E.pstate(n, i).shelf;
+      return bs.racks[n][size] || 0;
+    },
+
+    /** The emptiest size on a rail — where the next one off the box goes. */
+    thinnestSize(n, i) {
+      const bs = E.bstate(i);
+      let best = 0, low = Infinity;
+      bs.racks[n].forEach((v, k) => { if (v < low) { low = v; best = k; } });
+      return best;
+    },
+
+    /** Cubicles free right now, and how many there are at all. */
+    rooms(i) {
+      const bs = E.bstate(i);
+      if (!bs) return { built: 0, free: 0 };
+      const taken = {};
+      MSM.ent.customers.forEach((c) => { if (c.room >= 0) taken[c.room] = 1; });
+      let built = 0, free = 0;
+      bs.rooms.forEach((r, k) => {
+        if (!r.built) return;
+        built++;
+        if (!taken[k]) free++;
+      });
+      return { built, free };
+    },
+
+    /** What share of shoppers the boutique closes, unattended. */
+    fitRate(n, i) {
+      const B = CFG.BOUTIQUE;
+      const chance = B.BASE_BUY + B.HELP_BONUS +
+        (E.prod(n, i).garment ? B.FIT_BONUS : 0);
+      return Math.min(chance, B.MAX_BUY) * 0.85;
+    },
+
+    /** Boutique conversion — same headline number, its own tallies. */
+    fitConversion(i) {
+      const bs = E.bstate(i);
+      if (!bs) return 1;
+      const seen = bs.sold + bs.lost;
+      return seen ? bs.sold / seen : 0;
     },
 
     /** A machine's brew speed and how many cups it can have on at once. */
@@ -178,6 +239,9 @@ window.MSM = window.MSM || {};
       /* An outlet with nobody advising sells to almost nobody — the whole
          stage is the conversation on the shop floor. */
       if (ss.sports && !ss.sports.advisor) return 0;
+      /* Nobody to find a size or work the cubicles is the same problem in a
+         different shop: the clothes stay on the rail. */
+      if (ss.boutique && !ss.boutique.assistant) return 0;
       let r = 0;
       CFG.STORES[i].products.forEach((p, n) => {
         if (!p.sell || !ss.products[n].built) return;
@@ -185,7 +249,10 @@ window.MSM = window.MSM || {};
         if (ss.cafe && p.recipe && !ss.cafe.chef &&
             CFG.STORES[i].plan.machines[p.machineIndex].staff === 'chef') return;
         // a line with no court to try it on closes far fewer sales
-        r += E.price(n, i) / E.restock(n, i) * (ss.sports ? E.closeRate(n, i) : 1);
+        let rate = E.price(n, i) / E.restock(n, i);
+        if (ss.sports) rate *= E.closeRate(n, i);
+        if (ss.boutique) rate *= E.fitRate(n, i);
+        r += rate;
       });
       return r * 0.5;             // customers, not supply, are the real limit
     },
@@ -287,6 +354,41 @@ window.MSM = window.MSM || {};
           if (!a || !oa) return;
           a.built = !!oa.built;
           a.buildPaid = Math.max(0, +oa.buildPaid || 0);
+        });
+      }
+
+      /* The boutique's cubicles, its assistant, and what is hanging in each
+         size. The per-size counts and the rail total are two views of one
+         thing, so they are reconciled below rather than trusted. */
+      const bs = s.stores[i].boutique, ob = old.boutique;
+      if (bs) {
+        if (ob && !fresh) {
+          bs.assistant = !!ob.assistant;
+          bs.sold = Math.max(0, +ob.sold || 0);
+          bs.lost = Math.max(0, +ob.lost || 0);
+          bs.fetched = Math.max(0, +ob.fetched || 0);
+          (ob.rooms || []).forEach((orm, k) => {
+            const rm = bs.rooms[k];
+            if (!rm || !orm) return;
+            rm.built = !!orm.built;
+            rm.buildPaid = Math.max(0, +orm.buildPaid || 0);
+          });
+          (ob.racks || []).forEach((orr, k) => {
+            if (!bs.racks[k] || !Array.isArray(orr)) return;
+            bs.racks[k] = [0, 1, 2, 3].map((z) => Math.max(0, +orr[z] || 0));
+          });
+        }
+        /* Make the sizes add up to the rail, whatever the save said. A total
+           that disagrees with its own breakdown is how a rail ends up
+           permanently "full" with nothing anybody can wear. */
+        CFG.STORES[i].products.forEach((p, n) => {
+          const ps = s.stores[i].products[n];
+          if (!p.garment) { bs.racks[n] = [0, 0, 0, 0]; return; }
+          const have = bs.racks[n].reduce((a, v) => a + v, 0);
+          if (have === ps.shelf) return;
+          const each = Math.floor(ps.shelf / 4);
+          bs.racks[n] = [each, each, each, each];
+          for (let k = 0; k < ps.shelf - each * 4; k++) bs.racks[n][k]++;
         });
       }
 

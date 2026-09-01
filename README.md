@@ -178,6 +178,45 @@ Some shoppers simply cannot afford what they picked up; good advice steers
 them to something they can. The **Conversion** row in Staff is the honest
 scoreboard: how many of the people who walked in walked out with a bag.
 
+## Stage 4 — the Fashion Boutique
+
+The outlet asks whether you can talk somebody into a sale. The boutique asks
+a smaller, harder question: **have you got it in their size, and is there
+anywhere to try it on?**
+
+```
+they come in wanting an outfit  ->  one piece, sometimes two
+they find the rail              ->  and look for THEIR size
+the size is there               ->  it comes off the hanger
+the size is not                 ->  📏 "have you got this in L?"
+                                     and you fetch one from the back
+they take it to a cubicle       ->  if one is free, or they queue
+they try it on                  ->  a few seconds behind the curtain
+they decide                     ->  😊 buy   😞 leave it on the rail
+```
+
+**A full rail can still be an empty rail.** Every garment hangs in four
+sizes, and each rail shows the breakdown on the floor — `S 2 · M 0 · L 1 ·
+XL 3`, with a red pip for a size that has run out. Six of the eight lines are
+garments; the cap and the handbag have no size and skip the cubicle
+entirely, which makes them the easy sale when the shop is heaving.
+
+**"Have you got this in L?"** is the stage's job. A shopper stood at a rail
+with none of their size raises a 📏 over their head and waits — on a shorter
+fuse than anything else in the game. Walk to the stockroom, pick one up,
+carry it over, and it goes straight into their hands. Being served like that
+is worth a sale on its own. A hired **Fashion Assistant** runs those errands
+for you, and the shop earns nothing unattended until you have one.
+
+**The cubicles are the bottleneck.** Two come with the shop and three more
+are build plots. Everyone trying on a garment needs one, and when they are
+all curtained shut the queue outside starts losing people:
+
+| Fitting rooms | Conversion |
+| --- | --- |
+| 2 | 41% |
+| 5 | 66% |
+
 ## Stores
 
 | Store | Unlock | Products |
@@ -185,7 +224,7 @@ scoreboard: how many of the people who walked in walked out with a bag.
 | Grocery Store | free | 11 lines across vegetables, fruit, dairy and bakery |
 | Coffee Shop | $6K | 6 ingredients, 10 recipes, 3 machines — made to order |
 | Sport Outlet | $180K | 4 sports, 8 lines, 4 courts — tried before they are bought |
-| Fashion Boutique | $4.2M | t-shirt, dress, handbag, watch |
+| Fashion Boutique | $4.2M | 8 lines in 4 sizes, 5 fitting rooms — tried on before they are bought |
 | Electronics | $95M | earbuds, phone, tablet, TV |
 
 Unlock a store once, then travel between them freely from the Map.
@@ -218,6 +257,8 @@ src/cafe.js        stage 2: orders, brewing, serving, tips, tables, crew
 src/cafe-render.js stage 2's fixtures — crates, menu board, machines, tables
 src/sports.js      stage 3: browsing, the trial, advice, the buy decision
 src/sports-render.js stage 3's fixtures — the stockroom and the four courts
+src/boutique.js    stage 4: sizes, size requests, the cubicles, trying on
+src/boutique-render.js stage 4's fixtures — hanging rails and fitting rooms
 src/render.js      canvas scene + the joystick
 src/art.js         one painter per product — potatoes, tomatoes, cups...
 src/ui.js          HUD, bottom sheets, toasts
@@ -236,15 +277,20 @@ modules, so the file:// path keeps working.
 Sound, prestige, per-store decoration, and a tutorial past the first sale.
 Customers and staff do not collide with anything — only the player does — so
 they clip through fixtures on the diagonal. The café has no day cycle, so
-there is no end-of-day summary and no missions yet. The Boutique and
-Electronics still borrow the mini mart's floor plan.
+there is no end-of-day summary and no missions yet. Electronics still
+borrows the mini mart's floor plan.
 
-The Sport Outlet has the trial and the advice, but not yet the rest of its
-design: clothing **sizes**, per-product **quality tiers** and brands, setting
-your own **prices**, seasonal **promotions and events** that spike one
-sport's demand, store **reputation** and the VIP athletes it attracts, or the
-further sports (tennis, swimming, cycling, fitness) the zones are shaped to
-take. A trial is a progress bar, not yet an animation of the swing.
+The Sport Outlet has the trial and the advice, but not yet per-product
+**quality tiers** and brands, setting your own **prices**, seasonal
+**promotions and events** that spike one sport's demand, store
+**reputation** and the VIP athletes it attracts, or the further sports
+(tennis, swimming, cycling, fitness) the zones are shaped to take. A trial is
+a progress bar, not yet an animation of the swing.
+
+The Boutique has sizes, the size request and the cubicles, but not **colours**
+as a second axis, **outfit style matching** (casual / smart / winter), fashion
+**trends** and seasons that move demand week to week, **promotions** and
+bundles, VIP shoppers, or assistant levels. Every shop still has one till.
 
 ## Brand
 

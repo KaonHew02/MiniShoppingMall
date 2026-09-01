@@ -73,6 +73,7 @@ window.MSM = window.MSM || {};
         case 'server':
         case 'cleaner': MSM.game.hireCafe(act); break;
         case 'advisor': MSM.game.hireAdvisor(); break;
+        case 'assistant': MSM.game.hireAssistant(); break;
         case 'machine': MSM.game.upgradeMachine(i); break;
         case 'unlock':  MSM.game.unlockStore(i); return;
         case 'travel':  MSM.game.travel(i); return;
@@ -121,6 +122,7 @@ window.MSM = window.MSM || {};
         });
       }
       if (ss.sports && !ss.sports.advisor && s.cash >= MSM.game.advisorCost()) hire++;
+      if (ss.boutique && !ss.boutique.assistant && s.cash >= MSM.game.assistantCost()) hire++;
       let maps = 0;
       s.stores.forEach((st, i) => { if (!st.owned && s.cash >= CFG.STORES[i].unlock) maps++; });
       badge('badge-products', up);
@@ -379,9 +381,84 @@ window.MSM = window.MSM || {};
       <div class="seg">${seg}</div>${courts}${rows}`;
   }
 
+  /* The boutique's list leads with the cubicles, then gives every garment
+     its size breakdown — the one number a shop like this runs on. */
+  function boutiqueProductsBody() {
+    const store = MSM.econ.store(), bs = MSM.econ.sstate().boutique;
+    const cash = MSM.state.cash;
+    const B = CFG.BOUTIQUE;
+    const rooms = MSM.econ.rooms();
+
+    const seg = [t('buy.1'), t('buy.10'), t('buy.max')].map((l, k) => {
+      const on = (k === 0 && UI.buyMode === 1) || (k === 1 && UI.buyMode === 10) ||
+                 (k === 2 && UI.buyMode === 'max');
+      return `<button class="${on ? 'on' : ''}" data-act="buymode" data-i="${k}">${l}</button>`;
+    }).join('');
+
+    const cubicles = `<div class="row">${chip('🚪', '#FF7BA6')}
+      <div class="row-main">
+        <div class="row-name">${t('fit.rooms')}</div>
+        <div class="row-sub">${t('fit.roomsSub', {
+          free: rooms.free, built: rooms.built, all: store.plan.rooms.length })}</div>
+      </div>
+    </div>` + store.plan.rooms.map((spec, k) => {
+      if (bs.rooms[k].built) return '';
+      return `<div class="row locked">${chip('🔒', '#FF7BA6')}
+        <div class="row-main">
+          <div class="row-name">${t('fit.roomN', { n: k + 1 })}</div>
+          <div class="row-sub">${t('fit.roomOff', { cost: '$' + U.money(spec.cost) })}</div>
+        </div>
+      </div>`;
+    }).join('');
+
+    const rows = store.products.map((prod, n) => {
+      const ps = MSM.econ.pstate(n);
+      if (!ps.built) {
+        const next = MSM.econ.nextBuild() === n;
+        return `<div class="row prod locked">${artChip(prod)}
+          <div class="row-main">
+            <div class="row-name">${prod.name}</div>
+            <div class="row-sub">${next
+              ? t('prod.build', { cost: '$' + U.money(prod.buildCost) })
+              : t('prod.later')}</div>
+          </div>
+        </div>`;
+      }
+      const count = UI.buyMode === 'max' ? Math.max(1, MSM.econ.maxBuy(n, cash)) : UI.buyMode;
+      const cost = MSM.econ.upgradeCost(n, count);
+
+      /* For a garment the useful line is not "8 on the rail" — it is which
+         sizes those eight are. A zero here is somebody walking out. */
+      const detail = prod.garment
+        ? `<div class="row-sub">${t('fit.sizes')} ${bs.racks[n].map((v, k) =>
+             `<b style="color:${v === 0 ? '#E0553F' : v <= 1 ? '#C98B00' : '#2CA85C'}">${
+               B.SIZES[k]}&nbsp;${v}</b>`).join(' · ')}</div>`
+        : `<div class="row-sub">${t('fit.noSize')}</div>`;
+
+      return `<div class="row prod">${artChip(prod)}
+        <div class="row-main">
+          <div class="row-name">${prod.name}<span class="lvl">${t('lv', { n: ps.level })}</span></div>
+          <div class="row-sub">${t('prod.price', {
+            price: '$' + U.money(MSM.econ.price(n)), sec: MSM.econ.restock(n).toFixed(2) })}</div>
+          ${detail}
+          <div class="meters">
+            ${meter('shelf', t('fit.rail'), ps.shelf, CFG.SHELF_CAP)}
+            ${meter('crate', t('meter.crate'), ps.out, CFG.CRATE_CAP)}
+          </div>
+        </div>
+        <button class="btn" data-act="upgrade" data-i="${n}" ${cash >= cost ? '' : 'disabled'}>
+          ${t('btn.upgrade', { n: count })}<small>$${U.money(cost)}</small></button>
+      </div>`;
+    }).join('');
+
+    return `<div class="hint">${t('fit.hint')}</div>
+      <div class="seg">${seg}</div>${cubicles}${rows}`;
+  }
+
   function productsBody() {
     if (MSM.cafe.active()) return cafeProductsBody();
     if (MSM.sports.active()) return sportsProductsBody();
+    if (MSM.boutique.active()) return boutiqueProductsBody();
     const seg = [t('buy.1'), t('buy.10'), t('buy.max')].map((l, k) => {
       const on = (k === 0 && UI.buyMode === 1) || (k === 1 && UI.buyMode === 10) || (k === 2 && UI.buyMode === 'max');
       return `<button class="${on ? 'on' : ''}" data-act="buymode" data-i="${k}">${l}</button>`;
@@ -424,7 +501,7 @@ window.MSM = window.MSM || {};
 
   function staffBody() {
     const store = MSM.econ.store(), ss = MSM.econ.sstate(), cash = MSM.state.cash;
-    const cs = ss.cafe, sp = ss.sports;
+    const cs = ss.cafe, sp = ss.sports, bs = ss.boutique;
     const row = (glyph, bg, name, sub, hired, act, cost) => `<div class="row">
       <div class="row-ico" style="background:${bg}">${glyph}</div>
       <div class="row-main">
@@ -477,7 +554,24 @@ window.MSM = window.MSM || {};
         </div>
       </div>`;
 
-    return `<div class="hint">${t(cs ? 'staff.cafeHint' : sp ? 'staff.sportHint' : 'staff.hint',
+    /* Stage 4's hire, and the two numbers that say whether the floor is
+       coping: how many sizes were fetched, and how many cubicles are free. */
+    const fitRows = !bs ? '' :
+      row('🧑‍💼', '#FCDCE8', t('staff.assistant'),
+          bs.assistant ? t('staff.assistantOn') : t('staff.assistantOff'),
+          bs.assistant, 'assistant', MSM.game.assistantCost()) +
+      `<div class="row">
+        <div class="row-ico" style="background:#E4F6EA">📊</div>
+        <div class="row-main">
+          <div class="row-name">${t('fit.convName')}</div>
+          <div class="row-sub">${t('fit.convSub', {
+            p: Math.round(MSM.econ.fitConversion() * 100),
+            n: bs.sold, l: bs.lost, f: bs.fetched })}</div>
+        </div>
+      </div>`;
+
+    return `<div class="hint">${t(cs ? 'staff.cafeHint' : sp ? 'staff.sportHint'
+                                  : bs ? 'staff.fitHint' : 'staff.hint',
                                   { store: store.name })}</div>` +
       row('📦', '#FFE9D6', t(cs ? 'staff.runners' : 'staff.stockers',
           { a: ss.stockers, b: CFG.MAX_STOCKERS }),
@@ -489,7 +583,7 @@ window.MSM = window.MSM || {};
           ss.cashier ? t(cs ? 'staff.orderTakerOn' : 'staff.cashierOn')
                      : t(cs ? 'staff.orderTakerOff' : 'staff.cashierOff'),
           ss.cashier, 'cashier', store.cashierCost) +
-      cafeRows + sportRows +
+      cafeRows + sportRows + fitRows +
       `<div class="row">
         <div class="row-ico" style="background:#E4F6EA">📈</div>
         <div class="row-main">

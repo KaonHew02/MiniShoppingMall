@@ -187,7 +187,8 @@ window.MSM = window.MSM || {};
          nothing on it, and in the queue once the grace period is up. Time on
          the court is time they are enjoying — it never costs you. */
       const stuck = (c.phase === 'browse' && ps.shelf <= 0) ||
-                    (c.phase === 'queue' && c.queueT > S.QUEUE_GRACE);
+                    ((c.phase === 'queue' || c.phase === 'toQueue') &&
+                     c.queueT > S.QUEUE_GRACE);
       if (stuck) {
         c.patience -= dt / S.PATIENCE;
         if (c.patience <= 0) { K.walkout(c); return; }
@@ -258,9 +259,16 @@ window.MSM = window.MSM || {};
           K.decide(c);
           break;
 
+        /* Sold. A full till is not a reason to put it back on the shelf —
+           they wait at the back of the line, and their patience runs. */
         case 'toQueue': {
           if (MSM.ent.queue.indexOf(c) < 0) {
-            if (MSM.ent.queue.length >= P.queue.length) { c.phase = 'toReturn'; break; }
+            if (MSM.ent.queue.length >= P.queue.length) {
+              c.queueT += dt;
+              const last = P.queue[P.queue.length - 1];
+              W.seek(c, last.x, last.y + 0.7, spd, dt, false);
+              break;
+            }
             MSM.ent.queue.push(c);
           }
           const slot = P.queue[Math.max(0, MSM.ent.queue.indexOf(c))];
@@ -298,7 +306,7 @@ window.MSM = window.MSM || {};
             c.phase = 'toLane';
             break;
           }
-          MSM.econ.spstate().rejected++;
+          K.tally(c, 'rejected');
           c.phase = 'leave';
           break;
         }
@@ -332,7 +340,7 @@ window.MSM = window.MSM || {};
         S.LEVEL_BONUS * (MSM.econ.pstate(c.want).level - 1));
       if (Math.random() > chance) { K.no(c, 'meh'); return; }
 
-      sp.bought++;
+      K.tally(c, 'bought');
       c.verdict = 'buy';
       c.verdictT = 1.8;
       c.mood = 'happy';
@@ -350,6 +358,14 @@ window.MSM = window.MSM || {};
       c.mood = why === 'costly' ? 'wait' : 'want';
       c.phase = 'toReturn';
       MSM.render.pop(c.x, c.y, 1.9, why === 'costly' ? '😕' : '😞', '#E0553F');
+    },
+
+    /* One shopper is one outcome. Somebody who decides to buy and then runs
+       out of patience at a busy till used to land in both columns at once. */
+    tally(c, key) {
+      if (c.counted) return;
+      c.counted = true;
+      MSM.econ.spstate()[key]++;
     },
 
     /** Another line in the same sport — "have you got anything else?" */
@@ -371,7 +387,7 @@ window.MSM = window.MSM || {};
         c.carry = 0;
         c.carryP = -1;
       }
-      MSM.econ.spstate().walkouts++;
+      K.tally(c, 'walkouts');
       c.mood = 'angry';
       c.verdict = '';
       c.phase = 'leave';

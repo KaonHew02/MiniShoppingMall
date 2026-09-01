@@ -79,9 +79,10 @@ down; the bin is where mistakes go.
    themselves, so idling still pays.
 7. **Expand** — open the Map and buy the next store.
 
-Only the Grocery Store has the full farm chain so far — the Sports Outlet,
-the Boutique and Electronics still make their goods without an input. The
-Coffee Shop is a different game entirely — see below.
+Only the Grocery Store has the full farm chain so far — the Boutique and
+Electronics still make their goods without an input, and still borrow this
+floor plan. The Coffee Shop and the Sport Outlet are different games
+entirely — see below.
 
 **Staff** take over the parts you are tired of doing. A stocker hauls feed to
 whatever is starving, then restocks the emptiest shelf; the cashier works the
@@ -146,13 +147,44 @@ barista never bakes and the chef never brews. It earns unattended once the
 runner, cashier, barista and server are hired; the food lines pay only with
 the chef too.
 
+## Stage 3 — the Sport Outlet
+
+The mini mart is a *stocking* game and the café a *service* game. The outlet
+is a **selling** game: the goods are already made and already on the rack, and
+the only question is whether anybody buys them.
+
+```
+they come in wanting one thing  ->  they find its rack
+they take it down               ->  and carry it to the test area
+they try it                     ->  a few seconds on the court
+you stand with them a moment    ->  and talk them through it
+they decide                     ->  😊 buy   😕 too dear   😞 not for me
+a no goes back on the rack, and sometimes they ask to see another
+```
+
+**Nobody buys what they have not tried.** Four sports — running, football,
+basketball, badminton — two lines each, and a **court** for every one of
+them: a treadmill, a goal, a hoop, a net. Each court is a plot you walk onto
+and pay for, and a sport without one still sells, to about **half** as many
+people. That number is printed on every line in the Products sheet.
+
+**Advice is the other half of the sale.** A shopper holding something and
+wondering shows a **❓** over their head; stand with them for a moment and
+they are talked into it. It is the stage's version of working the till — the
+❓s are your to-do list. A hired **Sports Advisor** walks the floor doing it
+without you, and the shop earns nothing unattended until you have one.
+
+Some shoppers simply cannot afford what they picked up; good advice steers
+them to something they can. The **Conversion** row in Staff is the honest
+scoreboard: how many of the people who walked in walked out with a bag.
+
 ## Stores
 
 | Store | Unlock | Products |
 | --- | --- | --- |
 | Grocery Store | free | 11 lines across vegetables, fruit, dairy and bakery |
 | Coffee Shop | $6K | 6 ingredients, 10 recipes, 3 machines — made to order |
-| Sports Outlet | $180K | basketball, trainers, racket, jersey |
+| Sport Outlet | $180K | 4 sports, 8 lines, 4 courts — tried before they are bought |
 | Fashion Boutique | $4.2M | t-shirt, dress, handbag, watch |
 | Electronics | $95M | earbuds, phone, tablet, TV |
 
@@ -184,6 +216,8 @@ src/world.js       what is solid, and how bodies move and slide
 src/entities.js    player, stocker, customers and their wants, cash
 src/cafe.js        stage 2: orders, brewing, serving, tips, tables, crew
 src/cafe-render.js stage 2's fixtures — crates, menu board, machines, tables
+src/sports.js      stage 3: browsing, the trial, advice, the buy decision
+src/sports-render.js stage 3's fixtures — the stockroom and the four courts
 src/render.js      canvas scene + the joystick
 src/art.js         one painter per product — potatoes, tomatoes, cups...
 src/ui.js          HUD, bottom sheets, toasts
@@ -202,8 +236,15 @@ modules, so the file:// path keeps working.
 Sound, prestige, per-store decoration, and a tutorial past the first sale.
 Customers and staff do not collide with anything — only the player does — so
 they clip through fixtures on the diagonal. The café has no day cycle, so
-there is no end-of-day summary and no missions yet. The Sports Outlet, the
-Boutique and Electronics still borrow the mini mart's floor plan.
+there is no end-of-day summary and no missions yet. The Boutique and
+Electronics still borrow the mini mart's floor plan.
+
+The Sport Outlet has the trial and the advice, but not yet the rest of its
+design: clothing **sizes**, per-product **quality tiers** and brands, setting
+your own **prices**, seasonal **promotions and events** that spike one
+sport's demand, store **reputation** and the VIP athletes it attracts, or the
+further sports (tennis, swimming, cycling, fitness) the zones are shaped to
+take. A trial is a progress bar, not yet an animation of the swing.
 
 ## Brand
 

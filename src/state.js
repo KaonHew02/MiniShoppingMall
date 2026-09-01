@@ -20,6 +20,16 @@ window.MSM = window.MSM || {};
     tips: 0, walkouts: 0,
   });
 
+  /* Stage 3 keeps the courts you have built, whether an advisor is on the
+     floor, and the running tally of who bought and who walked. */
+  const blankSports = (store) => ({
+    areas: store.plan.areas.map((a) => ({
+      built: a.cost === 0, buildPaid: 0,
+    })),
+    advisor: false,
+    bought: 0, rejected: 0, walkouts: 0,
+  });
+
   const blank = () => ({
     cash: CFG.START_CASH,
     gems: 0,
@@ -42,6 +52,7 @@ window.MSM = window.MSM || {};
         level: 1, shelf: 0, out: 0, feed: 0, t: 0, pay: 0,
       })),
       cafe: s.mode === 'cafe' ? blankCafe(s) : null,
+      sports: s.mode === 'sports' ? blankSports(s) : null,
     })),
   });
 
@@ -77,6 +88,25 @@ window.MSM = window.MSM || {};
     /* ------------------------------------------------------- the cafe */
     cstate: (i) => MSM.state.stores[i ?? MSM.state.current].cafe,
     isCafe: (i) => CFG.STORES[i ?? MSM.state.current].mode === 'cafe',
+
+    /* ------------------------------------------------ the sport outlet */
+    spstate: (i) => MSM.state.stores[i ?? MSM.state.current].sports,
+
+    /** Is this line's court built? A sport with no court still sells, but
+        nobody gets to try anything, so far fewer of them buy. */
+    court(n, i) {
+      const sp = E.spstate(i), prod = E.prod(n, i);
+      if (!sp || prod.areaIndex == null || prod.areaIndex < 0) return false;
+      return !!sp.areas[prod.areaIndex].built;
+    },
+
+    /** How often a sale actually closes here — the stage's real headline. */
+    conversion(i) {
+      const sp = E.spstate(i);
+      if (!sp) return 1;
+      const seen = sp.bought + sp.rejected + sp.walkouts;
+      return seen ? sp.bought / seen : 0;
+    },
 
     /** A machine's brew speed and how many cups it can have on at once. */
     machine(mi, i) {
@@ -145,15 +175,26 @@ window.MSM = window.MSM || {};
       /* A cafe needs the whole crew: somebody to brew it and somebody to
          carry it out, or the drinks just pile up on the counter. */
       if (ss.cafe && !(ss.cafe.barista && ss.cafe.server)) return 0;
+      /* An outlet with nobody advising sells to almost nobody — the whole
+         stage is the conversation on the shop floor. */
+      if (ss.sports && !ss.sports.advisor) return 0;
       let r = 0;
       CFG.STORES[i].products.forEach((p, n) => {
         if (!p.sell || !ss.products[n].built) return;
         /* Food is the chef's station — without one the kitchen earns nothing. */
         if (ss.cafe && p.recipe && !ss.cafe.chef &&
             CFG.STORES[i].plan.machines[p.machineIndex].staff === 'chef') return;
-        r += E.price(n, i) / E.restock(n, i);
+        // a line with no court to try it on closes far fewer sales
+        r += E.price(n, i) / E.restock(n, i) * (ss.sports ? E.closeRate(n, i) : 1);
       });
       return r * 0.5;             // customers, not supply, are the real limit
+    },
+
+    /** The share of shoppers a line converts, unattended, with an advisor. */
+    closeRate(n, i) {
+      const S = CFG.SPORTS;
+      const chance = S.BASE_BUY + S.ADVICE_BONUS + (E.court(n, i) ? S.TRY_BONUS : 0);
+      return Math.min(chance, S.MAX_BUY) * 0.85;   // and some cannot afford it
     },
 
     idleRate: () => MSM.state.stores.reduce((a, _, i) => a + E.storeRate(i), 0),
@@ -232,6 +273,22 @@ window.MSM = window.MSM || {};
         ps.built = op.built != null ? !!op.built : true;   // old saves had everything
         ps.buildPaid = Math.max(0, +op.buildPaid || 0);
       });
+
+      /* The sport outlet's courts and its advisor. Same rule as the cafe:
+         if the line-up changed shape, this store starts over. */
+      const sp = s.stores[i].sports, op = old.sports;
+      if (sp && op && !fresh) {
+        sp.advisor = !!op.advisor;
+        sp.bought = Math.max(0, +op.bought || 0);
+        sp.rejected = Math.max(0, +op.rejected || 0);
+        sp.walkouts = Math.max(0, +op.walkouts || 0);
+        (op.areas || []).forEach((oa, k) => {
+          const a = sp.areas[k];
+          if (!a || !oa) return;
+          a.built = !!oa.built;
+          a.buildPaid = Math.max(0, +oa.buildPaid || 0);
+        });
+      }
 
       const cs = s.stores[i].cafe, oc = old.cafe;
       if (!cs || !oc || fresh) return;

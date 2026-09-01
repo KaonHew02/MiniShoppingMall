@@ -804,6 +804,115 @@ window.MSM = window.MSM || {};
       rr(ctx, x0 + w * 0.04, top + h * 0.24, w * 0.16, h * 0.12, h * 0.05, U.shade(c, 0.35));
     },
 
+    /* A football is a sphere of black pentagons on white — but the tint is
+       near-white, so like the milk carton it paints its own greys and lets
+       the patches carry the contrast. One centred pentagon with five round
+       its equator is the whole read. */
+    football(ctx, x, y, s) {
+      const R = s * 0.32, cy = y - R;
+      ell(ctx, x, cy, R, R, 0, '#F4F8FC');
+      ctx.save();
+      ctx.beginPath(); ctx.arc(x, cy, R, 0, TAU); ctx.clip();
+      ell(ctx, x + R * 0.5, cy + R * 0.55, R * 0.9, R * 0.9, 0, '#DCE4EE');
+
+      const patch = (px, py, rad, rot) => {
+        ctx.beginPath();
+        for (let i = 0; i < 5; i++) {
+          const a = rot + (i / 5) * TAU - Math.PI / 2;
+          const vx = px + Math.cos(a) * rad, vy = py + Math.sin(a) * rad;
+          if (i) ctx.lineTo(vx, vy); else ctx.moveTo(vx, vy);
+        }
+        ctx.closePath(); fill(ctx, '#2B3450');
+      };
+      patch(x - R * 0.08, cy - R * 0.1, R * 0.36, 0);
+      for (let i = 0; i < 5; i++) {
+        const a = (i / 5) * TAU - Math.PI / 2 + 0.35;
+        patch(x - R * 0.08 + Math.cos(a) * R * 0.86,
+              cy - R * 0.1 + Math.sin(a) * R * 0.86, R * 0.30, Math.PI + a);
+      }
+      ell(ctx, x - R * 0.4, cy - R * 0.46, R * 0.24, R * 0.15, -0.6, '#FFFFFFCC');
+      ctx.restore();
+      ctx.beginPath(); ctx.arc(x, cy, R - s * 0.008, 0, TAU);
+      stroke(ctx, '#B9C7DA', s * 0.016);
+    },
+
+    /* A boot is a trainer with the sole spiked and the collar cut low — the
+       studs are what stop it reading as the running shoe next to it. */
+    boots(ctx, x, y, s, c) {
+      const w = s * 0.62, h = s * 0.34, x0 = x - w / 2, sole = y - h * 0.30;
+      const top = y - h;
+      for (let k = 0; k < 5; k++) {                       // studs
+        const sx = x0 + w * (0.12 + k * 0.19);
+        rr(ctx, sx - w * 0.035, y - h * 0.1, w * 0.07, h * 0.13, w * 0.02, '#3E4A66');
+      }
+      ctx.beginPath();                                    // upper
+      ctx.moveTo(x0, sole);
+      ctx.lineTo(x0, top + h * 0.30);
+      ctx.quadraticCurveTo(x0 + w * 0.26, top - h * 0.02, x0 + w * 0.46, top + h * 0.40);
+      ctx.quadraticCurveTo(x0 + w * 0.78, top + h * 0.58, x0 + w, sole);
+      ctx.closePath(); fill(ctx, c);
+      ctx.beginPath();                                    // shadowed heel
+      ctx.moveTo(x0, sole); ctx.lineTo(x0, top + h * 0.52);
+      ctx.quadraticCurveTo(x0 + w * 0.2, top + h * 0.44, x0 + w * 0.26, sole);
+      ctx.closePath(); fill(ctx, U.shade(c, -0.24));
+
+      rr(ctx, x0 - w * 0.02, sole, w * 1.04, h * 0.22, h * 0.08, '#2B3450');
+      // laces up the instep
+      ctx.beginPath();
+      for (let k = 0; k < 3; k++) {
+        const lx = x0 + w * (0.34 + k * 0.13), ly = top + h * (0.5 + k * 0.14);
+        ctx.moveTo(lx - w * 0.07, ly); ctx.lineTo(lx + w * 0.07, ly - h * 0.08);
+      }
+      stroke(ctx, '#FFFFFF', s * 0.028);
+      rr(ctx, x0 + w * 0.04, top + h * 0.36, w * 0.14, h * 0.12, h * 0.05, U.shade(c, 0.34));
+    },
+
+    /* A shuttlecock: cork dome at the bottom, feather skirt flaring up. */
+    shuttle(ctx, x, y, s) {
+      const cy = y - s * 0.12, top = y - s * 0.56;
+      const halfTop = s * 0.20, halfBot = s * 0.085;
+
+      ctx.beginPath();                                    // the feather skirt
+      ctx.moveTo(x - halfBot, cy);
+      ctx.lineTo(x - halfTop, top);
+      ctx.lineTo(x + halfTop, top);
+      ctx.lineTo(x + halfBot, cy);
+      ctx.closePath(); fill(ctx, '#F4F8FC');
+      ctx.beginPath();                                    // shaded right half
+      ctx.moveTo(x, cy); ctx.lineTo(x, top);
+      ctx.lineTo(x + halfTop, top); ctx.lineTo(x + halfBot, cy);
+      ctx.closePath(); fill(ctx, '#DCE4EE');
+      // the feather splits, and the thread ring holding them together
+      ctx.beginPath();
+      for (let k = -2; k <= 2; k++) {
+        ctx.moveTo(x + halfBot * (k / 2.6), cy);
+        ctx.lineTo(x + halfTop * (k / 2.2), top);
+      }
+      stroke(ctx, '#B9C7DA', s * 0.016);
+      ctx.beginPath();
+      ctx.moveTo(x - halfTop * 0.72, top + s * 0.14);
+      ctx.lineTo(x + halfTop * 0.72, top + s * 0.14);
+      stroke(ctx, '#C2CFE0', s * 0.018);
+      ell(ctx, x, top, halfTop, s * 0.045, 0, '#FFFFFF');
+
+      ell(ctx, x, cy, s * 0.10, s * 0.10, 0, '#E8C86A');   // the cork
+      ell(ctx, x, cy + s * 0.03, s * 0.10, s * 0.07, 0, U.shade('#E8C86A', -0.22));
+      ell(ctx, x - s * 0.03, cy - s * 0.04, s * 0.035, s * 0.022, -0.5, '#F6E7CE');
+    },
+
+    /* A sports bottle: tapered body, a coloured band, and a flip cap. */
+    bottle(ctx, x, y, s, c) {
+      const w = s * 0.28, h = s * 0.60, x0 = x - w / 2, top = y - h;
+      rr(ctx, x0, top + h * 0.14, w, h * 0.86, w * 0.28, c);
+      rr(ctx, x + w * 0.10, top + h * 0.14, w * 0.40, h * 0.86, w * 0.24, U.shade(c, -0.20));
+      rr(ctx, x0, top + h * 0.42, w, h * 0.20, 0, U.shade(c, 0.40));   // grip band
+      rr(ctx, x0 + w * 0.14, top + h * 0.24, w * 0.22, h * 0.5, w * 0.1, '#FFFFFF55');
+      // neck and flip cap
+      rr(ctx, x - w * 0.20, top + h * 0.04, w * 0.40, h * 0.14, w * 0.08, U.shade(c, -0.34));
+      rr(ctx, x - w * 0.26, top - h * 0.04, w * 0.52, h * 0.10, w * 0.06, '#3E4A66');
+      rr(ctx, x - w * 0.06, top - h * 0.10, w * 0.12, h * 0.08, w * 0.04, '#5A6472');
+    },
+
     /* Racket with an actual string bed — the plain oval read as a lollipop. */
     racket(ctx, x, y, s, c) {
       const hy = y - s * 0.48, rx = s * 0.2, ry = s * 0.25;

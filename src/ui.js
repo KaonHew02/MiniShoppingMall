@@ -72,6 +72,7 @@ window.MSM = window.MSM || {};
         case 'chef':
         case 'server':
         case 'cleaner': MSM.game.hireCafe(act); break;
+        case 'advisor': MSM.game.hireAdvisor(); break;
         case 'machine': MSM.game.upgradeMachine(i); break;
         case 'unlock':  MSM.game.unlockStore(i); return;
         case 'travel':  MSM.game.travel(i); return;
@@ -119,6 +120,7 @@ window.MSM = window.MSM || {};
           if (!ss.cafe[j] && s.cash >= MSM.game.cafeCost(j)) hire++;
         });
       }
+      if (ss.sports && !ss.sports.advisor && s.cash >= MSM.game.advisorCost()) hire++;
       let maps = 0;
       s.stores.forEach((st, i) => { if (!st.owned && s.cash >= CFG.STORES[i].unlock) maps++; });
       badge('badge-products', up);
@@ -315,8 +317,71 @@ window.MSM = window.MSM || {};
       <div class="seg">${seg}</div>${machines}${rows}`;
   }
 
+  /* The sport outlet's list leads with the courts, because whether a line
+     has one is the single biggest thing about whether it sells. */
+  function sportsProductsBody() {
+    const store = MSM.econ.store(), ss = MSM.econ.sstate(), sp = ss.sports;
+    const cash = MSM.state.cash;
+
+    const seg = [t('buy.1'), t('buy.10'), t('buy.max')].map((l, k) => {
+      const on = (k === 0 && UI.buyMode === 1) || (k === 1 && UI.buyMode === 10) ||
+                 (k === 2 && UI.buyMode === 'max');
+      return `<button class="${on ? 'on' : ''}" data-act="buymode" data-i="${k}">${l}</button>`;
+    }).join('');
+
+    const courts = store.plan.areas.map((spec, ai) => {
+      const as = sp.areas[ai];
+      return `<div class="row${as.built ? '' : ' locked'}">${chip(as.built ? '🧪' : '🔒', '#8B62FF')}
+        <div class="row-main">
+          <div class="row-name">${spec.label}</div>
+          <div class="row-sub">${as.built
+            ? t('sport.courtOn')
+            : t('sport.courtOff', { cost: '$' + U.money(spec.cost) })}</div>
+        </div>
+      </div>`;
+    }).join('');
+
+    const rows = store.products.map((prod, n) => {
+      const ps = MSM.econ.pstate(n);
+      if (!ps.built) {
+        const next = MSM.econ.nextBuild() === n;
+        return `<div class="row prod locked">${artChip(prod)}
+          <div class="row-main">
+            <div class="row-name">${prod.name}</div>
+            <div class="row-sub">${next
+              ? t('prod.build', { cost: '$' + U.money(prod.buildCost) })
+              : t('prod.later')}</div>
+          </div>
+        </div>`;
+      }
+      const count = UI.buyMode === 'max' ? Math.max(1, MSM.econ.maxBuy(n, cash)) : UI.buyMode;
+      const cost = MSM.econ.upgradeCost(n, count);
+      const court = MSM.econ.court(n);
+      return `<div class="row prod">${artChip(prod)}
+        <div class="row-main">
+          <div class="row-name">${prod.name}<span class="lvl">${t('lv', { n: ps.level })}</span></div>
+          <div class="row-sub">${t('prod.price', {
+            price: '$' + U.money(MSM.econ.price(n)), sec: MSM.econ.restock(n).toFixed(2) })}</div>
+          <div class="row-sub">${court
+            ? t('sport.canTry', { p: Math.round(MSM.econ.closeRate(n) * 100) })
+            : t('sport.noTry', { p: Math.round(MSM.econ.closeRate(n) * 100) })}</div>
+          <div class="meters">
+            ${meter('shelf', t('sport.rack'), ps.shelf, CFG.SHELF_CAP)}
+            ${meter('crate', t('meter.crate'), ps.out, CFG.CRATE_CAP)}
+          </div>
+        </div>
+        <button class="btn" data-act="upgrade" data-i="${n}" ${cash >= cost ? '' : 'disabled'}>
+          ${t('btn.upgrade', { n: count })}<small>$${U.money(cost)}</small></button>
+      </div>`;
+    }).join('');
+
+    return `<div class="hint">${t('sport.hint')}</div>
+      <div class="seg">${seg}</div>${courts}${rows}`;
+  }
+
   function productsBody() {
     if (MSM.cafe.active()) return cafeProductsBody();
+    if (MSM.sports.active()) return sportsProductsBody();
     const seg = [t('buy.1'), t('buy.10'), t('buy.max')].map((l, k) => {
       const on = (k === 0 && UI.buyMode === 1) || (k === 1 && UI.buyMode === 10) || (k === 2 && UI.buyMode === 'max');
       return `<button class="${on ? 'on' : ''}" data-act="buymode" data-i="${k}">${l}</button>`;
@@ -359,7 +424,7 @@ window.MSM = window.MSM || {};
 
   function staffBody() {
     const store = MSM.econ.store(), ss = MSM.econ.sstate(), cash = MSM.state.cash;
-    const cs = ss.cafe;
+    const cs = ss.cafe, sp = ss.sports;
     const row = (glyph, bg, name, sub, hired, act, cost) => `<div class="row">
       <div class="row-ico" style="background:${bg}">${glyph}</div>
       <div class="row-main">
@@ -396,7 +461,23 @@ window.MSM = window.MSM || {};
         </div>
       </div>`;
 
-    return `<div class="hint">${t(cs ? 'staff.cafeHint' : 'staff.hint',
+    /* Stage 3's single hire, and the number that says whether the shop floor
+       is actually working: how many of the people who came in bought. */
+    const sportRows = !sp ? '' :
+      row('🧑‍💼', '#D6F2EE', t('staff.advisor'),
+          sp.advisor ? t('staff.advisorOn') : t('staff.advisorOff'),
+          sp.advisor, 'advisor', MSM.game.advisorCost()) +
+      `<div class="row">
+        <div class="row-ico" style="background:#E4F6EA">📊</div>
+        <div class="row-main">
+          <div class="row-name">${t('sport.convName')}</div>
+          <div class="row-sub">${t('sport.convSub', {
+            p: Math.round(MSM.econ.conversion() * 100),
+            n: sp.bought, r: sp.rejected, w: sp.walkouts })}</div>
+        </div>
+      </div>`;
+
+    return `<div class="hint">${t(cs ? 'staff.cafeHint' : sp ? 'staff.sportHint' : 'staff.hint',
                                   { store: store.name })}</div>` +
       row('📦', '#FFE9D6', t(cs ? 'staff.runners' : 'staff.stockers',
           { a: ss.stockers, b: CFG.MAX_STOCKERS }),
@@ -408,7 +489,7 @@ window.MSM = window.MSM || {};
           ss.cashier ? t(cs ? 'staff.orderTakerOn' : 'staff.cashierOn')
                      : t(cs ? 'staff.orderTakerOff' : 'staff.cashierOff'),
           ss.cashier, 'cashier', store.cashierCost) +
-      cafeRows +
+      cafeRows + sportRows +
       `<div class="row">
         <div class="row-ico" style="background:#E4F6EA">📈</div>
         <div class="row-main">

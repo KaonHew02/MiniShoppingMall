@@ -92,6 +92,31 @@ MSM.CFG = {
     CLEANER_COST: (unlock) => Math.max(2200, Math.round(unlock * 0.75)),
   },
 
+  /* --------------------------------------------------- the sport outlet */
+  /* Stage 3 is a SELLING game. The mini mart's customer takes what is on the
+     shelf and the cafe's waits for you to make it; here they pick a thing up,
+     go and TRY it, and then decide. Everything below is that decision. */
+  SPORTS: {
+    BROWSE_TIME: 1.1,        // seconds sizing it up before taking it down
+    TRY_TIME: [3.0, 5.0],    // seconds spent on the court / the treadmill
+    PATIENCE: 60,            // seconds of waiting at an empty rack
+    QUEUE_GRACE: 6,
+    ADVISE_REACH: 1.6,       // how close you stand to talk them through it
+    ADVISE_TIME: 0.9,        // seconds of standing there to land the advice
+    /* The purchase roll. A cold customer who was left alone buys well under
+       half the time — the trial and the advice are what close the sale, and
+       that is the whole loop of the stage. */
+    BASE_BUY: 0.34,
+    TRY_BONUS: 0.30,
+    ADVICE_BONUS: 0.26,
+    LEVEL_BONUS: 0.008,      // a better-stocked range sells itself, a little
+    MAX_BUY: 0.96,
+    BUDGET: [0.72, 2.20],    // what they will pay, as a multiple of the price
+    ADVICE_BUDGET: 1.25,     // good advice finds them something they can afford
+    SECOND_LOOK: 0.5,        // chance a "no" becomes "show me another one"
+    ADVISOR_COST: (unlock) => Math.max(9000, Math.round(unlock * 1.4)),
+  },
+
   /* --------------------------------------------------------- floor plans */
   /* MSM.CFG.PLAN is the ACTIVE plan. usePlan() copies the current store's
      layout into it IN PLACE, so every module can keep the
@@ -332,6 +357,105 @@ MSM.CFG.PLANS.cafe = {
   bin:      { x0: 19.60, y0: 10.40, x1: 20.30, y1: 11.10 },
 };
 
+/* The sport outlet:
+     back wall     eight stock crates — the stockroom you fetch from
+     mid           four sport zones, two display racks each
+     centre        the test area: a treadmill, a goal, a hoop and a net
+     front         the cashier, the queue running back to the door
+
+   Nothing here is grown or brewed, so the back of the shop is simple. What
+   makes stage 3 its own game happens on the floor: nobody buys a racket they
+   have not swung, and nobody swings one you did not build a court for. */
+MSM.CFG.PLANS.sports = {
+  id: 'sports',
+  /* Eight stock crates along the back, one per line, each above the zone it
+     serves so a restock run is a short straight walk. */
+  stations: [
+    { x0: 1.10,  y0: 0.55, x1: 2.90,  y1: 1.70 },   // 0 running shoes
+    { x0: 3.50,  y0: 0.55, x1: 5.30,  y1: 1.70 },   // 1 water bottles
+    { x0: 6.90,  y0: 0.55, x1: 8.70,  y1: 1.70 },   // 2 footballs
+    { x0: 9.30,  y0: 0.55, x1: 11.10, y1: 1.70 },   // 3 football boots
+    { x0: 12.70, y0: 0.55, x1: 14.50, y1: 1.70 },   // 4 basketballs
+    { x0: 15.10, y0: 0.55, x1: 16.90, y1: 1.70 },   // 5 team jerseys
+    { x0: 18.50, y0: 0.55, x1: 20.30, y1: 1.70 },   // 6 rackets
+    { x0: 20.90, y0: 0.55, x1: 22.70, y1: 1.70 },   // 7 shuttlecocks
+  ],
+  pads: [
+    { x0: 1.10,  y0: 2.00, x1: 1.80,  y1: 2.70 },
+    { x0: 3.50,  y0: 2.00, x1: 4.20,  y1: 2.70 },
+    { x0: 6.90,  y0: 2.00, x1: 7.60,  y1: 2.70 },
+    { x0: 9.30,  y0: 2.00, x1: 10.00, y1: 2.70 },
+    { x0: 12.70, y0: 2.00, x1: 13.40, y1: 2.70 },
+    { x0: 15.10, y0: 2.00, x1: 15.80, y1: 2.70 },
+    { x0: 18.50, y0: 2.00, x1: 19.20, y1: 2.70 },
+    { x0: 20.90, y0: 2.00, x1: 21.60, y1: 2.70 },
+  ],
+  /* Display racks, two to a sport. The wider gap between each pair is what
+     makes the four zones read as four zones from across the room. */
+  shelves: [
+    { x0: 1.20,  y0: 4.20, x1: 2.80,  y1: 5.15 },
+    { x0: 3.60,  y0: 4.20, x1: 5.20,  y1: 5.15 },
+    { x0: 7.00,  y0: 4.20, x1: 8.60,  y1: 5.15 },
+    { x0: 9.40,  y0: 4.20, x1: 11.00, y1: 5.15 },
+    { x0: 12.80, y0: 4.20, x1: 14.40, y1: 5.15 },
+    { x0: 15.20, y0: 4.20, x1: 16.80, y1: 5.15 },
+    { x0: 18.60, y0: 4.20, x1: 20.20, y1: 5.15 },
+    { x0: 21.00, y0: 4.20, x1: 22.60, y1: 5.15 },
+  ],
+  lanes: [2.00, 4.40, 7.80, 10.20, 13.60, 16.00, 19.40, 21.80],
+
+  /* The test areas — the stage's whole point. Each is a court you walk onto
+     and pay for; the prop in the middle of it is the only solid part, so a
+     customer can stand on the court and use it. A sport with no court still
+     sells, just to far fewer people. */
+  areas: [
+    { id: 'run',    sport: 'run',    label: 'Running Test',    cost: 0,
+      box:  { x0: 0.80,  y0: 6.60, x1: 5.60,  y1: 9.60 },
+      prop: { x0: 2.10,  y0: 6.85, x1: 4.30,  y1: 8.05 },
+      stand: { x: 3.20,  y: 8.95 } },
+    { id: 'foot',   sport: 'foot',   label: 'Football Test',   cost: 60000,
+      box:  { x0: 6.40,  y0: 6.60, x1: 11.20, y1: 9.60 },
+      prop: { x0: 7.70,  y0: 6.85, x1: 9.90,  y1: 8.05 },
+      stand: { x: 8.80,  y: 8.95 } },
+    { id: 'basket', sport: 'basket', label: 'Basketball Test', cost: 200000,
+      box:  { x0: 12.00, y0: 6.60, x1: 16.80, y1: 9.60 },
+      prop: { x0: 13.30, y0: 6.85, x1: 15.50, y1: 8.05 },
+      stand: { x: 14.40, y: 8.95 } },
+    { id: 'bad',    sport: 'bad',    label: 'Badminton Test',  cost: 500000,
+      box:  { x0: 17.60, y0: 6.60, x1: 22.40, y1: 9.60 },
+      prop: { x0: 18.90, y0: 6.85, x1: 21.10, y1: 8.05 },
+      stand: { x: 20.00, y: 8.95 } },
+  ],
+
+  sections: [
+    { name: 'RUNNING',    x0: 0.90,  y0: 3.60, x1: 5.50,  y1: 5.80, tint: '#BFE3FF' },
+    { name: 'FOOTBALL',   x0: 6.70,  y0: 3.60, x1: 11.30, y1: 5.80, tint: '#C6EFD2' },
+    { name: 'BASKETBALL', x0: 12.50, y0: 3.60, x1: 17.10, y1: 5.80, tint: '#FFD9B8' },
+    { name: 'BADMINTON',  x0: 18.30, y0: 3.60, x1: 22.90, y1: 5.80, tint: '#E7D6FF' },
+    { name: 'TEST AREA',  x0: 0.60,  y0: 6.20, x1: 22.60, y1: 9.90, tint: '#A9DCB6' },
+  ],
+  zones: [
+    { y0: -0.25, y1: 2.95,  a: '#DCE4EE', b: '#D3DCE8' },   // the stockroom
+    { y0: 2.95,  y1: 6.20,  a: '#F4F6FA', b: '#EBEFF6' },   // the shop floor
+    { y0: 6.20,  y1: 10.10, a: '#BFE3C9', b: '#B4DBBF' },   // the courts
+    { y0: 10.10, y1: 15.45, a: '#E8E2F5', b: '#DFD7F0' },   // the front
+  ],
+  patches: [],
+
+  stockLane: 3.30,
+  walkway: 10.15,
+
+  till:  { x0: 9.60, y0: 11.20, x1: 12.40, y1: 12.05 },
+  serve: { x: 11.00, y: 10.75 },
+  queue: [{ x: 11.00, y: 12.55 }, { x: 11.00, y: 13.15 },
+          { x: 11.00, y: 13.75 }, { x: 11.00, y: 14.35 }],
+  entrance: { x: 11.00, y: 14.90 },
+  spawn:    { x: 7.60,  y: 10.70 },
+  door:     { x0: 0.80,  y0: 12.60, x1: 2.20,  y1: 14.00 },
+  sign:     { x0: 13.20, y0: 13.70, x1: 13.90, y1: 14.40 },
+  bin:      { x0: 21.40, y0: 13.20, x1: 22.10, y1: 13.90 },
+};
+
 MSM.CFG.STORES = [
   {
     id: 'grocery', name: 'Grocery Store', glyph: '🥕', color: '#5FCBB6', unlock: 0,
@@ -479,13 +603,45 @@ MSM.CFG.STORES = [
     ],
   },
 
+  /* ------------------------------------------------------- STAGE 3 ---- */
+  /* Four sports, two lines each, and a court for every one of them. The
+     lines open a sport at a time, so a zone arrives whole: the gear, the
+     kit, and then the place to try them out. */
   {
-    id: 'sports', name: 'Sports Outlet', glyph: '🏀', color: '#8B62FF', unlock: 180000,
+    id: 'sports', name: 'Sport Outlet', glyph: '🏀', color: '#8B62FF', unlock: 180000,
+    mode: 'sports',
+    plan: MSM.CFG.PLANS.sports,
+    unlocks: [
+      { id: 'runshoe',    cost: 0 },
+      { id: 'bottle',     cost: 9000 },
+      { id: 'football',   cost: 26000 },
+      { id: 'boots',      cost: 60000 },
+      { id: 'basketball', cost: 130000 },
+      { id: 'jersey',     cost: 260000 },
+      { id: 'racket',     cost: 520000 },
+      { id: 'shuttle',    cost: 900000 },
+    ],
     products: [
-      { id: 'ball',   name:'Basketball', glyph:'🏀', color:'#FF8A3D', price:2400,  restock:1.8, art:'ball' },
-      { id: 'shoes',  name:'Trainers',   glyph:'👟', color:'#4FB0FF', price:3800,  restock:2.1, art:'shoes' },
-      { id: 'racket', name:'Racket',     glyph:'🎾', color:'#C9E265', price:5600,  restock:2.5, art:'racket' },
-      { id: 'jersey', name:'Jersey',     glyph:'👕', color:'#FF5C8A', price:8200,  restock:3.0, art:'shirt' },
+      /* --- 🏃 running ------------------------------------------------ */
+      { id:'runshoe',    name:'Running Shoes',  glyph:'👟', color:'#4FB0FF', price:2400,  restock:2.0, art:'shoes',
+        sport:'run',    source:{ kind:'stock', label:'Shoe Stock' } },
+      { id:'bottle',     name:'Water Bottle',   glyph:'🥤', color:'#2FCB9E', price:3200,  restock:1.8, art:'bottle',
+        sport:'run',    source:{ kind:'stock', label:'Bottle Stock' } },
+      /* --- ⚽ football ----------------------------------------------- */
+      { id:'football',   name:'Football',       glyph:'⚽', color:'#EDEFF4', price:4800,  restock:2.2, art:'football',
+        sport:'foot',   source:{ kind:'stock', label:'Football Stock' } },
+      { id:'boots',      name:'Football Boots', glyph:'🥾', color:'#FF5C5C', price:6400,  restock:2.5, art:'boots',
+        sport:'foot',   source:{ kind:'stock', label:'Boot Stock' } },
+      /* --- 🏀 basketball --------------------------------------------- */
+      { id:'basketball', name:'Basketball',     glyph:'🏀', color:'#FF8A3D', price:9000,  restock:2.4, art:'ball',
+        sport:'basket', source:{ kind:'stock', label:'Basketball Stock' } },
+      { id:'jersey',     name:'Team Jersey',    glyph:'👕', color:'#FF5C8A', price:12000, restock:2.7, art:'shirt',
+        sport:'basket', source:{ kind:'stock', label:'Jersey Stock' } },
+      /* --- 🏸 badminton ---------------------------------------------- */
+      { id:'racket',     name:'Racket',         glyph:'🏸', color:'#C9E265', price:17000, restock:2.8, art:'racket',
+        sport:'bad',    source:{ kind:'stock', label:'Racket Stock' } },
+      { id:'shuttle',    name:'Shuttlecocks',   glyph:'🪶', color:'#F4F8FC', price:24000, restock:2.2, art:'shuttle',
+        sport:'bad',    source:{ kind:'stock', label:'Shuttle Stock' } },
     ],
   },
   {
@@ -538,6 +694,13 @@ MSM.CFG.STORES.forEach((store) => {
       p.lane = P.lanes[shelfN];
       p.browse = { x: (p.shelf.x0 + p.shelf.x1) / 2, y: p.shelf.y1 + 0.55 };
       shelfN++;
+    }
+
+    /* Which court this line is tried out on. -1 means the sport has no test
+       area in the plan at all; an area that is merely unbuilt is a state,
+       not a layout, so the sim checks that separately. */
+    if (store.mode === 'sports') {
+      p.areaIndex = (P.areas || []).findIndex((a) => a.sport === p.sport);
     }
 
     p.upgradeBase = Math.max(60, (p.price || 12) * 7);

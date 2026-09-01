@@ -34,6 +34,13 @@ window.MSM = window.MSM || {};
         cs.machines.forEach((m, k) => { if (m.built) list.push(P.machines[k].box); });
         cs.tables.forEach((t, k) => { if (t.built) list.push(P.tables[k].box); });
       }
+      /* A test area is a floor you stand on, so only the equipment in the
+         middle of it is solid — block the whole court and nobody could use it. */
+      const sp = MSM.econ.spstate();
+      if (sp) {
+        const P = CFG.PLAN;
+        sp.areas.forEach((a, k) => { if (a.built) list.push(P.areas[k].prop); });
+      }
       this._solids = list;
       return list;
     },

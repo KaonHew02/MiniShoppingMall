@@ -138,13 +138,19 @@ window.MSM = window.MSM || {};
       MSM.ent.spawnGate = MSM.econ.sstate().open;
       MSM.ent.updateCustomers(dt);
       MSM.ent.ageCash(dt);
+      /* The sport outlet still uses the mini mart's till — a queue and a
+         counter work the same in any shop — so it gets both. */
       if (MSM.cafe.active()) MSM.cafe.update(dt);
-      else G.serve(dt);
+      else {
+        if (MSM.sports.active()) MSM.sports.update(dt);
+        G.serve(dt);
+      }
       G.tillPad(dt);
       G.buildPads(dt);
       G.signPost(dt);
       G.tutorial();
       if (MSM.cafe.active()) { G.tutTarget = null; G.tutText = MSM.cafe.guide(); }
+      if (MSM.sports.active()) { G.tutTarget = null; G.tutText = MSM.sports.guide(); }
       G.levelPads(dt);
       G.doors(dt);
       G.passive(dt);
@@ -507,6 +513,22 @@ window.MSM = window.MSM || {};
       MSM.ui.toast(MSM.t('cafe.machineUp', {
         label: MSM.econ.store().plan.machines[mi].label, n: cs.machines[mi].level }));
     },
+
+    /* Stage 3's one hire. An advisor does not touch stock and does not work
+       the till — they walk the floor and close the sales you cannot reach. */
+    hireAdvisor() {
+      const sp = MSM.econ.spstate();
+      if (!sp || sp.advisor) return;
+      const cost = G.advisorCost();
+      if (MSM.state.cash < cost) return;
+      MSM.state.cash -= cost;
+      sp.advisor = true;
+      MSM.sports.syncCrew();
+      MSM.ui.toast(MSM.t('toast.advisor'));
+      MSM.save();
+    },
+
+    advisorCost: () => CFG.SPORTS.ADVISOR_COST(MSM.econ.store().unlock),
 
     cafeCost(job) {
       const u = MSM.econ.store().unlock;

@@ -33,6 +33,10 @@ works if you just double-click it.
 Walk up to the **bin** on the shop floor to empty your arms — useful when you
 grabbed the wrong thing.
 
+Shops are linked by a **twin escalator** in the corner of each floor — one run
+going up, one coming down, both always carrying somebody. Stand on it and hold
+for a moment and it takes you to the next shop; the six of them form a ring.
+
 ## Your first five minutes
 
 You start with **$500** in a closed, empty store. A gold arrow walks you

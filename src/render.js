@@ -632,11 +632,15 @@ window.MSM = window.MSM || {};
     text(ctx, label, x, y, h * 0.52, '#16295C');
   }
 
-  /* The way out is an ESCALATOR — this is a mall, and malls do not connect
-     their shops with a door standing alone in the middle of the floor. It
-     rises from a comb plate at your feet up to a lit portal, steps crawling
-     while it runs. Step on, and the hold-to-travel fills on the plate; the
-     glass balustrade slides in front of you, so waiting reads as riding. */
+  /* The way out is a TWIN ESCALATOR — this is a mall, and malls run two side
+     by side: one carrying people up to the next floor, one bringing them
+     down. Both are always moving and both always have somebody on them, so
+     the corner that leads onward is the busiest-looking thing on the floor
+     rather than a door standing on its own.
+
+     The whole plot is the travel trigger. Step on it and the hold fills
+     across the comb plate at your feet, the glass slides past you, and you
+     ride up. */
   function drawDoor(ctx) {
     const d = P.door;
     const to = MSM.game.nextStore();
@@ -644,59 +648,39 @@ window.MSM = window.MSM || {};
     const store = CFG.STORES[to >= 0 ? to : tease] || null;
     const open = to >= 0;
 
-    const x0 = d.x0, x1 = d.x1, yF = d.y1, yB = d.y0;   // front foot, back top
-    const topZ = 1.25;
-    const metal = open ? '#B9C4D6' : '#C7CFDB';
-    const dark = open ? '#39424F' : '#8E9AB2';
+    const yF = d.y1, yB = d.y0;                    // front foot, back top
+    const topZ = 1.30;
+    const gap = 0.30;                              // the gutter between runs
+    const runW = (d.x1 - d.x0 - gap) / 2;
+    const runs = [
+      { x0: d.x0, x1: d.x0 + runW, dir: 1 },                   // going up
+      { x0: d.x1 - runW, x1: d.x1, dir: -1 },                  // coming down
+    ];
 
+    // the shared plinth both runs sit on
+    iso.box(ctx, d.x0 - 0.10, yB - 0.10, d.x1 + 0.10, yF + 0.34, 0, 0.10,
+            open ? '#C9A227' : '#9AA5B5');
     // the comb plate you stand on, and the hold-to-ride progress across it
-    iso.tile(ctx, x0 - 0.06, yF - 0.05, x1 + 0.06, yF + 0.30, 0.010, '#9AA5B5');
-    iso.tile(ctx, x0, yF, x1, yF + 0.24, 0.012, '#E7EDF6');
+    iso.tile(ctx, d.x0, yF, d.x1, yF + 0.26, 0.104, '#E7EDF6');
     const hold = MSM.game.doorHold || 0;
     if (open && hold > 0) {
       const pct = U.clamp(hold / CFG.DOOR_HOLD, 0, 1);
-      iso.tile(ctx, x0, yF, x0 + (x1 - x0) * pct, yF + 0.24, 0.014, '#5FE08D');
+      iso.tile(ctx, d.x0, yF, d.x0 + (d.x1 - d.x0) * pct, yF + 0.26, 0.106, '#5FE08D');
     }
 
-    /* One balustrade behind the steps, one in front — the near glass panel
-       overlapping whoever stands on the ramp is what sells the ride. */
-    const pane = (xs) => {
-      const aG = iso.s(xs, yF + 0.10, 0.06), bG = iso.s(xs, yB + 0.02, topZ + 0.10);
-      const aT = iso.s(xs, yF + 0.10, 0.52), bT = iso.s(xs, yB + 0.02, topZ + 0.56);
-      ctx.globalAlpha = 0.55;
-      iso.poly(ctx, [aT, bT, bG, aG], '#D6E9F8');         // the glass
-      ctx.globalAlpha = 1;
-      ctx.beginPath();                                    // the handrail
-      ctx.moveTo(aT.x, aT.y); ctx.lineTo(bT.x, bT.y);
-      ctx.strokeStyle = dark;
-      ctx.lineWidth = Math.max(3, iso.TW * 0.075);
-      ctx.lineCap = 'round';
-      ctx.stroke();
-    };
-    pane(x0 + 0.04);                                      // far side first
+    runs.forEach((run) => drawEscalatorRun(ctx, run, yF, yB, topZ, open));
 
-    /* The steps, marching upward while the store beyond is open. Each rides
-       the phase up the ramp; the yellow lip is the classic step edge. */
-    const steps = 6, depth = yF - yB - 0.15;
-    const stepD = depth / steps;
-    const phase = open ? (performance.now() / 460) % 1 : 0;
-    for (let i = steps - 1; i >= 0; i--) {
-      const t = i + phase;
-      const yy = yF - 0.05 - t * stepD;
-      const z = topZ * (t / steps);
-      iso.box(ctx, x0 + 0.14, yy - stepD * 0.82, x1 - 0.14, yy, z, z + 0.09, metal);
-      iso.tile(ctx, x0 + 0.16, yy - 0.06, x1 - 0.16, yy, z + 0.092, '#FFD65A');
-    }
-
-    pane(x1 - 0.04);                                      // near glass, over you
-
-    // the lit portal it climbs into — the next shop, one floor of glow away
-    iso.box(ctx, x0 - 0.14, yB - 0.16, x1 + 0.14, yB + 0.04, topZ, topZ + 1.50,
+    // the lit portal both runs climb into — the next shop, one floor away
+    iso.box(ctx, d.x0 - 0.16, yB - 0.18, d.x1 + 0.16, yB + 0.04, topZ, topZ + 1.55,
             open ? '#FFC53D' : '#B9C4D6');
-    fx0Portal(ctx, x0, x1, yB, topZ, open);
+    iso.faceL(ctx, yB + 0.04, d.x0 - 0.04, d.x1 + 0.04, topZ + 0.06, topZ + 1.38,
+              open ? '#16295C' : '#4E5D80');
+    if (open) {
+      iso.faceL(ctx, yB + 0.04, d.x0 + 0.14, d.x1 - 0.14, topZ + 1.14, topZ + 1.30, '#FFE9AE');
+    }
 
     if (!store) return;
-    const c = iso.s((x0 + x1) / 2, yB, topZ + 1.62);
+    const c = iso.s((d.x0 + d.x1) / 2, yB, topZ + 1.68);
     const w = Math.max(112, iso.TW * 1.35), h = Math.max(40, iso.TW * 0.46);
     ctx.save();
     ctx.shadowColor = '#0b1c3d40'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 3;
@@ -708,14 +692,72 @@ window.MSM = window.MSM || {};
          open ? '#16295C' : '#98A6C4');
   }
 
-  /** The opening at the escalator's top: dark depth, and a strip of light. */
-  function fx0Portal(ctx, x0, x1, yB, topZ, open) {
-    iso.faceL(ctx, yB + 0.04, x0 - 0.02, x1 + 0.02, topZ + 0.06, topZ + 1.34,
-              open ? '#16295C' : '#4E5D80');
-    if (!open) return;
-    iso.faceL(ctx, yB + 0.04, x0 + 0.10, x1 - 0.10, topZ + 1.10, topZ + 1.26, '#FFE9AE');
-    iso.faceL(ctx, yB + 0.04, x0 + 0.10, x0 + 0.22, topZ + 0.06, topZ + 1.26, '#2E4B8F');
-    iso.faceL(ctx, yB + 0.04, x1 - 0.22, x1 - 0.10, topZ + 0.06, topZ + 1.26, '#2E4B8F');
+  /* Who is riding. A fixed list rather than a random roll, so a rider keeps
+     the same coat for the whole trip instead of flickering every frame. */
+  const RIDERS = ['#FF7BA6', null, '#4FB0FF', null, '#FF9E4D', null, '#2FCB9E'];
+
+  /* One run of the pair. `dir` is +1 for the up escalator and -1 for the
+     down one, which only changes which way the steps and riders crawl. */
+  function drawEscalatorRun(ctx, run, yF, yB, topZ, open) {
+    const x0 = run.x0, x1 = run.x1;
+    const metal = open ? '#B9C4D6' : '#C7CFDB';
+    const dark = open ? '#39424F' : '#8E9AB2';
+
+    /* A balustrade: glass panel plus the fat handrail along its top. Drawn
+       once behind the steps and once in front, so a rider ends up sandwiched
+       between them the way they are on a real escalator. */
+    const pane = (xs) => {
+      const aG = iso.s(xs, yF + 0.12, 0.10), bG = iso.s(xs, yB + 0.02, topZ + 0.12);
+      const aT = iso.s(xs, yF + 0.12, 0.62), bT = iso.s(xs, yB + 0.02, topZ + 0.64);
+      ctx.globalAlpha = 0.5;
+      iso.poly(ctx, [aT, bT, bG, aG], '#D6E9F8');
+      ctx.globalAlpha = 1;
+      ctx.beginPath();
+      ctx.moveTo(aT.x, aT.y); ctx.lineTo(bT.x, bT.y);
+      ctx.strokeStyle = dark;
+      ctx.lineWidth = Math.max(2, iso.TW * 0.045);
+      ctx.lineCap = 'round';
+      ctx.stroke();
+    };
+    pane(x0 + 0.05);
+
+    /* Steps and riders share one crawl, so a rider always stands ON a step
+       rather than drifting between two. */
+    const steps = 7, depth = yF - yB - 0.18, stepD = depth / steps;
+    const phase = open ? (performance.now() / 520) % 1 : 0;
+
+    for (let i = steps - 1; i >= 0; i--) {
+      const t = run.dir > 0 ? i + phase : i + (1 - phase);
+      const yy = yF - 0.06 - t * stepD;
+      const z = topZ * (t / steps);
+      iso.box(ctx, x0 + 0.12, yy - stepD * 0.84, x1 - 0.12, yy, z, z + 0.10, metal);
+      iso.tile(ctx, x0 + 0.14, yy - 0.07, x1 - 0.14, yy, z + 0.102, '#FFD65A');
+      const who = RIDERS[(i + (run.dir > 0 ? 0 : 4)) % RIDERS.length];
+      if (open && who) drawRider(ctx, (x0 + x1) / 2, yy - stepD * 0.40, z + 0.10, who);
+    }
+
+    pane(x1 - 0.05);
+  }
+
+  /** A small standing figure riding a step: body, head, and a soft shadow. */
+  function drawRider(ctx, wx, wy, wz, color) {
+    const s = iso.s(wx, wy, wz);
+    const u = iso.TW / 64;
+    const bw = 10 * u, bh = 14 * u, hr = 4.9 * u;
+    ctx.globalAlpha = 0.18;
+    ell2(ctx, s.x, s.y + 1.2 * u, bw * 0.62, bw * 0.30, '#0b1c3d');
+    ctx.globalAlpha = 1;
+    rrect(ctx, s.x - bw / 2, s.y - bh, bw, bh, bw * 0.42);
+    ctx.fillStyle = color; ctx.fill();
+    rrect(ctx, s.x - bw / 2, s.y - bh * 0.42, bw, bh * 0.42, bw * 0.30);
+    ctx.fillStyle = U.shade(color, -0.16); ctx.fill();
+    ctx.beginPath();
+    ctx.arc(s.x, s.y - bh - hr * 0.62, hr, 0, TAU2);
+    ctx.fillStyle = SKIN; ctx.fill();
+    ctx.beginPath();
+    ctx.arc(s.x, s.y - bh - hr * 0.92, hr * 0.96, Math.PI, 0);
+    ctx.closePath();
+    ctx.fillStyle = U.shade(color, -0.34); ctx.fill();
   }
 
   /* The bin: walk up to it to empty your arms. */
@@ -1120,7 +1162,13 @@ window.MSM = window.MSM || {};
     if (tech) MSM.tech.collect(items, ctx);
     if (food) MSM.food.collect(items, ctx);
     items.push({ d: P.till.x1 + P.till.y1, fn: () => drawTill(ctx) });
-    items.push({ d: P.door.x1 + P.door.y1, fn: () => drawDoor(ctx) });
+    /* Sort the escalator by its BACK edge, not its far corner. It is a tall
+       thing you stand in FRONT of to ride, and keyed on the far corner it
+       painted over the player standing on its own comb plate. This way you
+       walk up in front of it, and only once you are on the ramp does the
+       near glass slide over you — which is what riding it should look
+       like. */
+    items.push({ d: P.door.x1 + P.door.y0, fn: () => drawDoor(ctx) });
     items.push({ d: P.bin.x1 + P.bin.y1, fn: () => drawBin(ctx) });
     /* Sort the sign well behind its own tile. It stands at the bottom edge of
        the room, so you always reach it from the north — which by raw depth

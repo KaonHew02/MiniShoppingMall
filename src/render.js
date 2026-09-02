@@ -181,6 +181,7 @@ window.MSM = window.MSM || {};
     if (kind === 'stock') { MSM.sports.drawSource(ctx, n); return; }
     if (kind === 'wardrobe') { MSM.boutique.drawSource(ctx, n); return; }
     if (kind === 'techstock') { MSM.tech.drawSource(ctx, n); return; }
+    if (kind === 'freezer') { MSM.food.drawSource(ctx, n); return; }
 
     if (kind === 'crop') {
       iso.box(ctx, b.x0, b.y0, b.x1, b.y1, 0, 0.16, '#8A5A2B');
@@ -631,8 +632,11 @@ window.MSM = window.MSM || {};
     text(ctx, label, x, y, h * 0.52, '#16295C');
   }
 
-  /* The doorway out: an arch against the side wall, a mat, and a sign saying
-     where it goes — or what it would go to if you bought it. */
+  /* The way out is an ESCALATOR — this is a mall, and malls do not connect
+     their shops with a door standing alone in the middle of the floor. It
+     rises from a comb plate at your feet up to a lit portal, steps crawling
+     while it runs. Step on, and the hold-to-travel fills on the plate; the
+     glass balustrade slides in front of you, so waiting reads as riding. */
   function drawDoor(ctx) {
     const d = P.door;
     const to = MSM.game.nextStore();
@@ -640,23 +644,59 @@ window.MSM = window.MSM || {};
     const store = CFG.STORES[to >= 0 ? to : tease] || null;
     const open = to >= 0;
 
-    iso.box(ctx, d.x0 - 0.12, d.y0 - 0.12, d.x1 + 0.12, d.y0 + 0.1, 0, 1.7,
-            open ? '#FFC53D' : '#B9C4D6');
-    iso.tile(ctx, d.x0, d.y0, d.x1, d.y1, 0.01, open ? '#FFE9AE' : '#E4E9F1');
-    iso.tile(ctx, d.x0 + 0.1, d.y0 + 0.1, d.x1 - 0.1, d.y1 - 0.1, 0.012,
-             open ? '#FFC53D' : '#D6DCE7');
-    iso.faceL(ctx, d.y0 + 0.1, d.x0, d.x1, 0.1, 1.5, open ? '#3E4A66' : '#8E9AB2');
+    const x0 = d.x0, x1 = d.x1, yF = d.y1, yB = d.y0;   // front foot, back top
+    const topZ = 1.25;
+    const metal = open ? '#B9C4D6' : '#C7CFDB';
+    const dark = open ? '#39424F' : '#8E9AB2';
 
-    // how far through the door you are
+    // the comb plate you stand on, and the hold-to-ride progress across it
+    iso.tile(ctx, x0 - 0.06, yF - 0.05, x1 + 0.06, yF + 0.30, 0.010, '#9AA5B5');
+    iso.tile(ctx, x0, yF, x1, yF + 0.24, 0.012, '#E7EDF6');
     const hold = MSM.game.doorHold || 0;
     if (open && hold > 0) {
       const pct = U.clamp(hold / CFG.DOOR_HOLD, 0, 1);
-      iso.tile(ctx, d.x0 + 0.1, d.y0 + 0.1,
-               d.x0 + 0.1 + (d.x1 - d.x0 - 0.2) * pct, d.y1 - 0.1, 0.014, '#5FE08D');
+      iso.tile(ctx, x0, yF, x0 + (x1 - x0) * pct, yF + 0.24, 0.014, '#5FE08D');
     }
 
+    /* One balustrade behind the steps, one in front — the near glass panel
+       overlapping whoever stands on the ramp is what sells the ride. */
+    const pane = (xs) => {
+      const aG = iso.s(xs, yF + 0.10, 0.06), bG = iso.s(xs, yB + 0.02, topZ + 0.10);
+      const aT = iso.s(xs, yF + 0.10, 0.52), bT = iso.s(xs, yB + 0.02, topZ + 0.56);
+      ctx.globalAlpha = 0.55;
+      iso.poly(ctx, [aT, bT, bG, aG], '#D6E9F8');         // the glass
+      ctx.globalAlpha = 1;
+      ctx.beginPath();                                    // the handrail
+      ctx.moveTo(aT.x, aT.y); ctx.lineTo(bT.x, bT.y);
+      ctx.strokeStyle = dark;
+      ctx.lineWidth = Math.max(3, iso.TW * 0.075);
+      ctx.lineCap = 'round';
+      ctx.stroke();
+    };
+    pane(x0 + 0.04);                                      // far side first
+
+    /* The steps, marching upward while the store beyond is open. Each rides
+       the phase up the ramp; the yellow lip is the classic step edge. */
+    const steps = 6, depth = yF - yB - 0.15;
+    const stepD = depth / steps;
+    const phase = open ? (performance.now() / 460) % 1 : 0;
+    for (let i = steps - 1; i >= 0; i--) {
+      const t = i + phase;
+      const yy = yF - 0.05 - t * stepD;
+      const z = topZ * (t / steps);
+      iso.box(ctx, x0 + 0.14, yy - stepD * 0.82, x1 - 0.14, yy, z, z + 0.09, metal);
+      iso.tile(ctx, x0 + 0.16, yy - 0.06, x1 - 0.16, yy, z + 0.092, '#FFD65A');
+    }
+
+    pane(x1 - 0.04);                                      // near glass, over you
+
+    // the lit portal it climbs into — the next shop, one floor of glow away
+    iso.box(ctx, x0 - 0.14, yB - 0.16, x1 + 0.14, yB + 0.04, topZ, topZ + 1.50,
+            open ? '#FFC53D' : '#B9C4D6');
+    fx0Portal(ctx, x0, x1, yB, topZ, open);
+
     if (!store) return;
-    const c = iso.s((d.x0 + d.x1) / 2, d.y0, 1.95);
+    const c = iso.s((x0 + x1) / 2, yB, topZ + 1.62);
     const w = Math.max(112, iso.TW * 1.35), h = Math.max(40, iso.TW * 0.46);
     ctx.save();
     ctx.shadowColor = '#0b1c3d40'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 3;
@@ -666,6 +706,16 @@ window.MSM = window.MSM || {};
     text(ctx, MSM.t(open ? 'world.goto' : 'world.locked'), c.x, c.y - h * 0.68, h * 0.27, '#8A95AB');
     text(ctx, store.glyph + '  ' + store.name, c.x, c.y - h * 0.28, h * 0.3,
          open ? '#16295C' : '#98A6C4');
+  }
+
+  /** The opening at the escalator's top: dark depth, and a strip of light. */
+  function fx0Portal(ctx, x0, x1, yB, topZ, open) {
+    iso.faceL(ctx, yB + 0.04, x0 - 0.02, x1 + 0.02, topZ + 0.06, topZ + 1.34,
+              open ? '#16295C' : '#4E5D80');
+    if (!open) return;
+    iso.faceL(ctx, yB + 0.04, x0 + 0.10, x1 - 0.10, topZ + 1.10, topZ + 1.26, '#FFE9AE');
+    iso.faceL(ctx, yB + 0.04, x0 + 0.10, x0 + 0.22, topZ + 0.06, topZ + 1.26, '#2E4B8F');
+    iso.faceL(ctx, yB + 0.04, x1 - 0.22, x1 - 0.10, topZ + 0.06, topZ + 1.26, '#2E4B8F');
   }
 
   /* The bin: walk up to it to empty your arms. */
@@ -945,6 +995,12 @@ window.MSM = window.MSM || {};
     }
     // the techhub's overlay owns its need pill — no round bubble on top of it
     if (MSM.tech.active()) return;
+    /* Fast food's bubble is the order, and it comes down the moment the
+       ticket is written — after that the ticket strip is the read. */
+    if (MSM.food.active()) {
+      if (c.served || c.ticket || c.phase === 'leave') return;
+      return drawOrderBubble(ctx, c, head);
+    }
     const prod = MSM.econ.prod(c.want);
     const r = Math.max(17, iso.TW * 0.21);
     const x = head.x, y = head.y - r - 4 * (iso.TW / 64);
@@ -1041,6 +1097,7 @@ window.MSM = window.MSM || {};
 
     const cafe = MSM.cafe.active(), sports = MSM.sports.active();
     const boutique = MSM.boutique.active(), tech = MSM.tech.active();
+    const food = MSM.food.active();
     const items = [];
     MSM.econ.store().products.forEach((prod, n) => {
       const built = MSM.econ.pstate(n).built;
@@ -1052,6 +1109,7 @@ window.MSM = window.MSM || {};
           items.push({ d: prod.shelf.x1 + prod.shelf.y1,
                        fn: () => (boutique ? MSM.boutique.drawRack(ctx, n)
                                 : tech ? MSM.tech.drawDisplay(ctx, n)
+                                : food ? MSM.food.drawRack(ctx, n)
                                 : drawShelf(ctx, n)) });
         }
       }
@@ -1060,6 +1118,7 @@ window.MSM = window.MSM || {};
     if (sports) MSM.sports.collect(items, ctx);
     if (boutique) MSM.boutique.collect(items, ctx);
     if (tech) MSM.tech.collect(items, ctx);
+    if (food) MSM.food.collect(items, ctx);
     items.push({ d: P.till.x1 + P.till.y1, fn: () => drawTill(ctx) });
     items.push({ d: P.door.x1 + P.door.y1, fn: () => drawDoor(ctx) });
     items.push({ d: P.bin.x1 + P.bin.y1, fn: () => drawBin(ctx) });
@@ -1081,6 +1140,7 @@ window.MSM = window.MSM || {};
         if (sports) MSM.sports.overlay(ctx, c, head);
         if (boutique) MSM.boutique.overlay(ctx, c, head);
         if (tech) MSM.tech.overlay(ctx, c, head);
+        if (food) MSM.food.overlay(ctx, c, head);
       },
     }));
     // staff are pink; the player is the blue one you drive
@@ -1103,6 +1163,10 @@ window.MSM = window.MSM || {};
                    fn: () => drawBody(ctx, s, { body: s.color, cap: '#FFFFFF', accent: s.color }) });
     });
     MSM.tech.crew.forEach((s) => {
+      items.push({ d: s.x + s.y + 0.3,
+                   fn: () => drawBody(ctx, s, { body: s.color, cap: '#FFFFFF', accent: s.color }) });
+    });
+    MSM.food.crew.forEach((s) => {
       items.push({ d: s.x + s.y + 0.3,
                    fn: () => drawBody(ctx, s, { body: s.color, cap: '#FFFFFF', accent: s.color }) });
     });

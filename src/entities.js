@@ -29,6 +29,7 @@ window.MSM = window.MSM || {};
       if (MSM.sports) MSM.sports.reset();
       if (MSM.boutique) MSM.boutique.reset();
       if (MSM.tech) MSM.tech.reset();
+      if (MSM.food) MSM.food.reset();
     },
 
     /** Keep the crew on the floor matching how many you have hired. */
@@ -340,6 +341,7 @@ window.MSM = window.MSM || {};
       if (store.mode === 'sports') { MSM.sports.spawn(); return; }
       if (store.mode === 'boutique') { MSM.boutique.spawn(); return; }
       if (store.mode === 'tech') { MSM.tech.spawn(); return; }
+      if (store.mode === 'food') { MSM.food.spawn(); return; }
 
       /* During the tutorial, customers keep it simple: one item, and always
          something that is actually on a shelf — the first customer walking
@@ -419,6 +421,7 @@ window.MSM = window.MSM || {};
       const mode = MSM.econ.store().mode;
       const cafe = mode === 'cafe', sports = mode === 'sports';
       const boutique = mode === 'boutique', tech = mode === 'tech';
+      const food = mode === 'food';
 
       for (let k = this.customers.length - 1; k >= 0; k--) {
         const c = this.customers[k];
@@ -426,6 +429,7 @@ window.MSM = window.MSM || {};
         if (sports) { MSM.sports.stepCustomer(c, k, dt); continue; }
         if (boutique) { MSM.boutique.stepCustomer(c, k, dt); continue; }
         if (tech) { MSM.tech.stepCustomer(c, k, dt); continue; }
+        if (food) { MSM.food.stepCustomer(c, k, dt); continue; }
         const prod = MSM.econ.prod(c.want);
         const ps = ss.products[c.want];
 

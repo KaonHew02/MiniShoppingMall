@@ -13,7 +13,10 @@
 window.MSM = window.MSM || {};
 
 MSM.CFG = {
-  SAVE_KEY: 'msm.save.v11',
+  /* v12: fast food slots in as the third shop, so every store after it
+     shifts index. Saves are keyed by index, so an old one cannot be read
+     onto the new list — it is retired rather than silently mangled. */
+  SAVE_KEY: 'msm.save.v12',
   START_CASH: 500,
 
   WORLD: { W: 23.5, H: 15.2 },
@@ -174,6 +177,32 @@ MSM.CFG = {
     BUDGET: [0.70, 2.20],    // what they will pay, over their category's prices
     ADVICE_BUDGET: 1.30,     // good advice finds the money for the right one
     ADVISOR_COST: (unlock) => Math.max(30000, Math.round(unlock * 1.2)),
+  },
+
+  /* -------------------------------------------------------- fast food */
+  /* Stage 3 is a BOTTLENECK game. The cafe makes one drink and hands it
+     over; here a meal is three things cooked in three different places, and
+     the tray cannot go out until the slowest of them is done:
+
+       burger ✓   drink ✓   fries ✗   ->  the whole order waits
+
+     So the shop is only ever as fast as its worst station, and the player's
+     job is to spot which one that is. Nowhere else in the mall does one
+     slow machine hold up finished work. */
+  FOOD: {
+    ORDER_TIME: 0.8,         // seconds to take one order at the counter
+    ASSEMBLE_TIME: 1.3,      // seconds to build the tray once every part is up
+    PATIENCE: 55,            // seconds holding a ticket before they give up
+    QUEUE_GRACE: 5,
+    TRAY_CAP: 6,             // finished trays the pickup counter holds
+    COMBO_ODDS: 0.62,        // chance they want the meal, not just the main
+    STATION_SPEED: 0.30,     // cook speed gained per station level
+    STATION_CAP: (lvl) => MSM.util.clamp(1 + (((lvl - 1) / 2) | 0), 1, 5),
+    STATION_GROWTH: 1.16,
+    /* Two jobs: somebody working the line, and somebody building the trays
+       and calling the numbers. Either one missing is a bottleneck of its own. */
+    COOK_COST:   (unlock) => Math.max(2600, Math.round(unlock * 0.9)),
+    PACKER_COST: (unlock) => Math.max(3400, Math.round(unlock * 1.2)),
   },
 
   /* --------------------------------------------------------- floor plans */
@@ -698,6 +727,105 @@ MSM.CFG.PLANS.tech = {
   bin:      { x0: 21.40, y0: 13.20, x1: 22.10, y1: 13.90 },
 };
 
+/* Fast food:
+     back wall   eight freezer crates — the raw stock, one per line
+     mid         the prep bins the runners fill, grouped by station
+     kitchen     three stations: GRILL, FRYER, DRINKS — the bottlenecks
+     behind      the assembly bench, then the pickup counter
+     front       the order counter, and the queue running back to the door
+
+   The floor is read top to bottom: raw stock comes down from the freezers
+   into the line bins, the stations turn it into parts, and the parts only
+   become a TRAY once every one of them is up. */
+MSM.CFG.PLANS.food = {
+  id: 'food',
+  stations: [
+    { x0: 1.10,  y0: 0.55, x1: 2.90,  y1: 1.70 },   // 0 cheeseburger
+    { x0: 3.50,  y0: 0.55, x1: 5.30,  y1: 1.70 },   // 1 double burger
+    { x0: 5.90,  y0: 0.55, x1: 7.70,  y1: 1.70 },   // 2 chicken burger
+    { x0: 9.10,  y0: 0.55, x1: 10.90, y1: 1.70 },   // 3 fries
+    { x0: 11.50, y0: 0.55, x1: 13.30, y1: 1.70 },   // 4 nuggets
+    { x0: 13.90, y0: 0.55, x1: 15.70, y1: 1.70 },   // 5 fried chicken
+    { x0: 17.90, y0: 0.55, x1: 19.70, y1: 1.70 },   // 6 cola
+    { x0: 20.30, y0: 0.55, x1: 22.10, y1: 1.70 },   // 7 milkshake
+  ],
+  pads: [
+    { x0: 1.10,  y0: 2.00, x1: 1.80,  y1: 2.70 },
+    { x0: 3.50,  y0: 2.00, x1: 4.20,  y1: 2.70 },
+    { x0: 5.90,  y0: 2.00, x1: 6.60,  y1: 2.70 },
+    { x0: 9.10,  y0: 2.00, x1: 9.80,  y1: 2.70 },
+    { x0: 11.50, y0: 2.00, x1: 12.20, y1: 2.70 },
+    { x0: 13.90, y0: 2.00, x1: 14.60, y1: 2.70 },
+    { x0: 17.90, y0: 2.00, x1: 18.60, y1: 2.70 },
+    { x0: 20.30, y0: 2.00, x1: 21.00, y1: 2.70 },
+  ],
+  /* The line bins: raw stock waiting at the station that cooks it. A runner
+     keeps these full; an empty one is a station that cannot start. */
+  shelves: [
+    { x0: 1.20,  y0: 4.30, x1: 2.80,  y1: 5.20 },
+    { x0: 3.60,  y0: 4.30, x1: 5.20,  y1: 5.20 },
+    { x0: 6.00,  y0: 4.30, x1: 7.60,  y1: 5.20 },
+    { x0: 9.20,  y0: 4.30, x1: 10.80, y1: 5.20 },
+    { x0: 11.60, y0: 4.30, x1: 13.20, y1: 5.20 },
+    { x0: 14.00, y0: 4.30, x1: 15.60, y1: 5.20 },
+    { x0: 18.00, y0: 4.30, x1: 19.60, y1: 5.20 },
+    { x0: 20.40, y0: 4.30, x1: 22.00, y1: 5.20 },
+  ],
+  lanes: [2.00, 4.40, 6.80, 10.00, 12.40, 14.80, 18.80, 21.20],
+
+  /* The three stations. Every combo needs all three, so the slowest one
+     sets the pace of the whole shop — level them up to relieve it. */
+  machines: [
+    { id: 'grill',  cat: 'grill',  label: 'Grill',      cost: 0,     base: 900,
+      box: { x0: 1.60,  y0: 6.60, x1: 7.20,  y1: 7.80 },
+      pad: { x0: 1.60,  y0: 8.10, x1: 2.30,  y1: 8.80 } },
+    { id: 'fryer',  cat: 'fryer',  label: 'Fryer',      cost: 5000,  base: 1800,
+      box: { x0: 9.60,  y0: 6.60, x1: 15.20, y1: 7.80 },
+      pad: { x0: 9.60,  y0: 8.10, x1: 10.30, y1: 8.80 } },
+    { id: 'drinks', cat: 'drinks', label: 'Drinks Bar', cost: 14000, base: 3200,
+      box: { x0: 17.60, y0: 6.60, x1: 22.00, y1: 7.80 },
+      pad: { x0: 17.60, y0: 8.10, x1: 18.30, y1: 8.80 } },
+  ],
+
+  /* Where a finished order becomes a tray, and where the tray waits. */
+  assembly: { x0: 3.60,  y0: 9.60, x1: 8.00,  y1: 10.40 },
+  pickup:   { x0: 12.40, y0: 9.60, x1: 16.80, y1: 10.40 },
+  pickupStand: { x: 14.60, y: 11.00 },
+
+  /* Where they stand with a ticket, waiting for their number. */
+  waits: [
+    { x: 13.20, y: 12.10 }, { x: 14.80, y: 12.10 }, { x: 16.40, y: 12.10 },
+    { x: 13.20, y: 13.30 }, { x: 14.80, y: 13.30 }, { x: 16.40, y: 13.30 },
+  ],
+
+  sections: [
+    { name: 'GRILL',    x0: 0.90,  y0: 3.70, x1: 7.80,  y1: 5.50, tint: '#FFD2C2' },
+    { name: 'FRYER',    x0: 8.90,  y0: 3.70, x1: 15.90, y1: 5.50, tint: '#FFE7B8' },
+    { name: 'DRINKS',   x0: 17.30, y0: 3.70, x1: 22.30, y1: 5.50, tint: '#CFE8F7' },
+    { name: 'PICKUP',   x0: 11.90, y0: 9.10, x1: 17.30, y1: 11.40, tint: '#D9F0D2' },
+  ],
+  zones: [
+    { y0: -0.25, y1: 2.95,  a: '#DCE4EE', b: '#D3DCE8' },   // the freezers
+    { y0: 2.95,  y1: 9.10,  a: '#FBEFE2', b: '#F5E6D6' },   // the kitchen
+    { y0: 9.10,  y1: 11.40, a: '#FFF3DE', b: '#FCEACE' },   // behind the counter
+    { y0: 11.40, y1: 15.45, a: '#F3EDE2', b: '#EBE3D5' },   // the customer side
+  ],
+  patches: [],
+
+  stockLane: 3.30,
+  walkway: 11.55,
+
+  till:  { x0: 7.60, y0: 9.60, x1: 11.60, y1: 10.40 },
+  serve: { x: 9.60, y: 9.10 },
+  queue: [{ x: 9.60, y: 11.10 }, { x: 9.60, y: 11.80 },
+          { x: 9.60, y: 12.50 }, { x: 9.60, y: 13.20 }],
+  entrance: { x: 9.60,  y: 14.60 },
+  spawn:    { x: 6.00,  y: 12.20 },
+  door:     { x0: 0.80,  y0: 12.60, x1: 2.20,  y1: 14.00 },
+  sign:     { x0: 19.40, y0: 13.60, x1: 20.10, y1: 14.30 },
+  bin:      { x0: 21.40, y0: 12.60, x1: 22.10, y1: 13.30 },
+};
+
 MSM.CFG.STORES = [
   {
     id: 'grocery', name: 'Grocery Store', glyph: '🥕', color: '#5FCBB6', unlock: 0,
@@ -846,6 +974,47 @@ MSM.CFG.STORES = [
   },
 
   /* ------------------------------------------------------- STAGE 3 ---- */
+  /* Eight lines across three stations. Every meal is a main, a side and a
+     drink, which means every meal touches all three — and the tray waits on
+     whichever of them is slowest. Fictional brands throughout. */
+  {
+    id: 'food', name: 'Burger Rush', glyph: '🍔', color: '#E8552F', unlock: 45000,
+    mode: 'food',
+    plan: MSM.CFG.PLANS.food,
+    unlocks: [
+      { id: 'cheeseburger', cost: 0 },
+      { id: 'fries',        cost: 0 },
+      { id: 'cola',         cost: 0 },
+      { id: 'nuggets',      cost: 3500 },
+      { id: 'doubleburger', cost: 9000 },
+      { id: 'shake',        cost: 20000 },
+      { id: 'chickenburger',cost: 42000 },
+      { id: 'friedchicken', cost: 90000 },
+    ],
+    products: [
+      /* --- 🔥 the grill ---------------------------------------------- */
+      { id:'cheeseburger',  name:'Cheeseburger',   glyph:'🍔', color:'#D8912F', price:190, restock:1.8, art:'burger',
+        cat:'grill',  role:'main', source:{ kind:'freezer', label:'Patty Freezer' } },
+      { id:'doubleburger',  name:'Double Burger',  glyph:'🍔', color:'#C4762A', price:320, restock:2.2, art:'bigburger',
+        cat:'grill',  role:'main', source:{ kind:'freezer', label:'Double Freezer' } },
+      { id:'chickenburger', name:'Chicken Burger', glyph:'🍔', color:'#E0A44E', price:480, restock:2.4, art:'burger',
+        cat:'grill',  role:'main', source:{ kind:'freezer', label:'Chicken Patty Freezer' } },
+      /* --- 🍟 the fryer ---------------------------------------------- */
+      { id:'fries',         name:'Fries',          glyph:'🍟', color:'#F2C23D', price:120, restock:1.5, art:'fries',
+        cat:'fryer',  role:'side', source:{ kind:'freezer', label:'Fries Freezer' } },
+      { id:'nuggets',       name:'Nuggets',        glyph:'🍗', color:'#E8A64E', price:210, restock:1.9, art:'nuggets',
+        cat:'fryer',  role:'side', source:{ kind:'freezer', label:'Nugget Freezer' } },
+      { id:'friedchicken',  name:'Fried Chicken',  glyph:'🍗', color:'#C9762E', price:640, restock:2.6, art:'drumstick',
+        cat:'fryer',  role:'main', source:{ kind:'freezer', label:'Chicken Freezer' } },
+      /* --- 🥤 the drinks bar ----------------------------------------- */
+      { id:'cola',          name:'Cola',           glyph:'🥤', color:'#8C3B2E', price:100, restock:1.2, art:'softdrink',
+        cat:'drinks', role:'drink', source:{ kind:'freezer', label:'Syrup Store' } },
+      { id:'shake',         name:'Milkshake',      glyph:'🥤', color:'#F0C7D8', price:260, restock:1.8, art:'shake',
+        cat:'drinks', role:'drink', source:{ kind:'freezer', label:'Shake Mix Store' } },
+    ],
+  },
+
+  /* ------------------------------------------------------- STAGE 5 ---- */
   /* Four sports, two lines each, and a court for every one of them. The
      lines open a sport at a time, so a zone arrives whole: the gear, the
      kit, and then the place to try them out. */
@@ -1004,6 +1173,14 @@ MSM.CFG.STORES.forEach((store) => {
       } else {
         p.machineIndex = P.machines.findIndex((m) => m.id === p.machine);
       }
+    } else if (store.mode === 'food') {
+      /* Fast food keeps a line bin per product, and every product belongs to
+         the station that cooks it. */
+      p.shelf = P.shelves[shelfN];
+      p.lane = P.lanes[shelfN];
+      p.browse = { x: (p.shelf.x0 + p.shelf.x1) / 2, y: p.shelf.y1 + 0.55 };
+      p.machineIndex = P.machines.findIndex((m) => m.cat === p.cat);
+      shelfN++;
     } else if (p.sell) {
       p.shelf = P.shelves[shelfN];
       p.lane = P.lanes[shelfN];

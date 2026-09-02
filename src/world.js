@@ -53,6 +53,13 @@ window.MSM = window.MSM || {};
         const P = CFG.PLAN;
         ts.areas.forEach((a, k) => { if (a.built) list.push(P.areas[k].prop); });
       }
+      // fast food's kitchen line, plus the two counters behind the till
+      const fs = MSM.econ.fstate();
+      if (fs) {
+        const P = CFG.PLAN;
+        list.push(P.assembly, P.pickup);
+        fs.stations.forEach((st, k) => { if (st.built) list.push(P.machines[k].box); });
+      }
       this._solids = list;
       return list;
     },

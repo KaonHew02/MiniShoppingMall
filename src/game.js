@@ -140,7 +140,11 @@ window.MSM = window.MSM || {};
       MSM.ent.ageCash(dt);
       /* The sport outlet still uses the mini mart's till — a queue and a
          counter work the same in any shop — so it gets both. */
+      /* The cafe and fast food both work their own counter — one hands the
+         drink over on delivery, the other takes the money up front — so
+         neither runs the mini mart's till. */
       if (MSM.cafe.active()) MSM.cafe.update(dt);
+      else if (MSM.food.active()) MSM.food.update(dt);
       else {
         if (MSM.sports.active()) MSM.sports.update(dt);
         if (MSM.boutique.active()) MSM.boutique.update(dt);
@@ -155,6 +159,7 @@ window.MSM = window.MSM || {};
       if (MSM.sports.active()) { G.tutTarget = null; G.tutText = MSM.sports.guide(); }
       if (MSM.boutique.active()) { G.tutTarget = null; G.tutText = MSM.boutique.guide(); }
       if (MSM.tech.active()) { G.tutTarget = null; G.tutText = MSM.tech.guide(); }
+      if (MSM.food.active()) { G.tutTarget = null; G.tutText = MSM.food.guide(); }
       G.levelPads(dt);
       G.doors(dt);
       G.passive(dt);
@@ -382,7 +387,7 @@ window.MSM = window.MSM || {};
 
     doorHold: 0,
 
-    /* Stand in the doorway for a moment and you walk through to the next
+    /* Stand on the escalator for a moment and it carries you to the next
        store. Held rather than instant so brushing past it does not fire. */
     doors(dt) {
       const p = MSM.ent.player;
@@ -440,7 +445,7 @@ window.MSM = window.MSM || {};
       MSM.state.current = i;
       MSM.world.invalidate();          // also swaps in the new store's floor plan
       MSM.ent.reset();
-      // arrive standing in the new store's doorway, not at the till
+      // arrive stepping off the new store's escalator, not at the till
       MSM.ent.player.x = (P.door.x0 + P.door.x1) / 2;
       MSM.ent.player.y = P.door.y1 + 0.5;
       G.doorHold = 0;
@@ -563,6 +568,35 @@ window.MSM = window.MSM || {};
     },
 
     techAdvisorCost: () => CFG.TECH.ADVISOR_COST(MSM.econ.store().unlock),
+
+    /* Fast food's two hires, either side of the bottleneck. */
+    hireFood(job) {
+      const fs = MSM.econ.fstate();
+      if (!fs || fs[job]) return;
+      const cost = G.foodCost(job);
+      if (MSM.state.cash < cost) return;
+      MSM.state.cash -= cost;
+      fs[job] = true;
+      MSM.food.syncCrew();
+      MSM.ui.toast(MSM.t('toast.' + job));
+      MSM.save();
+    },
+
+    foodCost: (job) => (job === 'cook' ? CFG.FOOD.COOK_COST : CFG.FOOD.PACKER_COST)
+      (MSM.econ.store().unlock),
+
+    /* A station's own levels: faster, and more parts on at once. Also on its
+       pad in the world, exactly like a cafe machine's. */
+    upgradeStation(mi) {
+      const fs = MSM.econ.fstate();
+      if (!fs || !fs.stations[mi].built) return;
+      const cost = MSM.econ.stationCost(mi);
+      if (MSM.state.cash < cost) { MSM.ui.toast(MSM.t('toast.noCash')); return; }
+      MSM.state.cash -= cost;
+      fs.stations[mi].level++;
+      MSM.ui.toast(MSM.t('food.stationUp', {
+        label: MSM.econ.store().plan.machines[mi].label, n: fs.stations[mi].level }));
+    },
 
     cafeCost(job) {
       const u = MSM.econ.store().unlock;

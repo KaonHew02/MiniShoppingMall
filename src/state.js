@@ -49,6 +49,17 @@ window.MSM = window.MSM || {};
     sold: 0, lost: 0, advised: 0, compared: 0,
   });
 
+  /* Fast food keeps its three stations and its two hires. Tickets, trays and
+     part-cooked food are all in flight, so — like the cafe's orders — they
+     live in the sim and are not saved. */
+  const blankFood = (store) => ({
+    stations: store.plan.machines.map((m) => ({
+      built: m.cost === 0, buildPaid: 0, level: 1, pay: 0,
+    })),
+    cook: false, packer: false,
+    sold: 0, walkouts: 0, trays: 0,
+  });
+
   const blank = () => ({
     cash: CFG.START_CASH,
     gems: 0,
@@ -74,6 +85,7 @@ window.MSM = window.MSM || {};
       sports: s.mode === 'sports' ? blankSports(s) : null,
       boutique: s.mode === 'boutique' ? blankBoutique(s) : null,
       tech: s.mode === 'tech' ? blankTech(s) : null,
+      food: s.mode === 'food' ? blankFood(s) : null,
     })),
   });
 
@@ -178,6 +190,34 @@ window.MSM = window.MSM || {};
       return seen ? bs.sold / seen : 0;
     },
 
+    /* ------------------------------------------------------ fast food */
+    fstate: (i) => MSM.state.stores[i ?? MSM.state.current].food,
+
+    /** A station's cook speed and how many parts it can have on at once —
+        the number that decides whether it is the bottleneck. */
+    station(mi, i) {
+      const fs = E.fstate(i);
+      const lvl = fs && fs.stations[mi] ? fs.stations[mi].level : 1;
+      return {
+        level: lvl,
+        speed: 1 + CFG.FOOD.STATION_SPEED * (lvl - 1),
+        cap: CFG.FOOD.STATION_CAP(lvl),
+      };
+    },
+
+    stationCost(mi, i) {
+      const spec = E.store(i).plan.machines[mi];
+      const lvl = E.fstate(i).stations[mi].level;
+      return Math.ceil(spec.base * Math.pow(CFG.FOOD.STATION_GROWTH, lvl - 1));
+    },
+
+    /** Seconds to cook one of this item on the station that makes it. */
+    cookTime(n, i) {
+      const prod = E.prod(n, i);
+      const st = E.station(prod.machineIndex, i);
+      return Math.max(CFG.MIN_RESTOCK, E.restock(n, i) / st.speed);
+    },
+
     /* --------------------------------------------------- the techhub */
     tstate: (i) => MSM.state.stores[i ?? MSM.state.current].tech,
 
@@ -279,6 +319,9 @@ window.MSM = window.MSM || {};
       /* Nobody to translate the spec sheets is the same problem again: the
          boxes stay sealed on the stands. */
       if (ss.tech && !ss.tech.advisor) return 0;
+      /* A kitchen with nobody on the line, or nobody building trays, plates
+         nothing at all — both halves have to be hired. */
+      if (ss.food && !(ss.food.cook && ss.food.packer)) return 0;
       let r = 0;
       CFG.STORES[i].products.forEach((p, n) => {
         if (!p.sell || !ss.products[n].built) return;
@@ -443,6 +486,24 @@ window.MSM = window.MSM || {};
           if (!a || !oa) return;
           a.built = !!oa.built;
           a.buildPaid = Math.max(0, +oa.buildPaid || 0);
+        });
+      }
+
+      /* Fast food's stations and its two hires. */
+      const fs = s.stores[i].food, of = old.food;
+      if (fs && of && !fresh) {
+        fs.cook = !!of.cook;
+        fs.packer = !!of.packer;
+        fs.sold = Math.max(0, +of.sold || 0);
+        fs.walkouts = Math.max(0, +of.walkouts || 0);
+        fs.trays = Math.max(0, +of.trays || 0);
+        (of.stations || []).forEach((os, k) => {
+          const st = fs.stations[k];
+          if (!st || !os) return;
+          st.built = !!os.built;
+          st.buildPaid = Math.max(0, +os.buildPaid || 0);
+          st.level = Math.max(1, +os.level || 1);
+          st.pay = Math.max(0, +os.pay || 0);
         });
       }
 

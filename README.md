@@ -79,10 +79,8 @@ down; the bin is where mistakes go.
    themselves, so idling still pays.
 7. **Expand** — open the Map and buy the next store.
 
-Only the Grocery Store has the full farm chain so far — the Boutique and
-Electronics still make their goods without an input, and still borrow this
-floor plan. The Coffee Shop and the Sport Outlet are different games
-entirely — see below.
+Only the Grocery Store has the full farm chain. Every other shop is its own
+game with its own floor — see the stages below.
 
 **Staff** take over the parts you are tired of doing. A stocker hauls feed to
 whatever is starving, then restocks the emptiest shelf; the cashier works the
@@ -147,7 +145,41 @@ barista never bakes and the chef never brews. It earns unattended once the
 runner, cashier, barista and server are hired; the food lines pay only with
 the chef too.
 
-## Stage 3 — the Sport Outlet
+## Stage 3 — Burger Rush
+
+The café makes your drink after you ask for it. Fast food is a **bottleneck**
+game, and it turns on one rule: a meal is three things cooked in three
+different places, and the tray does not go out until the slowest of them is
+done.
+
+```
+they queue at the counter    ->  you take the order AND the money
+the ticket splits three ways ->  🍔 grill   🍟 fryer   🥤 drinks
+each station cooks its part  ->  in parallel, at its own pace
+every part up                ->  the tray gets built at assembly
+the tray lands on pickup     ->  they collect it and go
+
+🍔 ✓   🥤 ✓   🍟 ✗   ->  the whole order is still waiting
+```
+
+**The shop runs at the speed of its worst station, never its best.** Each
+station wears its own load on the floor, and the one holding everything up
+is marked in red — the Products sheet says the same in words. Levelling it
+doesn't end the problem, it *moves* it: relieve the fryer and the grill
+becomes the constraint. Measured over the same 80 seconds, fryer load 3.7
+and grill 1.2 became fryer 0.4 and grill 3.0, and trays out went 39 → 44.
+
+**They pay at the counter, before a thing is cooked** — the only shop in the
+mall that takes the money up front. So a customer who gives up waiting is
+**refunded**, which is what makes a jammed kitchen actually hurt. With nobody
+hired the line seizes completely: 15 orders taken, 0 trays out, 9 walkouts.
+
+The **line bins** are the quieter failure: a station with no raw stock in
+front of it cannot start however fast it is, and that is what the runners
+are for. A **Line Cook** works the stations and a **Packer** builds the
+trays; the shop only earns unattended with both.
+
+## Stage 5 — the Sport Outlet
 
 The mini mart is a *stocking* game and the café a *service* game. The outlet
 is a **selling** game: the goods are already made and already on the rack, and
@@ -178,7 +210,7 @@ Some shoppers simply cannot afford what they picked up; good advice steers
 them to something they can. The **Conversion** row in Staff is the honest
 scoreboard: how many of the people who walked in walked out with a bag.
 
-## Stage 4 — the Fashion Boutique
+## Stage 6 — the Fashion Boutique
 
 The outlet asks whether you can talk somebody into a sale. The boutique asks
 a smaller, harder question: **have you got it in their size, and is there
@@ -217,7 +249,7 @@ all curtained shut the queue outside starts losing people:
 | 2 | 41% |
 | 5 | 66% |
 
-## Stage 5 — TechHub
+## Stage 7 — TechHub
 
 The boutique asks whether you have the right size. TechHub asks the question
 electronics actually turn on: **which one?** Nobody comes in for "the
@@ -266,11 +298,17 @@ a TechVision TV is worth millions.
 | --- | --- | --- |
 | Grocery Store | free | 11 lines across vegetables, fruit, dairy and bakery |
 | Coffee Shop | $6K | 6 ingredients, 10 recipes, 3 machines — made to order |
+| Burger Rush | $45K | 8 lines across 3 stations — every meal needs all three |
 | Sport Outlet | $180K | 4 sports, 8 lines, 4 courts — tried before they are bought |
 | Fashion Boutique | $4.2M | 8 lines in 4 sizes, 5 fitting rooms — tried on before they are bought |
 | TechHub | $95M | 4 departments, 8 lines in rival pairs, 4 demo benches — compared before they are bought |
 
-Unlock a store once, then travel between them freely from the Map.
+The mall is a **ring**: every shop has an **escalator** that rides up to the
+next one, and the Map draws that ring — a box per shop, linked shop to shop,
+solid where you can ride and dashed where the far end is still locked. Tap a
+box to travel there, or to buy it open. The middle of the ring keeps the one
+number that belongs to the whole mall rather than any single shop: what the
+place earns while you are away.
 
 Progress autosaves to `localStorage` every 10 seconds and when you leave.
 
@@ -298,12 +336,14 @@ src/world.js       what is solid, and how bodies move and slide
 src/entities.js    player, stocker, customers and their wants, cash
 src/cafe.js        stage 2: orders, brewing, serving, tips, tables, crew
 src/cafe-render.js stage 2's fixtures — crates, menu board, machines, tables
-src/sports.js      stage 3: browsing, the trial, advice, the buy decision
-src/sports-render.js stage 3's fixtures — the stockroom and the four courts
-src/boutique.js    stage 4: sizes, size requests, the cubicles, trying on
-src/boutique-render.js stage 4's fixtures — hanging rails and fitting rooms
-src/tech.js        stage 5: needs, demos, the comparison, advice
-src/tech-render.js stage 5's fixtures — lit displays and the demo benches
+src/food.js        stage 3: tickets, the three stations, assembly, pickup
+src/food-render.js stage 3's fixtures — the kitchen line and its counters
+src/sports.js      stage 5: browsing, the trial, advice, the buy decision
+src/sports-render.js stage 5's fixtures — the stockroom and the four courts
+src/boutique.js    stage 6: sizes, size requests, the cubicles, trying on
+src/boutique-render.js stage 6's fixtures — hanging rails and fitting rooms
+src/tech.js        stage 7: needs, demos, the comparison, advice
+src/tech-render.js stage 7's fixtures — lit displays and the demo benches
 src/render.js      canvas scene + the joystick
 src/art.js         one painter per product — potatoes, tomatoes, cups...
 src/ui.js          HUD, bottom sheets, toasts

@@ -952,6 +952,170 @@ window.MSM = window.MSM || {};
       rr(ctx, x - w * 0.14, y0 + h * 0.34, w * 0.28, h * 0.3, s * 0.03, U.shade(c, 0.3));
     },
 
+    /* --------------------------------------------------------- fast food */
+    /* A burger stacks in layers, and the layers ARE the read: domed seed bun,
+       lettuce frill, a dark patty, cheese corners, base bun. */
+    burger(ctx, x, y, s, c, tall) {
+      const w = s * 0.56, x0 = x - w / 2;
+      const hb = tall ? s * 0.62 : s * 0.50;
+      const top = y - hb;
+      const lay = (yy, hh, ww, col, r) =>
+        rr(ctx, x - ww / 2, yy, ww, hh, r == null ? s * 0.03 : r, col);
+
+      lay(y - hb * 0.20, hb * 0.20, w, U.shade(c, -0.10), s * 0.05);   // base bun
+      lay(y - hb * 0.34, hb * 0.15, w * 1.04, '#3E2B1C');              // patty
+      if (tall) {
+        lay(y - hb * 0.46, hb * 0.09, w * 1.02, '#FFC53D');            // cheese
+        lay(y - hb * 0.58, hb * 0.14, w * 1.04, '#3E2B1C');            // patty 2
+        lay(y - hb * 0.68, hb * 0.09, w * 1.06, '#7CC24E');            // lettuce
+      } else {
+        lay(y - hb * 0.45, hb * 0.09, w * 1.04, '#FFC53D');            // cheese
+        lay(y - hb * 0.55, hb * 0.10, w * 1.06, '#7CC24E');            // lettuce
+      }
+      // the crown: a dome, not a slab
+      const cw = w, ct = top + hb * 0.02;
+      ctx.beginPath();
+      ctx.moveTo(x0, y - hb * (tall ? 0.68 : 0.55) + hb * 0.02);
+      ctx.quadraticCurveTo(x0, ct, x, ct);
+      ctx.quadraticCurveTo(x0 + cw, ct, x0 + cw, y - hb * (tall ? 0.68 : 0.55) + hb * 0.02);
+      ctx.closePath(); fill(ctx, c);
+      ctx.beginPath();                                                  // lit side
+      ctx.ellipse(x - w * 0.16, top + hb * 0.14, w * 0.20, hb * 0.07, -0.25, 0, TAU);
+      fill(ctx, U.shade(c, 0.3));
+      // sesame
+      [[-0.22, 0.13], [0.04, 0.09], [0.26, 0.16]].forEach(([a, b2]) => {
+        ell(ctx, x + a * w, top + b2 * hb, s * 0.022, s * 0.013, -0.3, U.shade(c, 0.55));
+      });
+    },
+    bigburger(ctx, x, y, s, c) { P.burger(ctx, x, y, s, c, true); },
+
+    /* A carton of fries: red sleeve, and the fries fanning out of it. */
+    fries(ctx, x, y, s, c) {
+      const w = s * 0.38, h = s * 0.40, x0 = x - w / 2, top = y - h;
+      // the fries first, so the sleeve overlaps their bottoms
+      for (let k = -3; k <= 3; k++) {
+        const fx2 = x + k * w * 0.115, lean = k * 0.055;
+        ctx.save();
+        ctx.translate(fx2, top + h * 0.20);
+        ctx.rotate(lean);
+        rr(ctx, -s * 0.028, -s * 0.24, s * 0.056, s * 0.30, s * 0.016,
+           k % 2 ? '#F2C23D' : U.shade('#F2C23D', 0.18));
+        ctx.restore();
+      }
+      // the tapered sleeve
+      ctx.beginPath();
+      ctx.moveTo(x0 - w * 0.10, top + h * 0.16);
+      ctx.lineTo(x0 + w * 1.10, top + h * 0.16);
+      ctx.lineTo(x0 + w * 0.86, y);
+      ctx.lineTo(x0 + w * 0.14, y);
+      ctx.closePath(); fill(ctx, c);
+      ctx.beginPath();                                        // shaded right
+      ctx.moveTo(x, top + h * 0.16); ctx.lineTo(x0 + w * 1.10, top + h * 0.16);
+      ctx.lineTo(x0 + w * 0.86, y); ctx.lineTo(x, y);
+      ctx.closePath(); fill(ctx, U.shade(c, -0.16));
+      rr(ctx, x0 - w * 0.02, top + h * 0.34, w * 1.04, h * 0.16, s * 0.012, U.shade(c, 0.42));
+    },
+
+    /* A nugget box with three nuggets peeking over the rim. */
+    nuggets(ctx, x, y, s, c) {
+      const w = s * 0.46, h = s * 0.30, x0 = x - w / 2, top = y - h;
+      [[-0.24, 0.10], [0.02, 0.02], [0.26, 0.12]].forEach(([a, b2]) => {
+        const nx = x + a * w, ny = top - h * 0.18 + b2 * h;
+        ctx.beginPath();
+        ctx.moveTo(nx - s * 0.055, ny + s * 0.03);
+        ctx.quadraticCurveTo(nx - s * 0.07, ny - s * 0.05, nx, ny - s * 0.055);
+        ctx.quadraticCurveTo(nx + s * 0.075, ny - s * 0.04, nx + s * 0.05, ny + s * 0.035);
+        ctx.closePath(); fill(ctx, '#E8A64E');
+        ell(ctx, nx - s * 0.012, ny - s * 0.018, s * 0.026, s * 0.014, -0.3, '#F6D08A');
+      });
+      ctx.beginPath();                                        // the box
+      ctx.moveTo(x0 - w * 0.06, top);
+      ctx.lineTo(x0 + w * 1.06, top);
+      ctx.lineTo(x0 + w * 0.88, y);
+      ctx.lineTo(x0 + w * 0.12, y);
+      ctx.closePath(); fill(ctx, c);
+      ctx.beginPath();
+      ctx.moveTo(x, top); ctx.lineTo(x0 + w * 1.06, top);
+      ctx.lineTo(x0 + w * 0.88, y); ctx.lineTo(x, y);
+      ctx.closePath(); fill(ctx, U.shade(c, -0.16));
+      rr(ctx, x0, top + h * 0.32, w, h * 0.22, s * 0.012, U.shade(c, 0.40));
+    },
+
+    /* A drumstick: the meaty end, a bone, and a knuckle to finish it. */
+    drumstick(ctx, x, y, s, c) {
+      const cy = y - s * 0.26;
+      ctx.save();
+      ctx.translate(x, cy);
+      ctx.rotate(-0.42);
+      ctx.beginPath();                                        // the meat
+      ctx.ellipse(-s * 0.06, s * 0.02, s * 0.20, s * 0.16, 0, 0, TAU);
+      fill(ctx, c);
+      ctx.beginPath();
+      ctx.ellipse(-s * 0.10, -s * 0.04, s * 0.11, s * 0.07, -0.4, 0, TAU);
+      fill(ctx, U.shade(c, 0.26));
+      // crispy speckle
+      [[-0.10, 0.06], [0.02, -0.05], [0.05, 0.07], [-0.16, -0.02]].forEach(([a, b2]) => {
+        ell(ctx, a * s, b2 * s, s * 0.018, s * 0.013, 0, U.shade(c, -0.24));
+      });
+      rr(ctx, s * 0.10, -s * 0.035, s * 0.20, s * 0.07, s * 0.03, '#F4EADA');   // bone
+      ell(ctx, s * 0.30, -s * 0.035, s * 0.045, s * 0.045, 0, '#FFFFFF');
+      ell(ctx, s * 0.30, s * 0.030, s * 0.045, s * 0.045, 0, '#F0E6D6');
+      ctx.restore();
+    },
+
+    /* A lidded cup with a straw — the fast-food silhouette. */
+    softdrink(ctx, x, y, s, c) {
+      const wt = s * 0.36, wb = s * 0.26, h = s * 0.56, top = y - h;
+      const cup = () => {
+        ctx.beginPath();
+        ctx.moveTo(x - wt / 2, top + h * 0.14);
+        ctx.lineTo(x + wt / 2, top + h * 0.14);
+        ctx.lineTo(x + wb / 2, y);
+        ctx.lineTo(x - wb / 2, y);
+        ctx.closePath();
+      };
+      cup(); fill(ctx, c);
+      ctx.save(); cup(); ctx.clip();
+      rr(ctx, x, top, wt, h, 0, U.shade(c, -0.16));            // shaded right
+      rr(ctx, x - wt / 2, top + h * 0.42, wt, h * 0.20, 0, U.shade(c, 0.40));
+      ctx.restore();
+      // lid, rim and straw
+      rr(ctx, x - wt * 0.60, top + h * 0.03, wt * 1.20, h * 0.14, s * 0.02, '#E7EEF7');
+      rr(ctx, x - wt * 0.52, top + h * 0.12, wt * 1.04, h * 0.05, 0, '#C2CFE0');
+      ctx.save();
+      ctx.translate(x + wt * 0.16, top + h * 0.06);
+      ctx.rotate(0.28);
+      rr(ctx, -s * 0.022, -s * 0.26, s * 0.044, s * 0.28, s * 0.02, '#E0553F');
+      ctx.restore();
+    },
+
+    /* A shake: same cup family, but domed cream and a fat striped straw. */
+    shake(ctx, x, y, s, c) {
+      const wt = s * 0.34, wb = s * 0.24, h = s * 0.52, top = y - h;
+      ctx.beginPath();
+      ctx.moveTo(x - wt / 2, top + h * 0.22);
+      ctx.lineTo(x + wt / 2, top + h * 0.22);
+      ctx.lineTo(x + wb / 2, y);
+      ctx.lineTo(x - wb / 2, y);
+      ctx.closePath(); fill(ctx, '#F4F8FC');
+      ctx.beginPath();
+      ctx.moveTo(x, top + h * 0.22); ctx.lineTo(x + wt / 2, top + h * 0.22);
+      ctx.lineTo(x + wb / 2, y); ctx.lineTo(x, y);
+      ctx.closePath(); fill(ctx, '#DCE4EE');
+      rr(ctx, x - wt / 2, top + h * 0.36, wt, h * 0.30, 0, c);          // the shake
+      // whipped dome
+      ctx.beginPath();
+      ctx.arc(x, top + h * 0.22, wt * 0.50, Math.PI, 0);
+      ctx.closePath(); fill(ctx, U.shade(c, 0.55));
+      ell(ctx, x - wt * 0.14, top + h * 0.12, wt * 0.16, h * 0.06, -0.3, '#FFFFFF');
+      ell(ctx, x + wt * 0.06, top + h * 0.02, s * 0.035, s * 0.035, 0, '#E0553F');  // cherry
+      ctx.save();
+      ctx.translate(x + wt * 0.22, top + h * 0.10);
+      ctx.rotate(0.3);
+      rr(ctx, -s * 0.028, -s * 0.24, s * 0.056, s * 0.26, s * 0.024, '#FF7BA6');
+      ctx.restore();
+    },
+
     /* ---------------------------------------------------------- boutique */
     /* Jeans: two legs with a gap between them, a waistband, and the seam and
        pocket stitching that stop a blue trouser shape reading as a envelope. */

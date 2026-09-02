@@ -75,6 +75,9 @@ window.MSM = window.MSM || {};
         case 'advisor': MSM.game.hireAdvisor(); break;
         case 'assistant': MSM.game.hireAssistant(); break;
         case 'techadvisor': MSM.game.hireTechAdvisor(); break;
+        case 'cook':
+        case 'packer': MSM.game.hireFood(act); break;
+        case 'station': MSM.game.upgradeStation(i); break;
         case 'machine': MSM.game.upgradeMachine(i); break;
         case 'unlock':  MSM.game.unlockStore(i); return;
         case 'travel':  MSM.game.travel(i); return;
@@ -125,6 +128,11 @@ window.MSM = window.MSM || {};
       if (ss.sports && !ss.sports.advisor && s.cash >= MSM.game.advisorCost()) hire++;
       if (ss.boutique && !ss.boutique.assistant && s.cash >= MSM.game.assistantCost()) hire++;
       if (ss.tech && !ss.tech.advisor && s.cash >= MSM.game.techAdvisorCost()) hire++;
+      if (ss.food) {
+        ['cook', 'packer'].forEach((j) => {
+          if (!ss.food[j] && s.cash >= MSM.game.foodCost(j)) hire++;
+        });
+      }
       let maps = 0;
       s.stores.forEach((st, i) => { if (!st.owned && s.cash >= CFG.STORES[i].unlock) maps++; });
       badge('badge-products', up);
@@ -524,8 +532,92 @@ window.MSM = window.MSM || {};
       <div class="seg">${seg}</div>${benches}${rows}`;
   }
 
+  /* Fast food's list leads with the three stations and what each is
+     carrying, because that is the decision: which one do I pay to speed up. */
+  function foodProductsBody() {
+    const store = MSM.econ.store(), ss = MSM.econ.sstate(), fs = ss.food;
+    const cash = MSM.state.cash;
+
+    const seg = [t('buy.1'), t('buy.10'), t('buy.max')].map((l, k) => {
+      const on = (k === 0 && UI.buyMode === 1) || (k === 1 && UI.buyMode === 10) ||
+                 (k === 2 && UI.buyMode === 'max');
+      return `<button class="${on ? 'on' : ''}" data-act="buymode" data-i="${k}">${l}</button>`;
+    }).join('');
+
+    // whichever station is carrying most is the one holding up every tray
+    let worst = -1, load = 1;
+    store.plan.machines.forEach((spec, mi) => {
+      if (!fs.stations[mi].built) return;
+      const n = MSM.food.load(mi);
+      if (n > load) { load = n; worst = mi; }
+    });
+
+    const stations = store.plan.machines.map((spec, mi) => {
+      const st = fs.stations[mi];
+      if (!st.built) {
+        return `<div class="row locked">${chip('🔒', '#E8552F')}
+          <div class="row-main">
+            <div class="row-name">${spec.label}</div>
+            <div class="row-sub">${t('food.stationLocked', {
+              cost: '$' + U.money(spec.cost) })}</div>
+          </div>
+        </div>`;
+      }
+      const info = MSM.econ.station(mi);
+      const cost = MSM.econ.stationCost(mi);
+      const n = MSM.food.load(mi);
+      return `<div class="row">${chip(mi === worst ? '🔥' : '🍳', '#E8552F')}
+        <div class="row-main">
+          <div class="row-name">${spec.label}<span class="lvl">${t('lv', { n: st.level })}</span></div>
+          <div class="row-sub">${t('food.stationSub', {
+            cap: info.cap, sp: info.speed.toFixed(2) })}</div>
+          <div class="row-sub" style="color:${mi === worst ? '#E0553F' : '#8A95AB'}">${
+            mi === worst ? t('food.bottleneck', { n }) : t('food.waiting', { n })}</div>
+        </div>
+        <button class="btn" data-act="station" data-i="${mi}" ${cash >= cost ? '' : 'disabled'}>
+          ${t('btn.upgrade', { n: 1 })}<small>$${U.money(cost)}</small></button>
+      </div>`;
+    }).join('');
+
+    const rows = store.products.map((prod, n) => {
+      const ps = MSM.econ.pstate(n);
+      if (!ps.built) {
+        const next = MSM.econ.nextBuild() === n;
+        return `<div class="row prod locked">${artChip(prod)}
+          <div class="row-main">
+            <div class="row-name">${prod.name}</div>
+            <div class="row-sub">${next
+              ? t('prod.build', { cost: '$' + U.money(prod.buildCost) })
+              : t('prod.later')}</div>
+          </div>
+        </div>`;
+      }
+      const count = UI.buyMode === 'max' ? Math.max(1, MSM.econ.maxBuy(n, cash)) : UI.buyMode;
+      const cost = MSM.econ.upgradeCost(n, count);
+      return `<div class="row prod">${artChip(prod)}
+        <div class="row-main">
+          <div class="row-name">${prod.name}<span class="lvl">${t('lv', { n: ps.level })}</span></div>
+          <div class="row-sub">${t('food.cooks', {
+            price: '$' + U.money(MSM.econ.price(n)),
+            sec: MSM.econ.cookTime(n).toFixed(2),
+            label: store.plan.machines[prod.machineIndex].label })}</div>
+          <div class="meters">
+            ${meter('shelf', t('food.line'), ps.shelf, CFG.SHELF_CAP)}
+            ${meter('crate', t('food.freezer'), ps.out, CFG.CRATE_CAP)}
+          </div>
+        </div>
+        <button class="btn" data-act="upgrade" data-i="${n}" ${cash >= cost ? '' : 'disabled'}>
+          ${t('btn.upgrade', { n: count })}<small>$${U.money(cost)}</small></button>
+      </div>`;
+    }).join('');
+
+    return `<div class="hint">${t('food.hint')}</div>
+      <div class="seg">${seg}</div>${stations}${rows}`;
+  }
+
   function productsBody() {
     if (MSM.cafe.active()) return cafeProductsBody();
+    if (MSM.food.active()) return foodProductsBody();
     if (MSM.sports.active()) return sportsProductsBody();
     if (MSM.boutique.active()) return boutiqueProductsBody();
     if (MSM.tech.active()) return techProductsBody();
@@ -571,7 +663,7 @@ window.MSM = window.MSM || {};
 
   function staffBody() {
     const store = MSM.econ.store(), ss = MSM.econ.sstate(), cash = MSM.state.cash;
-    const cs = ss.cafe, sp = ss.sports, bs = ss.boutique, ts = ss.tech;
+    const cs = ss.cafe, sp = ss.sports, bs = ss.boutique, ts = ss.tech, fd = ss.food;
     const row = (glyph, bg, name, sub, hired, act, cost) => `<div class="row">
       <div class="row-ico" style="background:${bg}">${glyph}</div>
       <div class="row-main">
@@ -656,8 +748,27 @@ window.MSM = window.MSM || {};
         </div>
       </div>`;
 
+    /* Fast food's two hires sit either side of the bottleneck, so the row
+       under them reports what actually went out of the door. */
+    const foodRows = !fd ? '' :
+      row('🍳', '#FFD9CE', t('staff.cook'),
+          fd.cook ? t('staff.cookOn') : t('staff.cookOff'),
+          fd.cook, 'cook', MSM.game.foodCost('cook')) +
+      row('🧑‍🍳', '#D6E8FB', t('staff.packer'),
+          fd.packer ? t('staff.packerOn') : t('staff.packerOff'),
+          fd.packer, 'packer', MSM.game.foodCost('packer')) +
+      `<div class="row">
+        <div class="row-ico" style="background:#E4F6EA">🍽️</div>
+        <div class="row-main">
+          <div class="row-name">${t('food.traysName')}</div>
+          <div class="row-sub">${t('food.traysSub', {
+            n: fd.trays, c: fd.walkouts })}</div>
+        </div>
+      </div>`;
+
     return `<div class="hint">${t(cs ? 'staff.cafeHint' : sp ? 'staff.sportHint'
-                                  : bs ? 'staff.fitHint' : ts ? 'staff.techHint' : 'staff.hint',
+                                  : bs ? 'staff.fitHint' : ts ? 'staff.techHint'
+                                  : fd ? 'staff.foodHint' : 'staff.hint',
                                   { store: store.name })}</div>` +
       row('📦', '#FFE9D6', t(cs ? 'staff.runners' : 'staff.stockers',
           { a: ss.stockers, b: CFG.MAX_STOCKERS }),
@@ -669,7 +780,7 @@ window.MSM = window.MSM || {};
           ss.cashier ? t(cs ? 'staff.orderTakerOn' : 'staff.cashierOn')
                      : t(cs ? 'staff.orderTakerOff' : 'staff.cashierOff'),
           ss.cashier, 'cashier', store.cashierCost) +
-      cafeRows + sportRows + fitRows + techRows +
+      cafeRows + foodRows + sportRows + fitRows + techRows +
       `<div class="row">
         <div class="row-ico" style="background:#E4F6EA">📈</div>
         <div class="row-main">
@@ -677,6 +788,83 @@ window.MSM = window.MSM || {};
           <div class="row-sub">$${U.money(MSM.econ.storeRate(MSM.state.current))}/s</div>
         </div>
       </div>`;
+  }
+
+  /* The mall from above, the way you would sketch it: every shop its own
+     box, ringed round and chained to the next by an escalator link. Solid
+     links are escalators you can ride; a dashed one waits on the shop at
+     its far end. Tap a box to travel there — or to buy it open. */
+  function mapDiagram() {
+    const s = MSM.state;
+    const n = CFG.STORES.length;
+    const TAU = Math.PI * 2;
+    const cx = 160, cy = 132, rx = 112, ry = 88;
+    const pts = CFG.STORES.map((_, i) => {
+      const a = -Math.PI / 2 + (i / n) * TAU;
+      return { x: cx + Math.cos(a) * rx, y: cy + Math.sin(a) * ry };
+    });
+
+    // the escalator links, drawn under the boxes
+    let links = '';
+    for (let i = 0; i < n; i++) {
+      const a = pts[i], b = pts[(i + 1) % n];
+      const open = s.stores[i].owned && s.stores[(i + 1) % n].owned;
+      const col = open ? '#3E4A66' : '#C2CFE0';
+      links += `<line x1="${a.x.toFixed(1)}" y1="${a.y.toFixed(1)}"
+          x2="${b.x.toFixed(1)}" y2="${b.y.toFixed(1)}" stroke="${col}"
+          stroke-width="4" stroke-linecap="round"${open ? '' : ' stroke-dasharray="2 8"'}/>`;
+      // a little step badge on the link, so the line reads as an escalator
+      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      links += `<g transform="translate(${mx.toFixed(1)},${my.toFixed(1)})">
+        <circle r="9.5" fill="#FFFFFF" stroke="${col}" stroke-width="1.8"/>
+        <path d="M -4.5 3.5 H -1.5 V 0.5 H 1.5 V -2.5 H 4.5" fill="none"
+          stroke="${col}" stroke-width="1.8" stroke-linecap="round"/>
+      </g>`;
+    }
+
+    const boxes = CFG.STORES.map((st, i) => {
+      const p = pts[i], ss = s.stores[i];
+      const here = i === s.current;
+      const w = 76, h = 54;
+      const stroke = here ? '#FFC53D' : ss.owned ? st.color : '#C2CFE0';
+      const words = st.name.split(' ').slice(0, 2);
+      const name = words.map((wd, k) =>
+        `<text x="0" y="${9 + k * 9.5}" font-size="8.4" font-weight="700"
+           text-anchor="middle" fill="${ss.owned ? '#16295C' : '#98A6C4'}">${wd}</text>`).join('');
+      const under = here
+        ? `<text x="0" y="${h / 2 + 12}" font-size="9" font-weight="800"
+             text-anchor="middle" fill="#2CA85C">${t('map.here')}</text>`
+        : !ss.owned
+          ? `<text x="0" y="${h / 2 + 12}" font-size="9" font-weight="800"
+               text-anchor="middle" fill="#98A6C4">$${U.money(st.unlock)}</text>`
+          : '';
+      return `<g transform="translate(${p.x.toFixed(1)},${p.y.toFixed(1)})"
+          data-act="${ss.owned ? 'travel' : 'unlock'}" data-i="${i}" style="cursor:pointer">
+        <rect x="${-w / 2}" y="${-h / 2}" width="${w}" height="${h}" rx="9"
+          fill="#FFFFFF" stroke="${stroke}" stroke-width="${here ? 4 : 3}"
+          ${ss.owned ? '' : 'stroke-dasharray="5 4"'}/>
+        <text x="0" y="-5" font-size="17" text-anchor="middle">${ss.owned ? st.glyph : '🔒'}</text>
+        ${name}${under}
+      </g>`;
+    }).join('');
+
+    /* The middle of the ring is the only spot on this sheet with nothing to
+       say, so it carries the one number that is about the mall rather than
+       any single shop: what the whole place earns while you are away. */
+    const idle = MSM.econ.idleRate();
+    const owned = s.stores.filter((st) => st.owned).length;
+    const hub = `<g transform="translate(${cx},${cy})" text-anchor="middle">
+      <text y="-8" font-size="9" font-weight="700" fill="#98A6C4">${t('map.mall')}</text>
+      <text y="6" font-size="13" font-weight="800" fill="${idle > 0 ? '#2CA85C' : '#C2CFE0'}"
+        >$${U.money(idle)}/s</text>
+      <text y="19" font-size="8.5" font-weight="700" fill="#98A6C4"
+        >${owned}/${n} ${t('map.open')}</text>
+    </g>`;
+
+    return `<svg viewBox="0 0 320 268" style="width:100%;height:auto;display:block;margin:2px 0 8px"
+        font-family="'Baloo 2','Nunito',system-ui,sans-serif">
+      ${links}${hub}${boxes}
+    </svg>`;
   }
 
   function mapBody() {
@@ -710,7 +898,7 @@ window.MSM = window.MSM || {};
           : `<button class="btn" data-act="travel" data-i="${i}">${t('btn.travel')}</button>`}
       </div>`;
     }).join('');
-    return `<div class="hint">${t('map.hint')}</div>${rows}`;
+    return `<div class="hint">${t('map.hint')}</div>${mapDiagram()}${rows}`;
   }
 
   function boostBody() {

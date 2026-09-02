@@ -225,6 +225,7 @@ window.MSM = window.MSM || {};
         advised: false, browseT: 0, demoT: 0, demoDur: 0,
         verdict: '', verdictT: 0,
       });
+      MSM.ent.enterAt(MSM.ent.customers[MSM.ent.customers.length - 1]);
     },
 
     /** The other display in their department they have not seen yet. */
@@ -358,7 +359,7 @@ window.MSM = window.MSM || {};
         }
 
         case 'leave':
-          if (W.seek(c, P.entrance.x, P.entrance.y + 0.6, spd, dt, false)) {
+          if (MSM.ent.exitStep(c, dt, spd)) {
             const q = MSM.ent.queue.indexOf(c);
             if (q >= 0) MSM.ent.queue.splice(q, 1);
             MSM.ent.customers.splice(k, 1);

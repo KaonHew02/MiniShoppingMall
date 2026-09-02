@@ -42,6 +42,20 @@ MSM.CFG = {
   SPAWN_EVERY: [3.0, 1.3],   // seconds between arrivals: [quiet, busy]
   DOOR_HOLD: 0.7,            // seconds stood in the doorway before you travel
 
+  /* The escalator between shops. Its geometry lives here because both the
+     painter and the customers who ride it have to agree on where the tread
+     is: they walk UP the ramp, so their height has to track it exactly. */
+  ESC: {
+    TOP_Z: 1.05,           // how high the run climbs
+    DECK: 0.14,            // the tread just off the floor
+    RAIL: 0.86,            // balustrade height above the tread
+    RIDE: 2.6,             // seconds a customer takes to ride it end to end
+    /* Once another shop is open, this share of customers come and go by
+       escalator instead of the street door — they are shopping the mall,
+       not just this one unit. */
+    SHARE: 0.45,
+  },
+
   MIN_RESTOCK: 0.35,
   OFFLINE_CAP_H: 2,
   OFFLINE_RATE: 0.5,
@@ -316,7 +330,7 @@ MSM.CFG.PLANS.grocery = {
           { x: 17.80, y: 13.00 }, { x: 17.80, y: 13.55 }],
   entrance: { x: 17.80, y: 14.70 },
   spawn:    { x: 15.20, y: 12.40 },
-  door:     { x0: 0.60, y0: 12.60, x1: 3.60, y1: 14.00 },
+  door:     { x0: 0.60, y0: 12.20, x1: 3.60, y1: 14.20 },
   sign:     { x0: 16.30, y0: 13.95, x1: 17.00, y1: 14.60 },
   bin:      { x0: 21.80, y0: 14.00, x1: 22.50, y1: 14.70 },
 };
@@ -440,7 +454,7 @@ MSM.CFG.PLANS.cafe = {
 
   entrance: { x: 17.80, y: 14.70 },
   spawn:    { x: 10.00, y: 8.00 },
-  door:     { x0: 20.20, y0: 12.00, x1: 23.20, y1: 13.60 },
+  door:     { x0: 20.20, y0: 11.70, x1: 23.20, y1: 13.90 },
   sign:     { x0: 16.30, y0: 13.95, x1: 17.00, y1: 14.60 },
   bin:      { x0: 19.60, y0: 10.40, x1: 20.30, y1: 11.10 },
 };
@@ -539,7 +553,7 @@ MSM.CFG.PLANS.sports = {
           { x: 11.00, y: 13.75 }, { x: 11.00, y: 14.35 }],
   entrance: { x: 11.00, y: 14.90 },
   spawn:    { x: 7.60,  y: 10.70 },
-  door:     { x0: 0.80,  y0: 12.40, x1: 3.80,  y1: 14.00 },
+  door:     { x0: 0.80,  y0: 12.00, x1: 3.80,  y1: 14.20 },
   sign:     { x0: 13.20, y0: 13.70, x1: 13.90, y1: 14.40 },
   bin:      { x0: 21.40, y0: 13.20, x1: 22.10, y1: 13.90 },
 };
@@ -626,7 +640,7 @@ MSM.CFG.PLANS.boutique = {
           { x: 11.00, y: 13.65 }, { x: 11.00, y: 14.25 }],
   entrance: { x: 11.00, y: 14.80 },
   spawn:    { x: 7.60,  y: 10.60 },
-  door:     { x0: 0.80,  y0: 12.20, x1: 3.80,  y1: 13.80 },
+  door:     { x0: 0.80,  y0: 11.90, x1: 3.80,  y1: 14.10 },
   sign:     { x0: 13.10, y0: 13.60, x1: 13.80, y1: 14.30 },
   bin:      { x0: 21.40, y0: 13.00, x1: 22.10, y1: 13.70 },
 };
@@ -722,7 +736,7 @@ MSM.CFG.PLANS.tech = {
           { x: 11.00, y: 13.75 }, { x: 11.00, y: 14.35 }],
   entrance: { x: 11.00, y: 14.90 },
   spawn:    { x: 7.60,  y: 10.70 },
-  door:     { x0: 0.80,  y0: 12.40, x1: 3.80,  y1: 14.00 },
+  door:     { x0: 0.80,  y0: 12.00, x1: 3.80,  y1: 14.20 },
   sign:     { x0: 13.20, y0: 13.70, x1: 13.90, y1: 14.40 },
   bin:      { x0: 21.40, y0: 13.20, x1: 22.10, y1: 13.90 },
 };
@@ -821,7 +835,7 @@ MSM.CFG.PLANS.food = {
           { x: 9.60, y: 12.50 }, { x: 9.60, y: 13.20 }],
   entrance: { x: 9.60,  y: 14.60 },
   spawn:    { x: 6.00,  y: 12.20 },
-  door:     { x0: 0.80,  y0: 12.40, x1: 3.80,  y1: 14.00 },
+  door:     { x0: 0.80,  y0: 12.00, x1: 3.80,  y1: 14.20 },
   sign:     { x0: 19.40, y0: 13.60, x1: 20.10, y1: 14.30 },
   bin:      { x0: 21.40, y0: 12.60, x1: 22.10, y1: 13.30 },
 };

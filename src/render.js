@@ -633,14 +633,19 @@ window.MSM = window.MSM || {};
   }
 
   /* The way out is a TWIN ESCALATOR — this is a mall, and malls run two side
-     by side: one carrying people up to the next floor, one bringing them
-     down. Both are always moving and both always have somebody on them, so
-     the corner that leads onward is the busiest-looking thing on the floor
-     rather than a door standing on its own.
+     by side: one carrying people up, one bringing them down.
 
-     The whole plot is the travel trigger. Step on it and the hold fills
-     across the comb plate at your feet, the glass slides past you, and you
-     ride up. */
+     The two runs TOUCH and share their middle balustrade, so the pair wears
+     three rails and not four. That is what a real twin escalator looks like:
+     one machine with two treads through it, rather than two machines parked
+     next to each other with a gap.
+
+     The tread is ONE continuous dark ramp with the yellow step edges
+     crawling up it — separate floating step blocks read as a staircase, and
+     a staircase is the one thing this must not look like.
+
+     Nobody is painted onto it. The people you see riding are the shop's own
+     CUSTOMERS, walking on under their own steam — see MSM.ent.rideStep. */
   function drawDoor(ctx) {
     const d = P.door;
     const to = MSM.game.nextStore();
@@ -649,38 +654,39 @@ window.MSM = window.MSM || {};
     const open = to >= 0;
 
     const yF = d.y1, yB = d.y0;                    // front foot, back top
-    const topZ = 1.30;
-    const gap = 0.30;                              // the gutter between runs
-    const runW = (d.x1 - d.x0 - gap) / 2;
-    const runs = [
-      { x0: d.x0, x1: d.x0 + runW, dir: 1 },                   // going up
-      { x0: d.x1 - runW, x1: d.x1, dir: -1 },                  // coming down
-    ];
+    const topZ = CFG.ESC.TOP_Z;
+    const mid = (d.x0 + d.x1) / 2;
 
-    // the shared plinth both runs sit on
-    iso.box(ctx, d.x0 - 0.10, yB - 0.10, d.x1 + 0.10, yF + 0.34, 0, 0.10,
+    // the plinth the pair stands on, and the landing plate at its foot
+    iso.box(ctx, d.x0 - 0.12, yB - 0.10, d.x1 + 0.12, yF + 0.40, 0, 0.12,
             open ? '#C9A227' : '#9AA5B5');
-    // the comb plate you stand on, and the hold-to-ride progress across it
-    iso.tile(ctx, d.x0, yF, d.x1, yF + 0.26, 0.104, '#E7EDF6');
+    iso.tile(ctx, d.x0, yF + 0.04, d.x1, yF + 0.34, 0.124, '#E7EDF6');
     const hold = MSM.game.doorHold || 0;
     if (open && hold > 0) {
       const pct = U.clamp(hold / CFG.DOOR_HOLD, 0, 1);
-      iso.tile(ctx, d.x0, yF, d.x0 + (d.x1 - d.x0) * pct, yF + 0.26, 0.106, '#5FE08D');
+      iso.tile(ctx, d.x0, yF + 0.04, d.x0 + (d.x1 - d.x0) * pct, yF + 0.34, 0.126, '#5FE08D');
     }
 
-    runs.forEach((run) => drawEscalatorRun(ctx, run, yF, yB, topZ, open));
+    /* Back to front, because larger x is nearer the eye in this projection:
+       outer rail, up tread, the SHARED middle rail, down tread, outer rail.
+       Interleaving them is what lets one balustrade serve both runs. */
+    drawBalustrade(ctx, d.x0 + 0.05, yF, yB, topZ, open, false);
+    drawTread(ctx, d.x0, mid, 1, yF, yB, topZ, open);
+    drawBalustrade(ctx, mid, yF, yB, topZ, open, false);
+    drawTread(ctx, mid, d.x1, -1, yF, yB, topZ, open);
+    drawBalustrade(ctx, d.x1 - 0.05, yF, yB, topZ, open, true);
 
-    // the lit portal both runs climb into — the next shop, one floor away
-    iso.box(ctx, d.x0 - 0.16, yB - 0.18, d.x1 + 0.16, yB + 0.04, topZ, topZ + 1.55,
+    // the opening they climb into — a frame, not a billboard
+    iso.box(ctx, d.x0 - 0.14, yB - 0.16, d.x1 + 0.14, yB + 0.02, topZ + 0.06, topZ + 0.74,
             open ? '#FFC53D' : '#B9C4D6');
-    iso.faceL(ctx, yB + 0.04, d.x0 - 0.04, d.x1 + 0.04, topZ + 0.06, topZ + 1.38,
+    iso.faceL(ctx, yB + 0.02, d.x0 - 0.02, d.x1 + 0.02, topZ + 0.12, topZ + 0.66,
               open ? '#16295C' : '#4E5D80');
     if (open) {
-      iso.faceL(ctx, yB + 0.04, d.x0 + 0.14, d.x1 - 0.14, topZ + 1.14, topZ + 1.30, '#FFE9AE');
+      iso.faceL(ctx, yB + 0.02, d.x0 + 0.16, d.x1 - 0.16, topZ + 0.50, topZ + 0.60, '#FFE9AE');
     }
 
     if (!store) return;
-    const c = iso.s((d.x0 + d.x1) / 2, yB, topZ + 1.68);
+    const c = iso.s((d.x0 + d.x1) / 2, yB, topZ + 0.90);
     const w = Math.max(112, iso.TW * 1.35), h = Math.max(40, iso.TW * 0.46);
     ctx.save();
     ctx.shadowColor = '#0b1c3d40'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 3;
@@ -692,72 +698,56 @@ window.MSM = window.MSM || {};
          open ? '#16295C' : '#98A6C4');
   }
 
-  /* Who is riding. A fixed list rather than a random roll, so a rider keeps
-     the same coat for the whole trip instead of flickering every frame. */
-  const RIDERS = ['#FF7BA6', null, '#4FB0FF', null, '#FF9E4D', null, '#2FCB9E'];
+  /** One solid pale side panel following the slope, capped in gold. */
+  function drawBalustrade(ctx, xs, yF, yB, topZ, open, near) {
+    const E = MSM.ent.escRamp(yF, yB, topZ);
+    const a = E(0), b = E(1);
+    iso.poly(ctx, [
+      iso.s(xs, a.y, a.z), iso.s(xs, b.y, b.z),
+      iso.s(xs, b.y, b.z + CFG.ESC.RAIL), iso.s(xs, a.y, a.z + CFG.ESC.RAIL),
+    ], near ? '#E4EDF6' : '#CBD8E6');
 
-  /* One run of the pair. `dir` is +1 for the up escalator and -1 for the
-     down one, which only changes which way the steps and riders crawl. */
-  function drawEscalatorRun(ctx, run, yF, yB, topZ, open) {
-    const x0 = run.x0, x1 = run.x1;
-    const metal = open ? '#B9C4D6' : '#C7CFDB';
-    const dark = open ? '#39424F' : '#8E9AB2';
-
-    /* A balustrade: glass panel plus the fat handrail along its top. Drawn
-       once behind the steps and once in front, so a rider ends up sandwiched
-       between them the way they are on a real escalator. */
-    const pane = (xs) => {
-      const aG = iso.s(xs, yF + 0.12, 0.10), bG = iso.s(xs, yB + 0.02, topZ + 0.12);
-      const aT = iso.s(xs, yF + 0.12, 0.62), bT = iso.s(xs, yB + 0.02, topZ + 0.64);
-      ctx.globalAlpha = 0.5;
-      iso.poly(ctx, [aT, bT, bG, aG], '#D6E9F8');
-      ctx.globalAlpha = 1;
-      ctx.beginPath();
-      ctx.moveTo(aT.x, aT.y); ctx.lineTo(bT.x, bT.y);
-      ctx.strokeStyle = dark;
-      ctx.lineWidth = Math.max(2, iso.TW * 0.045);
-      ctx.lineCap = 'round';
-      ctx.stroke();
-    };
-    pane(x0 + 0.05);
-
-    /* Steps and riders share one crawl, so a rider always stands ON a step
-       rather than drifting between two. */
-    const steps = 7, depth = yF - yB - 0.18, stepD = depth / steps;
-    const phase = open ? (performance.now() / 520) % 1 : 0;
-
-    for (let i = steps - 1; i >= 0; i--) {
-      const t = run.dir > 0 ? i + phase : i + (1 - phase);
-      const yy = yF - 0.06 - t * stepD;
-      const z = topZ * (t / steps);
-      iso.box(ctx, x0 + 0.12, yy - stepD * 0.84, x1 - 0.12, yy, z, z + 0.10, metal);
-      iso.tile(ctx, x0 + 0.14, yy - 0.07, x1 - 0.14, yy, z + 0.102, '#FFD65A');
-      const who = RIDERS[(i + (run.dir > 0 ? 0 : 4)) % RIDERS.length];
-      if (open && who) drawRider(ctx, (x0 + x1) / 2, yy - stepD * 0.40, z + 0.10, who);
-    }
-
-    pane(x1 - 0.05);
+    const h0 = iso.s(xs, a.y, a.z + CFG.ESC.RAIL), h1 = iso.s(xs, b.y, b.z + CFG.ESC.RAIL);
+    ctx.beginPath();
+    ctx.moveTo(h0.x, h0.y); ctx.lineTo(h1.x, h1.y);
+    ctx.strokeStyle = open ? '#E3B23C' : '#B9C4D6';
+    ctx.lineWidth = Math.max(4, iso.TW * 0.105);
+    ctx.lineCap = 'round';
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(h0.x, h0.y); ctx.lineTo(h1.x, h1.y);
+    ctx.strokeStyle = open ? '#F7D775' : '#D6DEE9';
+    ctx.lineWidth = Math.max(1.5, iso.TW * 0.038);
+    ctx.stroke();
   }
 
-  /** A small standing figure riding a step: body, head, and a soft shadow. */
-  function drawRider(ctx, wx, wy, wz, color) {
-    const s = iso.s(wx, wy, wz);
-    const u = iso.TW / 64;
-    const bw = 10 * u, bh = 14 * u, hr = 4.9 * u;
-    ctx.globalAlpha = 0.18;
-    ell2(ctx, s.x, s.y + 1.2 * u, bw * 0.62, bw * 0.30, '#0b1c3d');
-    ctx.globalAlpha = 1;
-    rrect(ctx, s.x - bw / 2, s.y - bh, bw, bh, bw * 0.42);
-    ctx.fillStyle = color; ctx.fill();
-    rrect(ctx, s.x - bw / 2, s.y - bh * 0.42, bw, bh * 0.42, bw * 0.30);
-    ctx.fillStyle = U.shade(color, -0.16); ctx.fill();
-    ctx.beginPath();
-    ctx.arc(s.x, s.y - bh - hr * 0.62, hr, 0, TAU2);
-    ctx.fillStyle = SKIN; ctx.fill();
-    ctx.beginPath();
-    ctx.arc(s.x, s.y - bh - hr * 0.92, hr * 0.96, Math.PI, 0);
-    ctx.closePath();
-    ctx.fillStyle = U.shade(color, -0.34); ctx.fill();
+  /* One run's tread: the continuous ramp and the crawling step edges. `dir`
+     is +1 going up and -1 coming down, which only changes the crawl. */
+  function drawTread(ctx, rx0, rx1, dir, yF, yB, topZ, open) {
+    const inset = 0.06;
+    const x0 = rx0 + inset, x1 = rx1 - inset;
+    const at = MSM.ent.escRamp(yF, yB, topZ);
+
+    const a = at(0), b = at(1);
+    iso.poly(ctx, [
+      iso.s(x0, a.y, a.z), iso.s(x1, a.y, a.z),
+      iso.s(x1, b.y, b.z), iso.s(x0, b.y, b.z),
+    ], '#4C525A');
+
+    /* The yellow step edges are the only thing that moves, and the whole
+       reason it reads as running rather than as a fixed ramp. */
+    const steps = 9;
+    const phase = open ? (performance.now() / 780) % 1 : 0;
+    const lip = 0.30 / steps;
+    for (let i = 0; i < steps; i++) {
+      const t = (i + (dir > 0 ? phase : 1 - phase)) / steps;
+      if (t <= 0.01 || t >= 0.99) continue;
+      const p = at(t), q = at(Math.min(0.99, t + lip));
+      iso.poly(ctx, [
+        iso.s(x0 + 0.05, p.y, p.z), iso.s(x1 - 0.05, p.y, p.z),
+        iso.s(x1 - 0.05, q.y, q.z), iso.s(x0 + 0.05, q.y, q.z),
+      ], '#F2C23D');
+    }
   }
 
   /* The bin: walk up to it to empty your arms. */
@@ -910,7 +900,11 @@ window.MSM = window.MSM || {};
 
   function drawBody(ctx, e, look) {
     const u = iso.TW / 64;
-    const s = iso.s(e.x, e.y, 0);
+    /* `z` is normally 0 — the only bodies off the floor are the customers
+       riding the escalator between shops, and they carry their height up
+       the ramp with them. */
+    const z = e.z || 0;
+    const s = iso.s(e.x, e.y, z);
     const phase = e.moving ? Math.sin(e.walk * 10) : 0;
     const bob = e.moving ? Math.abs(phase) * 1.6 * u : 0;
 
@@ -919,7 +913,7 @@ window.MSM = window.MSM || {};
     const col = look.body;
     const dark = U.shade(col, -0.18);
 
-    shadow(ctx, e.x, e.y, 0.36);
+    if (!z) shadow(ctx, e.x, e.y, 0.36);
 
     const feet = s.y;
     const bw = 15 * u, bh = 16 * u;

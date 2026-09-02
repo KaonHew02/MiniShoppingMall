@@ -346,6 +346,7 @@ window.MSM = window.MSM || {};
         patience: 1, queueT: 0, served: false,
         ticket: null, spotIndex: -1,
       });
+      MSM.ent.enterAt(MSM.ent.customers[MSM.ent.customers.length - 1]);
     },
 
     stepCustomer(c, k, dt) {
@@ -406,7 +407,7 @@ window.MSM = window.MSM || {};
         }
 
         case 'leave':
-          if (W.seek(c, P.entrance.x, P.entrance.y + 0.6, spd, dt, false)) {
+          if (MSM.ent.exitStep(c, dt, spd)) {
             K.forget(c);
             MSM.ent.customers.splice(k, 1);
           }

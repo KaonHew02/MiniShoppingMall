@@ -293,6 +293,7 @@ window.MSM = window.MSM || {};
       const c = MSM.ent.customers[MSM.ent.customers.length - 1];
       c.budget = items.reduce((a, it) => a + MSM.econ.price(it.n), 0) *
         U.lerp(B.BUDGET[0], B.BUDGET[1], Math.random());
+      MSM.ent.enterAt(c);
     },
 
     /** The next piece of the outfit they still have to find. */
@@ -470,7 +471,7 @@ window.MSM = window.MSM || {};
         }
 
         case 'leave':
-          if (W.seek(c, P.entrance.x, P.entrance.y + 0.6, spd, dt, false)) {
+          if (MSM.ent.exitStep(c, dt, spd)) {
             K.forget(c);
             MSM.ent.customers.splice(k, 1);
           }

@@ -33,9 +33,16 @@ works if you just double-click it.
 Walk up to the **bin** on the shop floor to empty your arms — useful when you
 grabbed the wrong thing.
 
-Shops are linked by a **twin escalator** in the corner of each floor — one run
-going up, one coming down, both always carrying somebody. Stand on it and hold
-for a moment and it takes you to the next shop; the six of them form a ring.
+Shops are linked by a **twin escalator** in the corner of each floor — two runs
+sharing a middle balustrade, one going up and one coming down. Stand on it and
+hold for a moment and it takes you to the next shop; the six of them form a
+ring.
+
+Nobody is painted onto it. Once you own a second shop, a share of every shop's
+**customers** ride it for real: some arrive down it instead of through the
+street door, and some leave back up it rather than out to the street, because
+they are shopping the whole mall rather than one unit. With only one shop open
+the escalator is idle and everyone uses the door.
 
 ## Your first five minutes
 

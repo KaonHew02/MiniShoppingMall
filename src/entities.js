@@ -24,6 +24,14 @@ window.MSM = window.MSM || {};
       this.cash.length = 0;
       this.queue.length = 0;
       this.spawnTimer = 1.5;
+      /* Throw the stockers away rather than re-using them. syncStockers only
+         adds and removes to match the count, so travelling between two shops
+         that employ the SAME number of them handed the new shop the old
+         one's bodies — still carrying a `target` product index from a floor
+         that had more lines than this one. Reaching for it crashed the loop
+         (`ss.products[s.target].out` on an undefined row) the moment you
+         stepped off the escalator into a smaller shop. */
+      this.stockers.length = 0;
       this.syncStockers();
       if (MSM.cafe) MSM.cafe.reset();
       if (MSM.sports) MSM.sports.reset();
@@ -44,6 +52,106 @@ window.MSM = window.MSM || {};
           walk: 0, moving: false, handle: 0,
         });
       }
+    },
+
+    /* ------------------------------------------------- the escalator */
+    /* Once a second shop is open the mall stops being one unit: a share of
+       every shop's customers arrive down the escalator and leave back up it
+       instead of using the street door, because they are shopping the whole
+       building. Nobody is painted onto the escalator itself — the people you
+       see riding are these customers, walking on under their own steam. */
+
+    /** Points along the tread, 0 at the foot and 1 at the top. */
+    escRamp(yF, yB, topZ) {
+      const E = CFG.ESC;
+      return (t) => ({
+        y: yF + (yB - yF) * t,
+        z: E.DECK + (topZ - E.DECK) * t,
+      });
+    },
+
+    /** Is there anywhere else to go? No second shop, no escalator traffic. */
+    escOpen: () => MSM.game.nextStore() >= 0,
+
+    /** Coin-flip, weighted, for whether this customer uses it at all. */
+    escPick: () => E.escOpen() && Math.random() < CFG.ESC.SHARE,
+
+    /** The foot of the run — the DOWN one for arrivals, UP for departures. */
+    escFoot(up) {
+      const d = P.door, mid = (d.x0 + d.x1) / 2;
+      const x = up ? (d.x0 + mid) / 2 : (mid + d.x1) / 2;
+      return { x, y: d.y1 + 0.30 };
+    },
+
+    /** Put a customer on the escalator, coming down into the shop. */
+    escArrive(c) {
+      const d = P.door, foot = E.escFoot(false);
+      c.rideT = 0;
+      c.riding = -1;                 // coming down
+      c.x = foot.x;
+      c.y = d.y0 + 0.20;
+      c.z = CFG.ESC.TOP_Z;
+      c.moving = true;
+    },
+
+    /** Send a customer up and out of the shop. */
+    escLeave(c) {
+      c.rideT = 0;
+      c.riding = 1;                  // going up
+      c.z = c.z || 0;
+    },
+
+    /**
+     * Walk a rider along the tread. Returns true once they are done: at the
+     * bottom for an arrival, or gone through the opening for a departure.
+     */
+    rideStep(c, dt) {
+      const d = P.door, E2 = CFG.ESC;
+      const at = E.escRamp(d.y1, d.y0, E2.TOP_Z);
+      c.rideT = (c.rideT || 0) + dt / E2.RIDE;
+      const done = c.rideT >= 1;
+      const t = U.clamp(c.riding > 0 ? c.rideT : 1 - c.rideT, 0, 1);
+      const p = at(t);
+      c.y = p.y;
+      c.z = p.z;
+      c.walk += dt * 2;
+      c.moving = true;
+      if (!done) return false;
+      c.riding = 0;
+      c.rideT = 0;
+      c.z = 0;
+      return true;
+    },
+
+    /**
+     * Called on a brand new customer. Most walk in off the street; the rest
+     * appear at the top of the DOWN run and ride in, which is what makes the
+     * escalator look like it connects somewhere.
+     */
+    enterAt(c) {
+      if (!E.escPick()) return;
+      c.viaEsc = true;
+      E.escArrive(c);
+    },
+
+    /** Still riding down? The caller must skip its own logic while true. */
+    descending(c, dt) {
+      if (c.riding !== -1) return false;
+      return !E.rideStep(c, dt);
+    },
+
+    /**
+     * The shared way out. Riders walk to the foot of the UP run and take it;
+     * everyone else uses the street door. True means remove them.
+     */
+    exitStep(c, dt, spd) {
+      if (c.riding === 1) return E.rideStep(c, dt);
+      if (c.viaEsc && E.escOpen()) {
+        const foot = E.escFoot(true);
+        if (W.seek(c, foot.x, foot.y, spd, dt, false)) E.escLeave(c);
+        return false;
+      }
+      return W.seek(c, P.entrance.x, P.entrance.y + 0.6, spd, dt, false);
     },
 
     /** Where a body stands to reach a source / a shelf. Offset to the right
@@ -405,6 +513,7 @@ window.MSM = window.MSM || {};
         phase: 'toLane', carry: 0, carryP: -1,
         wait: 0, walk: 0, moving: true, viaLane: false, mood: 'want',
       });
+      E.enterAt(this.customers[this.customers.length - 1]);
     },
 
     updateCustomers(dt) {
@@ -425,6 +534,8 @@ window.MSM = window.MSM || {};
 
       for (let k = this.customers.length - 1; k >= 0; k--) {
         const c = this.customers[k];
+        // riding in: the escalator owns them until they step off at the foot
+        if (E.descending(c, dt)) continue;
         if (cafe) { MSM.cafe.stepCustomer(c, k, dt); continue; }
         if (sports) { MSM.sports.stepCustomer(c, k, dt); continue; }
         if (boutique) { MSM.boutique.stepCustomer(c, k, dt); continue; }
@@ -507,7 +618,7 @@ window.MSM = window.MSM || {};
           }
 
           case 'leave':
-            if (W.seek(c, P.entrance.x, P.entrance.y + 0.6, spd, dt, false)) {
+            if (E.exitStep(c, dt, spd)) {
               const q = this.queue.indexOf(c);
               if (q >= 0) this.queue.splice(q, 1);
               this.customers.splice(k, 1);

@@ -367,10 +367,14 @@ window.MSM = window.MSM || {};
       });
     },
 
-    /** The next store you own, wrapping round the list. -1 if there is none. */
+    /** The next OTHER store you own, wrapping round the list. -1 if there is
+        none — `k < n` stops the wrap landing back on the shop you are
+        standing in, which used to make the escalator advertise a trip to
+        itself and, once customers started riding it, send them off to
+        nowhere. */
     nextStore() {
       const n = MSM.state.stores.length;
-      for (let k = 1; k <= n; k++) {
+      for (let k = 1; k < n; k++) {
         const i = (MSM.state.current + k) % n;
         if (MSM.state.stores[i].owned) return i;
       }

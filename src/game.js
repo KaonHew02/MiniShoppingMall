@@ -28,7 +28,7 @@ window.MSM = window.MSM || {};
       addEventListener('pagehide', () => MSM.save());
 
       if (offline) MSM.ui.open('offline', offline);
-      else if (MSM.state.tut >= 99) {
+      else if ((MSM.state.stores[0].tut || 0) >= 99) {
         setTimeout(() => MSM.ui.toast(MSM.t('toast.tip')), 800);
       }
 
@@ -135,6 +135,7 @@ window.MSM = window.MSM || {};
       MSM.ent.restock(dt);
       MSM.ent.movePlayer(dt, dir.x, dir.y);
       MSM.ent.updateStockers(dt);
+      MSM.ent.stepCashier(dt);
       MSM.ent.spawnGate = MSM.econ.sstate().open;
       MSM.ent.updateCustomers(dt);
       MSM.ent.ageCash(dt);
@@ -154,12 +155,7 @@ window.MSM = window.MSM || {};
       G.tillPad(dt);
       G.buildPads(dt);
       G.signPost(dt);
-      G.tutorial();
-      if (MSM.cafe.active()) { G.tutTarget = null; G.tutText = MSM.cafe.guide(); }
-      if (MSM.sports.active()) { G.tutTarget = null; G.tutText = MSM.sports.guide(); }
-      if (MSM.boutique.active()) { G.tutTarget = null; G.tutText = MSM.boutique.guide(); }
-      if (MSM.tech.active()) { G.tutTarget = null; G.tutText = MSM.tech.guide(); }
-      if (MSM.food.active()) { G.tutTarget = null; G.tutText = MSM.food.guide(); }
+      MSM.tut.update();
       G.levelPads(dt);
       G.doors(dt);
       G.passive(dt);
@@ -283,61 +279,10 @@ window.MSM = window.MSM || {};
     },
 
     /* -------------------------------------------------------- tutorial */
+    /* Where the guided arrow points and what the line under the HUD says.
+       MSM.tut owns both — see src/tutorial.js. */
     tutTarget: null,
     tutText: '',
-
-    /* The first five minutes, guided by an arrow: build the counter, harvest,
-       stock a shelf, open up, serve, collect. All by walking. */
-    tutorial() {
-      const s = MSM.state;
-      if (s.tut >= 99 || s.current !== 0) { G.tutTarget = null; G.tutText = ''; return; }
-      const ss = MSM.econ.sstate();
-      const p = MSM.ent.player;
-      const potato = MSM.econ.prod(0);
-
-      switch (s.tut) {
-        case 0:
-          if (ss.till) { s.tut = 1; break; }
-          G.tutTarget = { x: (P.till.x0 + P.till.x1) / 2, y: (P.till.y0 + P.till.y1) / 2 };
-          G.tutText = MSM.t('tut.counter', { cost: '$' + CFG.TILL_COST(MSM.econ.store().unlock) });
-          break;
-        case 1:
-          if (p.hold.indexOf(0) >= 0) { s.tut = 2; break; }
-          if (MSM.econ.pstate(0).shelf > 0) { s.tut = 3; break; }
-          G.tutTarget = { x: (potato.crate.x0 + potato.crate.x1) / 2, y: potato.crate.y1 + 0.4 };
-          G.tutText = MSM.t('tut.harvest');
-          break;
-        case 2:
-          if (MSM.econ.pstate(0).shelf > 0) { s.tut = 3; break; }
-          G.tutTarget = { x: potato.browse.x, y: potato.browse.y };
-          G.tutText = MSM.t('tut.shelf');
-          break;
-        case 3:
-          if (ss.open) { s.tut = 4; break; }
-          G.tutTarget = { x: (P.sign.x0 + P.sign.x1) / 2, y: (P.sign.y0 + P.sign.y1) / 2 };
-          G.tutText = MSM.t('tut.sign');
-          break;
-        case 4:
-          if (s.served > 0) { s.tut = 5; break; }
-          G.tutTarget = { x: P.serve.x, y: P.serve.y };
-          G.tutText = MSM.t('tut.serve');
-          break;
-        case 5:
-          if (MSM.ent.cash.length === 0 && s.totalEarned > 0) {
-            s.tut = 99;
-            G.tutTarget = null;
-            G.tutText = '';
-            MSM.ui.toast(MSM.t('toast.firstSale'));
-            MSM.save();
-            break;
-          }
-          if (MSM.ent.cash.length) {
-            G.tutTarget = { x: MSM.ent.cash[0].x, y: MSM.ent.cash[0].y };
-            G.tutText = MSM.t('tut.collect');
-          }
-          break;
-      }
-    },
 
     /* Stand on a product's pad and your cash drains into its next level.
        Step off and what you have already put in stays put. */
@@ -495,6 +440,7 @@ window.MSM = window.MSM || {};
       if (ss.cashier || MSM.state.cash < store.cashierCost) return;
       MSM.state.cash -= store.cashierCost;
       ss.cashier = true;
+      MSM.ent.syncCashier();
       MSM.ui.toast(MSM.t('toast.cashier'));
       MSM.save();
     },

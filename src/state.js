@@ -69,9 +69,15 @@ window.MSM = window.MSM || {};
     lastSeen: Date.now(),
     totalEarned: 0,
     served: 0,
-    tut: 0,                     // tutorial step; 99 once the first sale is done
     stores: CFG.STORES.map((s, i) => ({
       owned: i === 0,
+      /* Guidance is per SHOP, not per save: each one walks you through its
+         own loop the first time you stand in it, and 99 means done. `sales`
+         is how the script knows a shop has rung one up — MSM.ent.dropCash
+         is the single point every completed sale in the mall goes through. */
+      tut: 0,
+      sales: 0,
+      walkouts: 0,             // gave up in the queue and put it all back
       till: false,              // the counter has to be built before you can sell
       tillPaid: 0,
       open: false,              // customers only come while the sign says OPEN
@@ -116,6 +122,13 @@ window.MSM = window.MSM || {};
         rank = p.rank; best = n;
       });
       return best;
+    },
+
+    /** The line that opens just BEFORE this one — what it is waiting on. */
+    prevBuild(n, i) {
+      const store = E.store(i), me = store.products[n];
+      if (!me || me.rank == null) return null;
+      return store.products.find((p) => p.rank === me.rank - 1) || null;
     },
 
     /* ------------------------------------------------------- the cafe */
@@ -394,7 +407,6 @@ window.MSM = window.MSM || {};
     s.served = +data.served || 0;
     s.lastSeen = +data.lastSeen || Date.now();
     s.current = MSM.util.clamp(+data.current || 0, 0, s.stores.length - 1);
-    s.tut = +data.tut || 0;
     // merge by index so adding stores or products never breaks an old save
     data.stores.forEach((old, i) => {
       if (!s.stores[i] || !old) return;
@@ -404,6 +416,12 @@ window.MSM = window.MSM || {};
       s.stores[i].tillPaid = Math.max(0, +old.tillPaid || 0);
       s.stores[i].open = !!old.open;
       s.stores[i].cashier = !!old.cashier;
+      /* Tutorial progress used to be one number for the whole save, and it
+         only ever described the mini mart. An old save's number is the mini
+         mart's; every other shop starts its own walkthrough from scratch. */
+      s.stores[i].tut = Math.max(+old.tut || 0, i === 0 ? +data.tut || 0 : 0);
+      s.stores[i].sales = Math.max(0, +old.sales || 0);
+      s.stores[i].walkouts = Math.max(0, +old.walkouts || 0);
       /* The coffee shop was rebuilt from four shelf products into sixteen
          ingredients and recipes. An old save's numbers would land on
          completely different lines, so that store starts fresh — everything

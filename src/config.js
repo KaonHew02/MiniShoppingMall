@@ -19,7 +19,12 @@ MSM.CFG = {
   SAVE_KEY: 'msm.save.v12',
   START_CASH: 500,
 
+  /* The live floor box. usePlan() overwrites it from the store you are
+     standing in, so a plan can be a different size to its neighbours —
+     the mini mart is much the biggest, because it is the only one with a
+     farm bolted onto the back of the shop. */
   WORLD: { W: 23.5, H: 15.2 },
+  WORLD_DEFAULT: { W: 23.5, H: 15.2 },
 
   PLAYER_SPEED: 3.8,       // top speed; a light push on the stick is slower
   STAFF_SPEED: 2.9,
@@ -66,6 +71,9 @@ MSM.CFG = {
   QTY_ODDS:  [0.55, 0.28, 0.17],  // chance of wanting 1 / 2 / 3 of each
   MAX_BASKET: 6,                  // total items one customer will carry
   TAKE_TIME: 0.28,                // seconds to lift each item off the shelf
+  /* How long somebody hovers behind a full queue before giving up. They put
+     the shopping back when they go — see MSM.ent.abandon. */
+  QUEUE_PATIENCE: 25,
   /* Each extra stocker costs a good deal more than the last. One cannot keep
      eleven shelves and four feed stations going on their own. */
   MAX_STOCKERS: 4,
@@ -229,110 +237,147 @@ MSM.CFG = {
   STORES: [],
 };
 
-/* The mini mart, and the three stores that still borrow its shape:
-     back wall    a row of crop beds, right across the width
-     left column  the farmyard — cow pen above, chicken coop below
-     right        the orchard, and the oven off on its own
+/* The mini mart:
+     back wall    a row of nine crop beds, right across the width
+     left column  the farmyard — pig, chicken, wheat, cow, oven, vat, each
+                  one within a few steps of whatever it eats
+     right column the orchard: apple, banana, orange
      middle       the shop floor: seventeen shelves in three rows
-     front-right  the till, with the queue running back to the door   */
+     front-right  the till, with the queue running back to the door
+     front-left   the escalator up to the rest of the mall              */
 MSM.CFG.PLANS.grocery = {
   id: 'grocery',
-  /* Ten crop beds along the back, an orchard down the right, and the
-     farmyard down the left: cow, pig, chicken, then the oven. */
+  /* This floor was widened once already, because it played cramped: the
+     aisles were 0.7 apart, which is narrower than the router's own clearance,
+     so half the gaps you could SEE were gaps you could not walk through, and
+     every lane ran close enough to a pen that walking past the cow picked its
+     milk up. Everything below is spaced off two numbers: bodies are 0.22
+     across and reach 0.8, so a lane you only walk down is kept a clear 0.8
+     from anything usable, and a gap you walk THROUGH is at least 1.0. */
+  world: { W: 27.5, H: 19.0 },
+  /* Nine crop beds along the back, an orchard down the right, and the
+     farmyard down the left: pig, chicken, then the wheat field with the two
+     things that eat it — the cow and the oven — on either side of it, and
+     the yogurt vat under the cow it draws its milk from. Wheat used to sit
+     in the far top-right corner, nineteen units from the trough. */
   stations: [
-    { x0: 0.60,  y0: 0.60,  x1: 2.30,  y1: 1.90 },   //  0 potato bed
-    { x0: 2.90,  y0: 0.60,  x1: 4.60,  y1: 1.90 },   //  1 tomato bed
-    { x0: 5.20,  y0: 0.60,  x1: 6.90,  y1: 1.90 },   //  2 carrot bed
-    { x0: 7.50,  y0: 0.60,  x1: 9.20,  y1: 1.90 },   //  3 eggplant bed
-    { x0: 9.80,  y0: 0.60,  x1: 11.50, y1: 1.90 },   //  4 cabbage bed
-    { x0: 12.10, y0: 0.60,  x1: 13.80, y1: 1.90 },   //  5 cucumber bed
-    { x0: 14.40, y0: 0.60,  x1: 16.10, y1: 1.90 },   //  6 watermelon patch
-    { x0: 16.70, y0: 0.60,  x1: 18.40, y1: 1.90 },   //  7 strawberry patch
-    { x0: 19.00, y0: 0.60,  x1: 20.70, y1: 1.90 },   //  8 blueberry bushes
-    { x0: 18.60, y0: 3.60,  x1: 20.50, y1: 5.00 },   //  9 apple tree
-    { x0: 18.60, y0: 5.80,  x1: 20.50, y1: 7.20 },   // 10 banana tree
-    { x0: 18.60, y0: 8.00,  x1: 20.50, y1: 9.40 },   // 11 orange tree
-    /* Spaced a clear 1.0 apart down the column. You stand 0.5 in front of a
-       pen to use it, and with a 0.6 gap that spot fell inside the next
-       pen's collision box — which made all three animals unreachable. */
-    { x0: 0.60,  y0: 3.20,  x1: 3.10,  y1: 4.80 },   // 12 cow pen
-    { x0: 0.60,  y0: 8.40,  x1: 3.10,  y1: 10.00 },  // 13 chicken coop
-    { x0: 0.60,  y0: 11.00, x1: 2.40,  y1: 12.30 },  // 14 oven
-    { x0: 0.60,  y0: 5.80,  x1: 3.10,  y1: 7.40 },   // 15 pig pen
-    { x0: 21.30, y0: 0.60,  x1: 23.00, y1: 1.90 },   // 16 wheat field
-    { x0: 14.60, y0: 9.60,  x1: 16.40, y1: 11.00 },  // 17 yogurt vat
+    { x0: 0.70,  y0: 0.60,  x1: 2.60,  y1: 2.00 },   //  0 potato bed
+    { x0: 3.60,  y0: 0.60,  x1: 5.50,  y1: 2.00 },   //  1 tomato bed
+    { x0: 6.50,  y0: 0.60,  x1: 8.40,  y1: 2.00 },   //  2 carrot bed
+    { x0: 9.40,  y0: 0.60,  x1: 11.30, y1: 2.00 },   //  3 eggplant bed
+    { x0: 12.30, y0: 0.60,  x1: 14.20, y1: 2.00 },   //  4 cabbage bed
+    { x0: 15.20, y0: 0.60,  x1: 17.10, y1: 2.00 },   //  5 cucumber bed
+    { x0: 18.10, y0: 0.60,  x1: 20.00, y1: 2.00 },   //  6 watermelon patch
+    { x0: 21.00, y0: 0.60,  x1: 22.90, y1: 2.00 },   //  7 strawberry patch
+    { x0: 23.90, y0: 0.60,  x1: 25.80, y1: 2.00 },   //  8 blueberry bushes
+    { x0: 23.00, y0: 4.80,  x1: 25.20, y1: 6.40 },   //  9 apple tree
+    { x0: 23.00, y0: 7.60,  x1: 25.20, y1: 9.20 },   // 10 banana tree
+    { x0: 23.00, y0: 10.40, x1: 25.20, y1: 12.00 },  // 11 orange tree
+    /* The farmyard column, top to bottom: pig, chicken, wheat, cow, oven,
+       vat. Every station that eats something is within three units of what
+       it eats, and the column keeps a clear 1.5 from the aisle beside it so
+       walking down the shop does not milk the cow on the way past. */
+    { x0: 0.70,  y0: 11.50, x1: 3.10,  y1: 13.10 },  // 12 cow pen
+    { x0: 0.70,  y0: 7.00,  x1: 3.10,  y1: 8.60 },   // 13 chicken coop
+    { x0: 0.70,  y0: 13.90, x1: 2.90,  y1: 15.20 },  // 14 oven
+    { x0: 0.70,  y0: 4.60,  x1: 3.10,  y1: 6.20 },   // 15 pig pen
+    { x0: 0.70,  y0: 9.40,  x1: 3.10,  y1: 10.70 },  // 16 wheat field
+    { x0: 0.70,  y0: 16.00, x1: 2.70,  y1: 17.20 },  // 17 yogurt vat
+  ],
+  /* Where a body stands to work a station. The default is the middle of its
+     front edge, which is right for a bed you walk up to from the aisle; for
+     the two side columns it would send the staff straight DOWN through the
+     pens they are walking past, so those stand at the side instead. */
+  stands: [
+    null, null, null, null, null, null, null, null, null,
+    { x: 22.50, y: 5.60 },   //  9 apple — from the aisle, not through the tree
+    { x: 22.50, y: 8.40 },   // 10 banana
+    { x: 22.50, y: 11.20 },  // 11 orange
+    { x: 3.60,  y: 12.30 },  // 12 cow
+    { x: 3.60,  y: 7.80 },   // 13 chicken
+    { x: 3.40,  y: 14.55 },  // 14 oven
+    { x: 3.60,  y: 5.40 },   // 15 pig
+    { x: 3.60,  y: 10.05 },  // 16 wheat
+    { x: 3.20,  y: 16.60 },  // 17 vat
   ],
   pads: [
-    { x0: 0.60,  y0: 2.20,  x1: 1.30,  y1: 2.90 },
-    { x0: 2.90,  y0: 2.20,  x1: 3.60,  y1: 2.90 },
-    { x0: 5.20,  y0: 2.20,  x1: 5.90,  y1: 2.90 },
-    { x0: 7.50,  y0: 2.20,  x1: 8.20,  y1: 2.90 },
-    { x0: 9.80,  y0: 2.20,  x1: 10.50, y1: 2.90 },
-    { x0: 12.10, y0: 2.20,  x1: 12.80, y1: 2.90 },
-    { x0: 14.40, y0: 2.20,  x1: 15.10, y1: 2.90 },
-    { x0: 16.70, y0: 2.20,  x1: 17.40, y1: 2.90 },
-    { x0: 19.00, y0: 2.20,  x1: 19.70, y1: 2.90 },
-    { x0: 17.70, y0: 4.00,  x1: 18.40, y1: 4.70 },
-    { x0: 17.70, y0: 6.20,  x1: 18.40, y1: 6.90 },
-    { x0: 17.70, y0: 8.40,  x1: 18.40, y1: 9.10 },
-    { x0: 3.45,  y0: 3.20,  x1: 4.15,  y1: 3.90 },
-    { x0: 3.45,  y0: 8.40,  x1: 4.15,  y1: 9.10 },
-    { x0: 2.70,  y0: 11.30, x1: 3.40,  y1: 12.00 },
-    { x0: 3.45,  y0: 5.80,  x1: 4.15,  y1: 6.50 },
-    { x0: 21.30, y0: 2.20,  x1: 22.00, y1: 2.90 },
-    { x0: 15.30, y0: 11.30, x1: 16.00, y1: 12.00 },
+    { x0: 0.70,  y0: 2.35,  x1: 1.40,  y1: 3.05 },
+    { x0: 3.60,  y0: 2.35,  x1: 4.30,  y1: 3.05 },
+    { x0: 6.50,  y0: 2.35,  x1: 7.20,  y1: 3.05 },
+    { x0: 9.40,  y0: 2.35,  x1: 10.10, y1: 3.05 },
+    { x0: 12.30, y0: 2.35,  x1: 13.00, y1: 3.05 },
+    { x0: 15.20, y0: 2.35,  x1: 15.90, y1: 3.05 },
+    { x0: 18.10, y0: 2.35,  x1: 18.80, y1: 3.05 },
+    { x0: 21.00, y0: 2.35,  x1: 21.70, y1: 3.05 },
+    { x0: 23.90, y0: 2.35,  x1: 24.60, y1: 3.05 },
+    { x0: 22.10, y0: 4.80,  x1: 22.80, y1: 5.50 },
+    { x0: 22.10, y0: 7.60,  x1: 22.80, y1: 8.30 },
+    { x0: 22.10, y0: 10.40, x1: 22.80, y1: 11.10 },
+    { x0: 3.45,  y0: 11.50, x1: 4.15,  y1: 12.20 },
+    { x0: 3.45,  y0: 7.00,  x1: 4.15,  y1: 7.70 },
+    { x0: 3.25,  y0: 13.90, x1: 3.95,  y1: 14.60 },
+    { x0: 3.45,  y0: 4.60,  x1: 4.15,  y1: 5.30 },
+    { x0: 3.45,  y0: 9.40,  x1: 4.15,  y1: 10.10 },
+    { x0: 3.05,  y0: 16.00, x1: 3.75,  y1: 16.70 },
   ],
-  /* Six vegetables, six fruit, five dairy & bakery. */
+  /* Six vegetables, six fruit, five dairy & bakery. Shelves are 1.45 across
+     with 1.05 between them and 1.65 between the rows, so both the gap down a
+     row and the aisle between two rows are walkable — the old 0.70 gaps were
+     scenery you bounced off. */
   shelves: [
-    { x0: 4.60,  y0: 4.40, x1: 5.85,  y1: 5.30 },
-    { x0: 6.55,  y0: 4.40, x1: 7.80,  y1: 5.30 },
-    { x0: 8.50,  y0: 4.40, x1: 9.75,  y1: 5.30 },
-    { x0: 10.45, y0: 4.40, x1: 11.70, y1: 5.30 },
-    { x0: 12.40, y0: 4.40, x1: 13.65, y1: 5.30 },
-    { x0: 14.35, y0: 4.40, x1: 15.60, y1: 5.30 },
-    { x0: 4.60,  y0: 7.00, x1: 5.85,  y1: 7.90 },
-    { x0: 6.55,  y0: 7.00, x1: 7.80,  y1: 7.90 },
-    { x0: 8.50,  y0: 7.00, x1: 9.75,  y1: 7.90 },
-    { x0: 10.45, y0: 7.00, x1: 11.70, y1: 7.90 },
-    { x0: 12.40, y0: 7.00, x1: 13.65, y1: 7.90 },
-    { x0: 14.35, y0: 7.00, x1: 15.60, y1: 7.90 },
-    { x0: 4.60,  y0: 9.60, x1: 5.85,  y1: 10.50 },
-    { x0: 6.55,  y0: 9.60, x1: 7.80,  y1: 10.50 },
-    { x0: 8.50,  y0: 9.60, x1: 9.75,  y1: 10.50 },
-    { x0: 10.45, y0: 9.60, x1: 11.70, y1: 10.50 },
-    { x0: 12.40, y0: 9.60, x1: 13.65, y1: 10.50 },
+    { x0: 5.60,  y0: 4.70, x1: 7.05,  y1: 5.65 },
+    { x0: 8.10,  y0: 4.70, x1: 9.55,  y1: 5.65 },
+    { x0: 10.60, y0: 4.70, x1: 12.05, y1: 5.65 },
+    { x0: 13.10, y0: 4.70, x1: 14.55, y1: 5.65 },
+    { x0: 15.60, y0: 4.70, x1: 17.05, y1: 5.65 },
+    { x0: 18.10, y0: 4.70, x1: 19.55, y1: 5.65 },
+    { x0: 5.60,  y0: 7.30, x1: 7.05,  y1: 8.25 },
+    { x0: 8.10,  y0: 7.30, x1: 9.55,  y1: 8.25 },
+    { x0: 10.60, y0: 7.30, x1: 12.05, y1: 8.25 },
+    { x0: 13.10, y0: 7.30, x1: 14.55, y1: 8.25 },
+    { x0: 15.60, y0: 7.30, x1: 17.05, y1: 8.25 },
+    { x0: 18.10, y0: 7.30, x1: 19.55, y1: 8.25 },
+    { x0: 5.60,  y0: 9.90, x1: 7.05,  y1: 10.85 },
+    { x0: 8.10,  y0: 9.90, x1: 9.55,  y1: 10.85 },
+    { x0: 10.60, y0: 9.90, x1: 12.05, y1: 10.85 },
+    { x0: 13.10, y0: 9.90, x1: 14.55, y1: 10.85 },
+    { x0: 15.60, y0: 9.90, x1: 17.05, y1: 10.85 },
   ],
-  lanes: [6.20, 8.15, 10.10, 12.05, 14.00, 16.20,
-          6.20, 8.15, 10.10, 12.05, 14.00, 16.20,
-          6.20, 8.15, 10.10, 12.05, 14.00],
+  lanes: [7.58, 10.08, 12.58, 15.08, 17.58, 20.08,
+          7.58, 10.08, 12.58, 15.08, 17.58, 20.08,
+          7.58, 10.08, 12.58, 15.08, 17.58],
   sections: [
-    { name: 'VEGETABLES',     x0: 4.35, y0: 4.10, x1: 16.00, y1: 6.30,  tint: '#BFEAB6' },
-    { name: 'FRUIT',          x0: 4.35, y0: 6.70, x1: 16.00, y1: 8.90,  tint: '#FFDCA8' },
-    { name: 'DAIRY & BAKERY', x0: 4.35, y0: 9.30, x1: 14.05, y1: 11.50, tint: '#CFE2FF' },
+    { name: 'VEGETABLES',     x0: 5.30, y0: 4.35, x1: 19.85, y1: 6.60,  tint: '#BFEAB6' },
+    { name: 'FRUIT',          x0: 5.30, y0: 6.95, x1: 19.85, y1: 9.20,  tint: '#FFDCA8' },
+    { name: 'DAIRY & BAKERY', x0: 5.30, y0: 9.55, x1: 17.35, y1: 11.80, tint: '#CFE2FF' },
   ],
   /* The floor itself: banded zones first, then patches of grass on top. */
   zones: [
-    { y0: -0.25, y1: 3.15,  a: '#A9E4A2', b: '#9FDD98' },   // the crop beds
-    { y0: 3.15,  y1: 12.00, a: '#FFE3D2', b: '#FBDBC8' },   // the shop floor
-    { y0: 12.00, y1: 15.45, a: '#DCE4EE', b: '#D3DCE8' },   // by the door
+    { y0: -0.25, y1: 3.60,  a: '#A9E4A2', b: '#9FDD98' },   // the crop beds
+    { y0: 3.60,  y1: 15.90, a: '#FFE3D2', b: '#FBDBC8' },   // the shop floor
+    { y0: 15.90, y1: 19.25, a: '#DCE4EE', b: '#D3DCE8' },   // by the door
   ],
   patches: [
-    { x0: -0.25, y0: 3.15, x1: 3.50,  y1: 12.00, c: '#9FDD98', line: 'x1' },
-    { x0: 18.20, y0: 3.15, x1: 23.75, y1: 9.90,  c: '#9FDD98', line: 'x0' },
+    { x0: -0.25, y0: 3.60, x1: 4.30,  y1: 17.90, c: '#9FDD98', line: 'x1' },
+    { x0: 22.30, y0: 3.60, x1: 27.75, y1: 12.60, c: '#9FDD98', line: 'x0' },
   ],
 
-  stockLane: 3.40,
-  walkway: 12.35,
+  stockLane: 3.70,
+  walkway: 12.10,
 
-  till:  { x0: 17.00, y0: 10.40, x1: 18.60, y1: 11.20 },
-  serve: { x: 17.80, y: 9.95 },
-  queue: [{ x: 17.80, y: 11.90 }, { x: 17.80, y: 12.45 },
-          { x: 17.80, y: 13.00 }, { x: 17.80, y: 13.55 }],
-  entrance: { x: 17.80, y: 14.70 },
-  spawn:    { x: 15.20, y: 12.40 },
-  door:     { x0: 0.60, y0: 12.20, x1: 3.60, y1: 14.20 },
-  sign:     { x0: 16.30, y0: 13.95, x1: 17.00, y1: 14.60 },
-  bin:      { x0: 21.80, y0: 14.00, x1: 22.50, y1: 14.70 },
+  till:  { x0: 20.60, y0: 12.90, x1: 22.20, y1: 13.70 },
+  serve: { x: 21.40, y: 12.45 },
+  /* Five slots, not four. The queue used to be short enough to fill in a
+     busy minute, and a customer who found it full walked straight out with
+     an armful of shopping — see MSM.ent.abandon. */
+  queue: [{ x: 21.40, y: 14.40 }, { x: 21.40, y: 15.05 },
+          { x: 21.40, y: 15.70 }, { x: 21.40, y: 16.35 },
+          { x: 21.40, y: 17.00 }],
+  entrance: { x: 21.40, y: 18.20 },
+  spawn:    { x: 17.60, y: 15.60 },
+  door:     { x0: 5.20, y0: 16.00, x1: 8.20, y1: 18.00 },
+  sign:     { x0: 19.00, y0: 17.40, x1: 19.70, y1: 18.05 },
+  bin:      { x0: 25.00, y0: 17.20, x1: 25.70, y1: 17.90 },
 };
 
 /* The coffee shop:
@@ -1251,6 +1296,8 @@ MSM.CFG.usePlan = function (i) {
   if (MSM.CFG.PLAN.id === store.plan.id) return false;
   Object.keys(MSM.CFG.PLAN).forEach((k) => { delete MSM.CFG.PLAN[k]; });
   Object.assign(MSM.CFG.PLAN, store.plan);
+  // the floor box travels with the plan, in place — iso and world hold it
+  Object.assign(MSM.CFG.WORLD, store.plan.world || MSM.CFG.WORLD_DEFAULT);
   return true;
 };
 MSM.CFG.usePlan(0);

@@ -44,6 +44,14 @@ street door, and some leave back up it rather than out to the street, because
 they are shopping the whole mall rather than one unit. With only one shop open
 the escalator is idle and everyone uses the door.
 
+## Being told what to do
+
+Every shop walks you through its own loop the first time you stand in it — a
+gold arrow on the floor and one line under the HUD, a step at a time, ending
+at its first sale. After that the same line keeps working as a live to-do:
+the cow whose trough has run dry, a queue with nobody on the till, the next
+product line you can afford to build, the next shop you can afford to buy.
+
 ## Your first five minutes
 
 You start with **$500** in a closed, empty store. A gold arrow walks you
@@ -64,16 +72,24 @@ down; the bin is where mistakes go.
 2. **Read the floor** — a green ring round the bubble is their patience. It
    drains only while they stand at an empty shelf. At zero they walk out
    angry and the sale is lost.
-3. **Restock** — everything is *made* on site, not delivered. Crop beds sit
-   back-left, the animal pens back-right, the oven off to the side:
+3. **Restock** — everything is *made* on site, not delivered. Nine crop beds
+   run right across the back, the orchard is down the right, and the farmyard
+   is the column down the left: pig, chicken, **wheat field**, cow, oven,
+   yogurt vat, in that order. The column is ordered so nothing is ever far
+   from what it eats — the wheat sits between the cow and the oven, the only
+   two things that want it, and the vat sits under the cow it draws milk
+   from:
 
    | Product | Comes from | Needs |
    | --- | --- | --- |
-   | Potato, Tomato, Carrot, Eggplant, Cabbage, Wheat | crop beds along the back | just time |
+   | Potato, Tomato, Carrot, Eggplant, Cabbage, Cucumber, Watermelon, Strawberry, Blueberry | crop beds along the back | just time |
    | Apple, Banana, Orange | the orchard down the right | just time |
-   | Milk | the cow, in the farmyard down the left | wheat in its trough |
-   | Eggs | the chicken coop, below the cow | tomatoes |
-   | Bread | the oven, by the door | wheat |
+   | Wheat | the wheat field, mid-way down the farmyard | just time |
+   | Milk | the cow, right below the wheat | wheat in its trough |
+   | Bread | the oven, right below the cow | wheat |
+   | Yogurt | the vat at the foot of the column | milk |
+   | Bacon | the pig pen, at the top | potatoes |
+   | Eggs | the chicken coop, below the pig | tomatoes |
 
    The shop floor is laid out by department — **Vegetables**, **Fruit**, and
    **Dairy & Bakery** — each a tinted block of floor with its name on it.
@@ -94,8 +110,8 @@ Only the Grocery Store has the full farm chain. Every other shop is its own
 game with its own floor — see the stages below.
 
 **Staff** take over the parts you are tired of doing. A stocker hauls feed to
-whatever is starving, then restocks the emptiest shelf; the cashier works the
-till. You can hire **up to four stockers** — each costs 3.2x the last — and
+whatever is starving, then restocks the emptiest shelf; the cashier is a body
+who stands at the counter and works the till. You can hire **up to four stockers** — each costs 3.2x the last — and
 they claim jobs so two never chase the same shelf. One alone cannot keep
 eleven shelves and four feed stations going. A store only earns while you
 are elsewhere — or offline, 2 hours max at half rate — with **both** hired.

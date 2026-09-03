@@ -241,6 +241,26 @@ window.MSM = window.MSM || {};
     `<div class="row-ico art" style="background:radial-gradient(circle at 50% 34%,#fff 4%,${
       U.shade(prod.color, 0.72)} 100%)"><img src="${thumb(prod)}" alt=""></div>`;
 
+  /* A line you have not opened yet. "Unlocks later" said nothing useful: not
+     what it costs, not what has to come first, and — the part people get
+     stuck on — not that you open one by WALKING onto its plot in the shop
+     rather than pressing anything in this list. */
+  function lockedRow(prod, n) {
+    const next = MSM.econ.nextBuild() === n;
+    const cost = '$' + U.money(prod.buildCost);
+    const after = MSM.econ.prevBuild(n);
+    const sub = next ? t('prod.build', { cost })
+      : after ? t('prod.after', { name: after.name, cost })
+      : t('prod.later');
+    return `<div class="row prod locked">${artChip(prod)}
+      <div class="row-main">
+        <div class="row-name">${prod.name}${
+          next ? ` <span class="lvl">${t('prod.upNext')}</span>` : ''}</div>
+        <div class="row-sub">${sub}</div>
+      </div>
+    </div>`;
+  }
+
   const meter = (kind, label, have, cap) =>
     `<div class="meter ${kind}"><i style="width:${Math.round(
       U.clamp(have / cap, 0, 1) * 100)}%"></i><span>${label} ${have}/${cap}</span></div>`;
@@ -286,15 +306,7 @@ window.MSM = window.MSM || {};
     const rows = store.products.map((prod, n) => {
       const ps = MSM.econ.pstate(n);
       if (!ps.built) {
-        const next = MSM.econ.nextBuild() === n;
-        return `<div class="row prod locked">${artChip(prod)}
-          <div class="row-main">
-            <div class="row-name">${prod.name}</div>
-            <div class="row-sub">${next
-              ? t('prod.build', { cost: '$' + U.money(prod.buildCost) })
-              : t('prod.later')}</div>
-          </div>
-        </div>`;
+        return lockedRow(prod, n);
       }
       const count = UI.buyMode === 'max' ? Math.max(1, MSM.econ.maxBuy(n, cash)) : UI.buyMode;
       const cost = MSM.econ.upgradeCost(n, count);
@@ -356,15 +368,7 @@ window.MSM = window.MSM || {};
     const rows = store.products.map((prod, n) => {
       const ps = MSM.econ.pstate(n);
       if (!ps.built) {
-        const next = MSM.econ.nextBuild() === n;
-        return `<div class="row prod locked">${artChip(prod)}
-          <div class="row-main">
-            <div class="row-name">${prod.name}</div>
-            <div class="row-sub">${next
-              ? t('prod.build', { cost: '$' + U.money(prod.buildCost) })
-              : t('prod.later')}</div>
-          </div>
-        </div>`;
+        return lockedRow(prod, n);
       }
       const count = UI.buyMode === 'max' ? Math.max(1, MSM.econ.maxBuy(n, cash)) : UI.buyMode;
       const cost = MSM.econ.upgradeCost(n, count);
@@ -424,15 +428,7 @@ window.MSM = window.MSM || {};
     const rows = store.products.map((prod, n) => {
       const ps = MSM.econ.pstate(n);
       if (!ps.built) {
-        const next = MSM.econ.nextBuild() === n;
-        return `<div class="row prod locked">${artChip(prod)}
-          <div class="row-main">
-            <div class="row-name">${prod.name}</div>
-            <div class="row-sub">${next
-              ? t('prod.build', { cost: '$' + U.money(prod.buildCost) })
-              : t('prod.later')}</div>
-          </div>
-        </div>`;
+        return lockedRow(prod, n);
       }
       const count = UI.buyMode === 'max' ? Math.max(1, MSM.econ.maxBuy(n, cash)) : UI.buyMode;
       const cost = MSM.econ.upgradeCost(n, count);
@@ -493,15 +489,7 @@ window.MSM = window.MSM || {};
     const rows = store.products.map((prod, n) => {
       const ps = MSM.econ.pstate(n);
       if (!ps.built) {
-        const next = MSM.econ.nextBuild() === n;
-        return `<div class="row prod locked">${artChip(prod)}
-          <div class="row-main">
-            <div class="row-name">${prod.name}</div>
-            <div class="row-sub">${next
-              ? t('prod.build', { cost: '$' + U.money(prod.buildCost) })
-              : t('prod.later')}</div>
-          </div>
-        </div>`;
+        return lockedRow(prod, n);
       }
       const count = UI.buyMode === 'max' ? Math.max(1, MSM.econ.maxBuy(n, cash)) : UI.buyMode;
       const cost = MSM.econ.upgradeCost(n, count);
@@ -582,15 +570,7 @@ window.MSM = window.MSM || {};
     const rows = store.products.map((prod, n) => {
       const ps = MSM.econ.pstate(n);
       if (!ps.built) {
-        const next = MSM.econ.nextBuild() === n;
-        return `<div class="row prod locked">${artChip(prod)}
-          <div class="row-main">
-            <div class="row-name">${prod.name}</div>
-            <div class="row-sub">${next
-              ? t('prod.build', { cost: '$' + U.money(prod.buildCost) })
-              : t('prod.later')}</div>
-          </div>
-        </div>`;
+        return lockedRow(prod, n);
       }
       const count = UI.buyMode === 'max' ? Math.max(1, MSM.econ.maxBuy(n, cash)) : UI.buyMode;
       const cost = MSM.econ.upgradeCost(n, count);
@@ -629,15 +609,7 @@ window.MSM = window.MSM || {};
     const rows = MSM.econ.store().products.map((prod, n) => {
       const ps = MSM.econ.pstate(n), cash = MSM.state.cash;
       if (!ps.built) {
-        const next = MSM.econ.nextBuild() === n;
-        return `<div class="row prod locked">${artChip(prod)}
-          <div class="row-main">
-            <div class="row-name">${prod.name}</div>
-            <div class="row-sub">${next
-              ? t('prod.build', { cost: '$' + U.money(prod.buildCost) })
-              : t('prod.later')}</div>
-          </div>
-        </div>`;
+        return lockedRow(prod, n);
       }
       const count = UI.buyMode === 'max' ? Math.max(1, MSM.econ.maxBuy(n, cash)) : UI.buyMode;
       const cost = MSM.econ.upgradeCost(n, count);
@@ -658,7 +630,8 @@ window.MSM = window.MSM || {};
       </div>`;
     }).join('');
 
-    return `<div class="seg">${seg}</div>${rows}`;
+    return `<div class="hint">${t('prod.howto')}</div>
+      <div class="seg">${seg}</div>${rows}`;
   }
 
   function staffBody() {
@@ -732,6 +705,19 @@ window.MSM = window.MSM || {};
         </div>
       </div>`;
 
+    /* The mini mart has no hire of its own beyond the two above, but it does
+       have the number that says whether the till is keeping up: a customer
+       who gives up in the queue puts the whole basket back on the shelf. */
+    const martRows = (cs || sp || bs || ts || fd) ? '' :
+      `<div class="row">
+        <div class="row-ico" style="background:#E4F6EA">📊</div>
+        <div class="row-main">
+          <div class="row-name">${t('mart.convName')}</div>
+          <div class="row-sub">${t('mart.convSub', {
+            n: ss.sales || 0, w: ss.walkouts || 0 })}</div>
+        </div>
+      </div>`;
+
     /* Stage 5's hire, and its scoreboard: how many walked out with a box,
        and how much of that the demos and the advice did. */
     const techRows = !ts ? '' :
@@ -780,7 +766,7 @@ window.MSM = window.MSM || {};
           ss.cashier ? t(cs ? 'staff.orderTakerOn' : 'staff.cashierOn')
                      : t(cs ? 'staff.orderTakerOff' : 'staff.cashierOff'),
           ss.cashier, 'cashier', store.cashierCost) +
-      cafeRows + foodRows + sportRows + fitRows + techRows +
+      cafeRows + foodRows + sportRows + fitRows + techRows + martRows +
       `<div class="row">
         <div class="row-ico" style="background:#E4F6EA">📈</div>
         <div class="row-main">
@@ -873,11 +859,16 @@ window.MSM = window.MSM || {};
       const ss = MSM.state.stores[i];
       const here = i === MSM.state.current;
       if (!ss.owned) {
+        /* Say what "locked" is waiting for. Shops open on CASH — there is no
+           level gate anywhere in the mall — and the button alone never said
+           how far off you were. */
         return `<div class="row locked">${chip('🔒', store.color)}
           <div class="row-main">
             <div class="row-name">${store.name}</div>
             <div class="row-sub">${store.products.map((p) => p.glyph).join(' ')} · ${
               t('map.products', { n: store.products.length })}</div>
+            <div class="row-sub">${t('map.need', {
+              cost: '$' + U.money(store.unlock), have: '$' + U.money(cash) })}</div>
           </div>
           <button class="btn gold" data-act="unlock" data-i="${i}" ${cash >= store.unlock ? '' : 'disabled'}>
             ${t('btn.unlock')}<small>$${U.money(store.unlock)}</small></button>

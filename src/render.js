@@ -1187,6 +1187,12 @@ window.MSM = window.MSM || {};
     }));
     // staff are pink; the player is the blue one you drive
     const CREW = ['#FF2E9C', '#F2A03D', '#B45CE0', '#12B4A6'];
+    if (MSM.ent.cashier) {
+      const k = MSM.ent.cashier;
+      items.push({ d: k.x + k.y + 0.3,
+                   fn: () => drawBody(ctx, k,
+                     { body: '#00B368', cap: '#FFFFFF', accent: '#00B368' }) });
+    }
     MSM.ent.stockers.forEach((st, i) => {
       items.push({ d: st.x + st.y + 0.3,
                    fn: () => drawBody(ctx, st,

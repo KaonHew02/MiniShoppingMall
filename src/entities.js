@@ -33,6 +33,8 @@ window.MSM = window.MSM || {};
          stepped off the escalator into a smaller shop. */
       this.stockers.length = 0;
       this.syncStockers();
+      this.cashier = null;
+      this.syncCashier();
       if (MSM.cafe) MSM.cafe.reset();
       if (MSM.sports) MSM.sports.reset();
       if (MSM.boutique) MSM.boutique.reset();
@@ -52,6 +54,42 @@ window.MSM = window.MSM || {};
           walk: 0, moving: false, handle: 0,
         });
       }
+    },
+
+    /* ----------------------------------------------------------- cashier */
+    /* Hiring a cashier used to be a tick in a menu and nothing else: the
+       queue cleared itself with visibly nobody standing there doing it, and
+       the obvious read was that the character was missing. They are a body
+       on the floor now, like the stockers, in every shop — the till, the
+       cafe counter and the burger counter all run off the same flag. */
+    cashier: null,
+
+    /** Put one behind the counter, or take them away, to match the hire. */
+    syncCashier() {
+      if (!MSM.econ.sstate().cashier) { this.cashier = null; return; }
+      if (this.cashier) return;
+      /* Along the counter to one end, and a touch further back than the
+         player's own spot, so the two of you do not stand in each other. */
+      const t = P.till, sv = P.serve;
+      const wide = (t.x1 - t.x0) >= (t.y1 - t.y0);
+      const side = wide ? Math.max(0.8, (t.x1 - t.x0) * 0.45)
+                        : Math.max(0.8, (t.y1 - t.y0) * 0.45);
+      this.cashier = {
+        x: wide ? sv.x - side : sv.x - 0.15,
+        y: wide ? sv.y - 0.15 : sv.y - side,
+        hold: [], carry: 0, carryP: -1,
+        walk: 0, moving: false, handle: 0,
+      };
+    },
+
+    /** They shuffle on the spot while there is somebody to ring up. */
+    stepCashier(dt) {
+      this.syncCashier();
+      const s = this.cashier;
+      if (!s) return;
+      const front = this.queue[0];
+      s.moving = !!front && front.phase === 'queue';
+      if (s.moving) s.walk += dt * 1.5;
     },
 
     /* ------------------------------------------------- the escalator */
@@ -154,9 +192,19 @@ window.MSM = window.MSM || {};
       return W.seek(c, P.entrance.x, P.entrance.y + 0.6, spd, dt, false);
     },
 
-    /** Where a body stands to reach a source / a shelf. Offset to the right
-        of the station so it clears the level pad on its left. */
-    crateStand: (n) => ({ x: (P.stations[n].x0 + P.stations[n].x1) / 2 + 0.28, y: P.stations[n].y1 + 0.5 }),
+    /**
+     * Where a body stands to reach a source. The default is just in front of
+     * the station, offset right so it clears the level pad on its left.
+     * A plan may name the spot itself instead: the mini mart's farmyard and
+     * orchard are vertical columns, and standing in FRONT of each one sent
+     * the staff walking straight down through every pen above it.
+     */
+    crateStand(n) {
+      const st = (P.stands || [])[n];
+      if (st) return { x: st.x, y: st.y };
+      const b = P.stations[n];
+      return { x: (b.x0 + b.x1) / 2 + 0.28, y: b.y1 + 0.5 };
+    },
     shelfStand: (n) => MSM.econ.prod(n).browse,
 
     /* ------------------------------------------------------- production */
@@ -248,33 +296,45 @@ window.MSM = window.MSM || {};
          size straight to whoever asked for it. Both are its own business. */
       if (store.mode === 'boutique' && MSM.boutique.handle(body)) { body.handle = 0; return; }
 
-      store.products.some((prod, n) => {
-        const ps = ss.products[n];
-        if (!ps.built) return false;
-
-        // in the cafe the "shelf" is the ingredient storage the bar draws on
-        if (prod.shelf && (prod.sell || prod.ingredient) && ps.shelf < CFG.SHELF_CAP &&
-            body.hold.indexOf(n) >= 0 && W.atBox(body, prod.shelf)) {
+      /* Three passes over the whole floor, in that order — NOT one pass per
+         product that tries all three. Stations sit close enough now that you
+         are often in reach of two at once, and the old per-product order let
+         the lower-numbered one win: carrying milk to the yogurt vat you were
+         also in range of the cow, so the cow topped your arms back up with
+         milk and the vat never got fed. Putting something down always beats
+         picking something up. */
+      const passes = [
+        // 1. stock a shelf — in the cafe, the storage the bar draws on
+        (prod, n, ps) => {
+          if (!prod.shelf || !(prod.sell || prod.ingredient)) return false;
+          if (ps.shelf >= CFG.SHELF_CAP) return false;
+          if (body.hold.indexOf(n) < 0 || !W.atBox(body, prod.shelf)) return false;
           E.takeOne(body, n); ps.shelf++;
-          body.handle = 0;
           return true;
-        }
-        // feeding: this station eats something we are holding
-        const inp = prod.source.inputIndex;
-        if (inp >= 0 && ps.feed < CFG.FEED_CAP &&
-            body.hold.indexOf(inp) >= 0 && W.atBox(body, prod.crate)) {
+        },
+        // 2. tip something into the animal or machine that eats it
+        (prod, n, ps) => {
+          const inp = prod.source.inputIndex;
+          if (inp < 0 || ps.feed >= CFG.FEED_CAP) return false;
+          if (body.hold.indexOf(inp) < 0 || !W.atBox(body, prod.crate)) return false;
           E.takeOne(body, inp); ps.feed++;
-          body.handle = 0;
           return true;
-        }
-        if (ps.out > 0 && !prod.drink && body.hold.length < CFG.CARRY_CAP &&
-            (body.only < 0 || body.only === n) && W.atBox(body, prod.crate)) {
+        },
+        // 3. fill your arms from a station
+        (prod, n, ps) => {
+          if (ps.out <= 0 || prod.drink) return false;
+          if (body.hold.length >= CFG.CARRY_CAP) return false;
+          if (body.only >= 0 && body.only !== n) return false;
+          if (!W.atBox(body, prod.crate)) return false;
           ps.out--; body.hold.push(n); E.sync(body);
-          body.handle = 0;
           return true;
-        }
-        return false;
-      });
+        },
+      ];
+      const acted = passes.some((pass) => store.products.some((prod, n) => {
+        const ps = ss.products[n];
+        return ps.built && pass(prod, n, ps);
+      }));
+      if (acted) body.handle = 0;
     },
 
     /** Stand by the bin and whatever is in your arms goes in it. */
@@ -300,7 +360,32 @@ window.MSM = window.MSM || {};
       }
     },
 
+    /**
+     * They give up and leave with nothing. Everything in the basket goes
+     * back where it came from — onto its shelf if there is room, otherwise
+     * into the crate behind it — so a walkout costs you the sale and the
+     * time, but never the stock itself.
+     */
+    abandon(c) {
+      const ss = MSM.econ.sstate();
+      (c.bought || []).forEach((n) => {
+        const ps = ss.products[n];
+        if (!ps) return;
+        if (ps.shelf < CFG.SHELF_CAP) ps.shelf++;
+        else if (ps.out < CFG.CRATE_CAP) ps.out++;
+      });
+      c.bought = null;
+      c.got = 0; c.total = 0; c.carry = 0; c.carryP = -1;
+      c.mood = 'angry';
+      c.phase = 'leave';
+      ss.walkouts = (ss.walkouts || 0) + 1;
+      MSM.render.pop(c.x, c.y, 1.0, '😠', '#FF5C5C');
+    },
+
     dropCash(value, x, y) {
+      // the one point every completed sale in every shop passes through
+      const sst = MSM.econ.sstate();
+      sst.sales = (sst.sales || 0) + 1;
       this.cash.push({
         x: (x != null ? x : P.serve.x) + (Math.random() - 0.5) * 1.3,
         y: (y != null ? y : P.serve.y - 0.15) + (Math.random() - 0.5) * 0.5,
@@ -454,7 +539,7 @@ window.MSM = window.MSM || {};
       /* During the tutorial, customers keep it simple: one item, and always
          something that is actually on a shelf — the first customer walking
          straight to your stocked potatoes is the whole first-sale moment. */
-      if (MSM.state.tut < 99) {
+      if (MSM.tut.scripted()) {
         let best = -1, most = 0;
         store.sells.forEach((pr) => {
           const st = ss.products[pr.index];
@@ -597,7 +682,21 @@ window.MSM = window.MSM || {};
 
           case 'toQueue': {
             if (this.queue.indexOf(c) < 0) {
-              if (this.queue.length >= P.queue.length) { c.phase = 'leave'; break; }
+              /* Nowhere to stand. They used to turn round and walk out THERE
+                 AND THEN — still holding everything they had lifted off the
+                 shelf, which is why customers looked like they were robbing
+                 the place: the stock was gone and no money came in. Hang
+                 back behind the last slot instead and keep trying, and if
+                 the till never clears, put the shopping back before going. */
+              if (this.queue.length >= P.queue.length) {
+                const back = P.queue[P.queue.length - 1];
+                c.mood = 'wait';
+                W.seek(c, back.x, back.y + 0.85, spd, dt, false);
+                c.qWait = (c.qWait || 0) + dt;
+                if (c.qWait > CFG.QUEUE_PATIENCE) E.abandon(c);
+                break;
+              }
+              c.qWait = 0;
               this.queue.push(c);
             }
             // back down the lane first, then across to the slot

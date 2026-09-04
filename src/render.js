@@ -849,8 +849,13 @@ window.MSM = window.MSM || {};
 
     box(ctx, b, 0, 0.55, '#FFC53D');
     iso.tile(ctx, b.x0 + 0.05, b.y0 + 0.05, b.x1 - 0.05, b.y1 - 0.05, 0.552, '#FFE9AE');
-    iso.box(ctx, b.x0 + 0.15, b.y0 + 0.12, b.x0 + 0.62, b.y0 + 0.46, 0.55, 0.88, '#4E5D80');
-    iso.tile(ctx, b.x0 + 0.19, b.y0 + 0.16, b.x0 + 0.58, b.y0 + 0.42, 0.882, '#8FD8FF');
+    /* The register stands where the CASHIER stands. Parked at the left end
+       of the counter it belonged to whatever fixture happened to end there
+       — in the food court that is the assembly bench, and the two together
+       read as one counter with a lump on the end. */
+    const rx = U.clamp(P.serve ? P.serve.x : b.x0 + 0.4, b.x0 + 0.35, b.x1 - 0.35);
+    iso.box(ctx, rx - 0.24, b.y0 + 0.12, rx + 0.24, b.y0 + 0.46, 0.55, 0.88, '#4E5D80');
+    iso.tile(ctx, rx - 0.20, b.y0 + 0.16, rx + 0.20, b.y0 + 0.42, 0.882, '#8FD8FF');
 
     /* Checkout in progress: a bag on the counter, and the customer's items
        hop into it one by one as they are rung up. */

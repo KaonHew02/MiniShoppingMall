@@ -192,7 +192,8 @@ window.MSM = window.MSM || {};
     P.areas.forEach((spec, ai) => {
       /* Sort the court by its FAR edge so the painted floor lands under the
          people standing on it, and the equipment behind them. */
-      items.push({ d: spec.box.x0 + spec.box.y0 + 0.01, fn: () => drawArea(ctx, ai) });
+      items.push({ d: spec.box.x0 + spec.box.y0 + 0.01, b: spec.box,
+                   fn: () => drawArea(ctx, ai) });
     });
   };
 

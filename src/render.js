@@ -1017,40 +1017,6 @@ window.MSM = window.MSM || {};
     return { x: s.x, y: hy - hr - (look.cap ? hr * 0.35 : 0) };
   }
 
-  /* ------------------------------------------------- where a body sorts */
-  /* One number per drawable only sorts correctly while everything is the
-     same size. A shelf is 1.45 across and keys on its NEAR corner
-     (x1 + y1), so a body standing at the left-hand end of its front edge
-     has the smaller key and the shelf paints straight over them. That is
-     why the character kept disappearing into the counter and the customers
-     looked like they were sitting inside the furniture.
-
-     Bodies are the only things that move, so correct them and leave the
-     fixtures alone: clamp the key against every solid box with the real
-     isometric test — one box is in front of another when it clears it
-     entirely on an axis. Two boxes that only miss each other diagonally
-     pass BOTH tests, never overlap on screen, and so get no say. */
-  function bodyDepth(e, base) {
-    // riders on the escalator ramp are above the floor and sort on their own
-    if (e.z) return base;
-    const r = CFG.BODY_R;
-    let lo = -Infinity, hi = Infinity;
-    const solids = MSM.world.solids();
-    for (let k = 0; k < solids.length; k++) {
-      const b = solids[k];
-      if (!b) continue;
-      const front = e.y - r >= b.y1 || e.x - r >= b.x1;
-      const back = e.y + r <= b.y0 || e.x + r <= b.x0;
-      if (front === back) continue;      // diagonal miss, or standing inside it
-      if (front) lo = Math.max(lo, b.x1 + b.y1 + 0.02);
-      else hi = Math.min(hi, b.x0 + b.y0 - 0.02);
-    }
-    /* Boxed in on both sides by fixtures that disagree: being swallowed by
-       the thing you are standing in FRONT of is the worse of the two. */
-    if (lo > hi) return lo;
-    return U.clamp(base, lo, hi);
-  }
-
   /** A customer with something in their basket — or, once they have paid,
       the packed paper bag they carry out of the store. */
   function drawBasket(ctx, c) {
@@ -1188,6 +1154,54 @@ window.MSM = window.MSM || {};
   R.fx = { rrect, text, tag, shadow, item, box, onFace, ell2, stroke2,
            buildPlot, drawPaperBag, drawBody };
 
+  /* ------------------------------------------------------- what paints first */
+  /* One depth number per object only sorts correctly while everything is the
+     same size, and this shop is not: the kitchen line is five units long and
+     keys on its near corner, so it painted over the order counter three
+     tiles in FRONT of it — and anyone standing between the two came out on
+     top of the counter, apparently stood on the table.
+
+     So anything with a real footprint is ordered by the real test instead:
+     one box is behind another when it clears it entirely on an axis. The
+     depth number is still what seeds the order and breaks ties, and it is
+     all the flat floor decals have, which is why they keep their hand-tuned
+     offsets. Boxes that overlap constrain nothing and fall back to it too.
+
+     The relation can contain a cycle (three boxes each clearing the next);
+     `mark` breaks whichever edge the walk meets last, which is arbitrary but
+     stable, and any order is right for shapes that cannot all be in front. */
+  function paint(items) {
+    items.sort((a, b) => a.d - b.d);
+    const n = items.length;
+    const deps = new Array(n).fill(null);
+    for (let i = 0; i < n; i++) {
+      const A = items[i].b;
+      if (!A) continue;
+      for (let j = 0; j < n; j++) {
+        const B = j === i ? null : items[j].b;
+        if (!B) continue;
+        if (B.x1 <= A.x0 || B.y1 <= A.y0) (deps[i] || (deps[i] = [])).push(j);
+      }
+    }
+    const mark = new Uint8Array(n), out = [];
+    const visit = (i) => {
+      if (mark[i]) return;
+      mark[i] = 1;
+      const e = deps[i];
+      if (e) for (let k = 0; k < e.length; k++) visit(e[k]);
+      out.push(items[i]);
+    };
+    for (let i = 0; i < n; i++) visit(i);
+    return out;
+  }
+
+  /* A body is a small box on the floor. Riders on the escalator ramp are off
+     the floor entirely and keep to the depth number alone. */
+  const bodyBox = (e) => (e.z ? null : {
+    x0: e.x - CFG.BODY_R, y0: e.y - CFG.BODY_R,
+    x1: e.x + CFG.BODY_R, y1: e.y + CFG.BODY_R,
+  });
+
   /* --------------------------------------------------------------- frame */
   R.frame = function (dt) {
     const ctx = this.ctx;
@@ -1200,12 +1214,13 @@ window.MSM = window.MSM || {};
     const items = [];
     MSM.econ.store().products.forEach((prod, n) => {
       const built = MSM.econ.pstate(n).built;
-      items.push({ d: prod.crate.x1 + prod.crate.y1, fn: () => drawSource(ctx, n) });
+      items.push({ d: prod.crate.x1 + prod.crate.y1, b: prod.crate,
+                   fn: () => drawSource(ctx, n) });
       if (built) {
         items.push({ d: prod.pad.x1 + prod.pad.y1 - 0.5, fn: () => drawLevelPad(ctx, n) });
         // every cafe ingredient shares one storage unit — MSM.cafe draws it once
         if (prod.shelf && !cafe) {
-          items.push({ d: prod.shelf.x1 + prod.shelf.y1,
+          items.push({ d: prod.shelf.x1 + prod.shelf.y1, b: prod.shelf,
                        fn: () => (boutique ? MSM.boutique.drawRack(ctx, n)
                                 : tech ? MSM.tech.drawDisplay(ctx, n)
                                 : food ? MSM.food.drawRack(ctx, n)
@@ -1218,22 +1233,22 @@ window.MSM = window.MSM || {};
     if (boutique) MSM.boutique.collect(items, ctx);
     if (tech) MSM.tech.collect(items, ctx);
     if (food) MSM.food.collect(items, ctx);
-    items.push({ d: P.till.x1 + P.till.y1, fn: () => drawTill(ctx) });
+    items.push({ d: P.till.x1 + P.till.y1, b: P.till, fn: () => drawTill(ctx) });
     /* Sort the escalator by its BACK edge, not its far corner. It is a tall
        thing you stand in FRONT of to ride, and keyed on the far corner it
        painted over the player standing on its own comb plate. This way you
        walk up in front of it, and only once you are on the ramp does the
        near glass slide over you — which is what riding it should look
        like. */
-    items.push({ d: P.door.x1 + P.door.y0, fn: () => drawDoor(ctx) });
-    items.push({ d: P.bin.x1 + P.bin.y1, fn: () => drawBin(ctx) });
+    items.push({ d: P.door.x1 + P.door.y0, b: P.door, fn: () => drawDoor(ctx) });
+    items.push({ d: P.bin.x1 + P.bin.y1, b: P.bin, fn: () => drawBin(ctx) });
     /* Sort the sign well behind its own tile. It stands at the bottom edge of
        the room, so you always reach it from the north — which by raw depth
        puts the post and board on top of you, hiding the character. */
     items.push({ d: P.sign.x1 + P.sign.y1 - 1.6, fn: () => drawSign(ctx) });
     MSM.ent.cash.forEach((c) => items.push({ d: c.x + c.y, fn: () => drawCash(ctx, c) }));
     MSM.ent.customers.forEach((c) => items.push({
-      d: bodyDepth(c, c.x + c.y + 0.3),
+      d: c.x + c.y + 0.3, b: bodyBox(c),
       fn: () => {
         // behind the curtain: the cubicle draws the progress, not them
         if (c.hidden) return;
@@ -1252,40 +1267,40 @@ window.MSM = window.MSM || {};
     const CREW = ['#FF2E9C', '#F2A03D', '#B45CE0', '#12B4A6'];
     if (MSM.ent.cashier) {
       const k = MSM.ent.cashier;
-      items.push({ d: bodyDepth(k, k.x + k.y + 0.3),
+      items.push({ d: k.x + k.y + 0.3, b: bodyBox(k),
                    fn: () => drawBody(ctx, k,
                      { body: '#00B368', cap: '#FFFFFF', accent: '#00B368' }) });
     }
     MSM.ent.stockers.forEach((st, i) => {
-      items.push({ d: bodyDepth(st, st.x + st.y + 0.3),
+      items.push({ d: st.x + st.y + 0.3, b: bodyBox(st),
                    fn: () => drawBody(ctx, st,
                      { body: CREW[i % CREW.length], cap: '#FFFFFF', accent: CREW[i % CREW.length] }) });
     });
     MSM.cafe.crew.forEach((s) => {
-      items.push({ d: bodyDepth(s, s.x + s.y + 0.3),
+      items.push({ d: s.x + s.y + 0.3, b: bodyBox(s),
                    fn: () => drawBody(ctx, s, { body: s.color, cap: '#FFFFFF', accent: s.color }) });
     });
     MSM.sports.crew.forEach((s) => {
-      items.push({ d: bodyDepth(s, s.x + s.y + 0.3),
+      items.push({ d: s.x + s.y + 0.3, b: bodyBox(s),
                    fn: () => drawBody(ctx, s, { body: s.color, cap: '#FFFFFF', accent: s.color }) });
     });
     MSM.boutique.crew.forEach((s) => {
-      items.push({ d: bodyDepth(s, s.x + s.y + 0.3),
+      items.push({ d: s.x + s.y + 0.3, b: bodyBox(s),
                    fn: () => drawBody(ctx, s, { body: s.color, cap: '#FFFFFF', accent: s.color }) });
     });
     MSM.tech.crew.forEach((s) => {
-      items.push({ d: bodyDepth(s, s.x + s.y + 0.3),
+      items.push({ d: s.x + s.y + 0.3, b: bodyBox(s),
                    fn: () => drawBody(ctx, s, { body: s.color, cap: '#FFFFFF', accent: s.color }) });
     });
     MSM.food.crew.forEach((s) => {
-      items.push({ d: bodyDepth(s, s.x + s.y + 0.3),
+      items.push({ d: s.x + s.y + 0.3, b: bodyBox(s),
                    fn: () => drawBody(ctx, s, { body: s.color, cap: '#FFFFFF', accent: s.color }) });
     });
     const p = MSM.ent.player;
-    items.push({ d: bodyDepth(p, p.x + p.y + 0.35),
+    items.push({ d: p.x + p.y + 0.35, b: bodyBox(p),
                  fn: () => drawBody(ctx, p, { body: '#29A9F2', cap: '#FFFFFF', accent: '#29A9F2' }) });
 
-    items.sort((a, b) => a.d - b.d).forEach((it) => it.fn());
+    paint(items).forEach((it) => it.fn());
     drawPops(ctx, dt);
     drawTutArrow(ctx, dt);
     drawStick(ctx);

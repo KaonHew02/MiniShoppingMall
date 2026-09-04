@@ -312,20 +312,22 @@ window.MSM = window.MSM || {};
     if (!cs) return;
 
     const st = P.storage;
-    items.push({ d: st.x1 + st.y1, fn: () => drawStorage(ctx) });
-    items.push({ d: P.pickup.x1 + P.pickup.y1, fn: () => drawPickup(ctx) });
+    items.push({ d: st.x1 + st.y1, b: st, fn: () => drawStorage(ctx) });
+    items.push({ d: P.pickup.x1 + P.pickup.y1, b: P.pickup, fn: () => drawPickup(ctx) });
     items.push({ d: P.till.x1 + P.till.y1 + 0.01, fn: () => drawOrderSign(ctx) });
 
     P.machines.forEach((spec, mi) => {
-      items.push({ d: spec.box.x1 + spec.box.y1, fn: () => drawMachine(ctx, mi) });
+      items.push({ d: spec.box.x1 + spec.box.y1, b: spec.box, fn: () => drawMachine(ctx, mi) });
       items.push({ d: spec.pad.x1 + spec.pad.y1 - 0.5, fn: () => drawMachinePad(ctx, mi) });
     });
     P.tables.forEach((spec, ti) => {
       const b = spec.box, cy = (b.y0 + b.y1) / 2;
-      items.push({ d: b.x1 + b.y1, fn: () => drawTable(ctx, ti) });
+      items.push({ d: b.x1 + b.y1, b, fn: () => drawTable(ctx, ti) });
       if (!cs.tables[ti].built) return;
       [b.x0 - 0.62, b.x1 + 0.62].forEach((sx) => {
-        items.push({ d: sx + cy + 0.4, fn: () => drawChair(ctx, sx, cy) });
+        items.push({ d: sx + cy + 0.4,
+                     b: { x0: sx - 0.2, y0: cy - 0.2, x1: sx + 0.2, y1: cy + 0.2 },
+                     fn: () => drawChair(ctx, sx, cy) });
       });
     });
   };

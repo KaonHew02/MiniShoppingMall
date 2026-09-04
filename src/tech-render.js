@@ -139,7 +139,8 @@ window.MSM = window.MSM || {};
     const ts = MSM.econ.tstate();
     if (!ts) return;
     P.areas.forEach((spec, ai) => {
-      items.push({ d: spec.box.x0 + spec.box.y0 + 0.01, fn: () => drawBench(ctx, ai) });
+      items.push({ d: spec.box.x0 + spec.box.y0 + 0.01, b: spec.box,
+                   fn: () => drawBench(ctx, ai) });
     });
   };
 

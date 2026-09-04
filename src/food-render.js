@@ -261,11 +261,11 @@ window.MSM = window.MSM || {};
     const fs = MSM.econ.fstate();
     if (!fs) return;
     P.machines.forEach((spec, mi) => {
-      items.push({ d: spec.box.x1 + spec.box.y1, fn: () => drawStation(ctx, mi) });
+      items.push({ d: spec.box.x1 + spec.box.y1, b: spec.box, fn: () => drawStation(ctx, mi) });
       items.push({ d: spec.pad.x1 + spec.pad.y1 - 0.5, fn: () => drawStationPad(ctx, mi) });
     });
-    items.push({ d: P.assembly.x1 + P.assembly.y1, fn: () => drawAssembly(ctx) });
-    items.push({ d: P.pickup.x1 + P.pickup.y1, fn: () => drawPickup(ctx) });
+    items.push({ d: P.assembly.x1 + P.assembly.y1, b: P.assembly, fn: () => drawAssembly(ctx) });
+    items.push({ d: P.pickup.x1 + P.pickup.y1, b: P.pickup, fn: () => drawPickup(ctx) });
     items.push({ d: P.till.x1 + P.till.y1 + 0.01, fn: () => drawOrderSign(ctx) });
   };
 

@@ -191,7 +191,7 @@ window.MSM = window.MSM || {};
     const bs = MSM.econ.bstate();
     if (!bs) return;
     P.rooms.forEach((spec, k) => {
-      items.push({ d: spec.box.x1 + spec.box.y1, fn: () => drawRoom(ctx, k) });
+      items.push({ d: spec.box.x1 + spec.box.y1, b: spec.box, fn: () => drawRoom(ctx, k) });
     });
   };
 

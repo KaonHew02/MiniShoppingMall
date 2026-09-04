@@ -410,11 +410,11 @@ window.MSM = window.MSM || {};
           if (d < bd) { bd = d; best = k; }
         });
         if (best < 0) {
-          W.seek(s, P.tables[0].box.x1 + 1.4, P.tables[0].box.y1 + 0.9, spd, dt, false);
+          W.walk(s, P.tables[0].box.x1 + 1.4, P.tables[0].box.y1 + 0.9, spd, dt);
           return;
         }
         const b = P.tables[best].box;
-        if (W.seek(s, b.x0 - 0.62, (b.y0 + b.y1) / 2, spd, dt, false)) {
+        if (W.walk(s, b.x0 - 0.62, (b.y0 + b.y1) / 2, spd, dt)) {
           s.moving = false;
           K.wipe(s, dt, 'wipeT');
         }
@@ -436,7 +436,7 @@ window.MSM = window.MSM || {};
         const spec = best >= 0 ? P.machines[best]
           : P.machines.find((m) => m.staff === s.job) || P.machines[0];
         const b = spec.box;
-        W.seek(s, (b.x0 + b.x1) / 2, b.y1 + 0.55, spd, dt, false);
+        W.walk(s, (b.x0 + b.x1) / 2, b.y1 + 0.55, spd, dt);
         return;
       }
 
@@ -451,20 +451,20 @@ window.MSM = window.MSM || {};
             const n = s.hold.pop();
             MSM.ent.sync(s);
             if (cs.ready.length < C.READY_CAP) cs.ready.push({ n, t: 0 });
-          } else W.seek(s, P.pickupStand.x, P.pickupStand.y, spd, dt, false);
+          } else W.walk(s, P.pickupStand.x, P.pickupStand.y, spd, dt);
           return;
         }
-        if (W.seek(s, c.x, c.y - 0.75, spd, dt, false)) s.moving = false;
+        if (W.walk(s, c.x, c.y - 0.75, spd, dt)) s.moving = false;
         MSM.ent.handle(s, dt);
         return;
       }
 
       if (cs.ready.some((r) => K.waiter(r.n))) {
-        if (W.seek(s, P.pickupStand.x, P.pickupStand.y, spd, dt, false)) s.moving = false;
+        if (W.walk(s, P.pickupStand.x, P.pickupStand.y, spd, dt)) s.moving = false;
         MSM.ent.handle(s, dt);
         return;
       }
-      W.seek(s, P.pickupStand.x - 1.2, P.pickupStand.y - 0.6, spd, dt, false);
+      W.walk(s, P.pickupStand.x - 1.2, P.pickupStand.y - 0.6, spd, dt);
     },
 
     /* -------------------------------------------------------- customers */
@@ -519,7 +519,7 @@ window.MSM = window.MSM || {};
 
       switch (c.phase) {
         case 'in':
-          if (W.seek(c, P.queue[0].x, P.walkway, spd, dt, false)) c.phase = 'toQueue';
+          if (W.walk(c, P.queue[0].x, P.walkway, spd, dt)) c.phase = 'toQueue';
           break;
 
         case 'toQueue': {
@@ -528,20 +528,20 @@ window.MSM = window.MSM || {};
             MSM.ent.queue.push(c);
           }
           const slot = P.queue[Math.max(0, MSM.ent.queue.indexOf(c))];
-          if (W.seek(c, slot.x, slot.y, spd, dt, false)) c.phase = 'queue';
+          if (W.walk(c, slot.x, slot.y, spd, dt)) c.phase = 'queue';
           break;
         }
 
         case 'queue': {
           const slot = P.queue[Math.max(0, MSM.ent.queue.indexOf(c))];
-          W.seek(c, slot.x, slot.y, spd, dt, false);
+          W.walk(c, slot.x, slot.y, spd, dt);
           c.queueT += dt;
           break;
         }
 
         case 'toWait': {
           const s = P.waits[c.spotIndex] || P.waits[0];
-          if (W.seek(c, s.x, s.y, spd, dt, false)) c.phase = 'wait';
+          if (W.walk(c, s.x, s.y, spd, dt)) c.phase = 'wait';
           break;
         }
 
@@ -552,7 +552,7 @@ window.MSM = window.MSM || {};
 
         case 'toTable': {
           const seat = K.seatPoint(c);
-          if (W.seek(c, seat.x, seat.y, spd, dt, false)) {
+          if (W.walk(c, seat.x, seat.y, spd, dt)) {
             c.phase = 'sit';
             c.sitT = U.lerp(C.SIT[0], C.SIT[1], Math.random());
           }

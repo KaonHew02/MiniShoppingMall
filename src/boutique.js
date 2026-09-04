@@ -218,15 +218,15 @@ window.MSM = window.MSM || {};
         // nothing to fetch — wait where the cubicles are, and drop any stray
         if (s.hold.length) {
           const prod = MSM.econ.prod(s.hold[0]);
-          if (W.seek(s, prod.shelf ? (prod.shelf.x0 + prod.shelf.x1) / 2 : P.serve.x,
-                     prod.shelf ? prod.shelf.y1 + 0.55 : P.serve.y, spd, dt, false)) {
+          if (W.walk(s, prod.shelf ? (prod.shelf.x0 + prod.shelf.x1) / 2 : P.serve.x,
+                     prod.shelf ? prod.shelf.y1 + 0.55 : P.serve.y, spd, dt)) {
             s.moving = false;
             MSM.ent.handle(s, dt);
           }
           return;
         }
         const home = K.roomDoor(0);
-        W.seek(s, home.x - 1.4, home.y + 0.6, spd, dt, false);
+        W.walk(s, home.x - 1.4, home.y + 0.6, spd, dt);
         return;
       }
 
@@ -234,13 +234,13 @@ window.MSM = window.MSM || {};
       s.errand = true;
       // holding it already? walk it over. otherwise go and get one.
       if (s.hold.indexOf(c.need.n) >= 0) {
-        if (W.seek(s, c.x + 0.6, c.y + 0.4, spd, dt, false)) s.moving = false;
+        if (W.walk(s, c.x + 0.6, c.y + 0.4, spd, dt)) s.moving = false;
         MSM.ent.handle(s, dt);
         if (!K.asking(c)) { s.target = null; s.only = -1; }
         return;
       }
       const stand = MSM.ent.crateStand(c.need.n);
-      if (W.seek(s, stand.x, stand.y, spd, dt, false)) {
+      if (W.walk(s, stand.x, stand.y, spd, dt)) {
         s.moving = false;
         MSM.ent.handle(s, dt);
       }
@@ -335,15 +335,15 @@ window.MSM = window.MSM || {};
 
       switch (c.phase) {
         case 'in':
-          if (W.seek(c, c.lane, P.walkway, spd, dt, false)) c.phase = 'toRack';
+          if (W.walk(c, c.lane, P.walkway, spd, dt)) c.phase = 'toRack';
           break;
 
         case 'toLane':
-          if (W.seek(c, c.lane, c.y, spd, dt, false)) c.phase = 'toRack';
+          if (W.walk(c, c.lane, c.y, spd, dt)) c.phase = 'toRack';
           break;
 
         case 'toRack':
-          if (W.seek(c, prod.browse.x, prod.browse.y, spd, dt, false)) {
+          if (W.walk(c, prod.browse.x, prod.browse.y, spd, dt)) {
             c.phase = 'browse';
             c.browseT = 0;
           }
@@ -403,7 +403,7 @@ window.MSM = window.MSM || {};
             break;
           }
           const door = K.roomDoor(c.room);
-          if (W.seek(c, door.x, door.y, spd, dt, false)) {
+          if (W.walk(c, door.x, door.y, spd, dt)) {
             c.spotIndex = -1;
             c.phase = 'fitting';
             c.hidden = true;
@@ -419,7 +419,7 @@ window.MSM = window.MSM || {};
         /* The bottleneck the shop lives or dies by. */
         case 'wait': {
           const s = P.waits[c.spotIndex] || P.waits[0];
-          if (W.seek(c, s.x, s.y, spd, dt, false)) c.moving = false;
+          if (W.walk(c, s.x, s.y, spd, dt)) c.moving = false;
           if (K.claimRoom(c)) c.phase = 'toRoom';
           break;
         }
@@ -453,19 +453,19 @@ window.MSM = window.MSM || {};
             if (MSM.ent.queue.length >= P.queue.length) {
               c.queueT += dt;
               const last = P.queue[P.queue.length - 1];
-              W.seek(c, last.x, last.y + 0.7, spd, dt, false);
+              W.walk(c, last.x, last.y + 0.7, spd, dt);
               break;
             }
             MSM.ent.queue.push(c);
           }
           const slot = P.queue[Math.max(0, MSM.ent.queue.indexOf(c))];
-          if (W.seek(c, slot.x, slot.y, spd, dt, false)) c.phase = 'queue';
+          if (W.walk(c, slot.x, slot.y, spd, dt)) c.phase = 'queue';
           break;
         }
 
         case 'queue': {
           const slot = P.queue[Math.max(0, MSM.ent.queue.indexOf(c))];
-          W.seek(c, slot.x, slot.y, spd, dt, false);
+          W.walk(c, slot.x, slot.y, spd, dt);
           c.queueT += dt;
           break;
         }

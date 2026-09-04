@@ -138,13 +138,13 @@ window.MSM = window.MSM || {};
 
       const c = K.needsAdvice();
       if (!c) {
-        W.seek(s, P.serve.x - 1.6, P.serve.y - 0.7, spd, dt, false);
+        W.walk(s, P.serve.x - 1.6, P.serve.y - 0.7, spd, dt);
         return;
       }
       // stop a polite step short rather than standing on top of them
       const d = Math.hypot(s.x - c.x, s.y - c.y);
       if (d <= S.ADVISE_REACH * 0.8) { s.moving = false; return; }
-      W.seek(s, c.x + 0.7, c.y + 0.4, spd, dt, false);
+      W.walk(s, c.x + 0.7, c.y + 0.4, spd, dt);
     },
 
     /* -------------------------------------------------------- customers */
@@ -197,17 +197,17 @@ window.MSM = window.MSM || {};
 
       switch (c.phase) {
         case 'in':
-          if (W.seek(c, c.lane, P.walkway, spd, dt, false)) c.phase = 'toRack';
+          if (W.walk(c, c.lane, P.walkway, spd, dt)) c.phase = 'toRack';
           break;
 
         /* Cross to the right lane at the current row, then walk up it — the
            route a person takes round a shop floor. */
         case 'toLane':
-          if (W.seek(c, c.lane, c.y, spd, dt, false)) c.phase = 'toRack';
+          if (W.walk(c, c.lane, c.y, spd, dt)) c.phase = 'toRack';
           break;
 
         case 'toRack':
-          if (W.seek(c, prod.browse.x, prod.browse.y, spd, dt, false)) {
+          if (W.walk(c, prod.browse.x, prod.browse.y, spd, dt)) {
             c.phase = 'browse';
             c.browseT = 0;
           }
@@ -243,7 +243,7 @@ window.MSM = window.MSM || {};
             K.decide(c);
             break;
           }
-          if (W.seek(c, area.stand.x, area.stand.y, spd, dt, false)) {
+          if (W.walk(c, area.stand.x, area.stand.y, spd, dt)) {
             c.phase = 'try';
             c.tryT = 0;
             c.tryDur = U.lerp(S.TRY_TIME[0], S.TRY_TIME[1], Math.random());
@@ -267,13 +267,13 @@ window.MSM = window.MSM || {};
             if (MSM.ent.queue.length >= P.queue.length) {
               c.queueT += dt;
               const last = P.queue[P.queue.length - 1];
-              W.seek(c, last.x, last.y + 0.7, spd, dt, false);
+              W.walk(c, last.x, last.y + 0.7, spd, dt);
               break;
             }
             MSM.ent.queue.push(c);
           }
           const slot = P.queue[Math.max(0, MSM.ent.queue.indexOf(c))];
-          if (W.seek(c, slot.x, slot.y, spd, dt, false)) c.phase = 'queue';
+          if (W.walk(c, slot.x, slot.y, spd, dt)) c.phase = 'queue';
           break;
         }
 
@@ -281,7 +281,7 @@ window.MSM = window.MSM || {};
            cashier work the same in any shop. MSM.game.serve() clears it. */
         case 'queue': {
           const slot = P.queue[Math.max(0, MSM.ent.queue.indexOf(c))];
-          W.seek(c, slot.x, slot.y, spd, dt, false);
+          W.walk(c, slot.x, slot.y, spd, dt);
           c.queueT += dt;
           break;
         }
@@ -289,7 +289,7 @@ window.MSM = window.MSM || {};
         /* A no. They carry it back to where they found it rather than
            dropping it — and sometimes ask to see something else instead. */
         case 'toReturn': {
-          if (!W.seek(c, prod.browse.x, prod.browse.y, spd, dt, false)) break;
+          if (!W.walk(c, prod.browse.x, prod.browse.y, spd, dt)) break;
           ps.shelf = Math.min(CFG.SHELF_CAP, ps.shelf + 1);
           c.carry = 0;
           c.carryP = -1;

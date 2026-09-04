@@ -186,10 +186,10 @@ window.MSM = window.MSM || {};
       if (c.riding === 1) return E.rideStep(c, dt);
       if (c.viaEsc && E.escOpen()) {
         const foot = E.escFoot(true);
-        if (W.seek(c, foot.x, foot.y, spd, dt, false)) E.escLeave(c);
+        if (W.walk(c, foot.x, foot.y, spd, dt)) E.escLeave(c);
         return false;
       }
-      return W.seek(c, P.entrance.x, P.entrance.y + 0.6, spd, dt, false);
+      return W.walk(c, P.entrance.x, P.entrance.y + 0.6, spd, dt);
     },
 
     /**
@@ -478,8 +478,8 @@ window.MSM = window.MSM || {};
         case 'toCrate': {
           const at = E.crateStand(s.target);
           if (s.leg === 0) {
-            if (W.seek(s, at.x, P.stockLane, spd, dt, false)) s.leg = 1;
-          } else if (W.seek(s, at.x, at.y, spd, dt, false)) s.phase = 'load';
+            if (W.walk(s, at.x, P.stockLane, spd, dt)) s.leg = 1;
+          } else if (W.walk(s, at.x, at.y, spd, dt)) s.phase = 'load';
           break;
         }
         case 'load':
@@ -496,8 +496,8 @@ window.MSM = window.MSM || {};
           const at = feeding ? E.crateStand(s.deliverTo) : E.shelfStand(s.carryP);
           const lane = feeding ? at.x : MSM.econ.prod(s.carryP).lane;
           if (s.leg === 0) {
-            if (W.seek(s, lane, P.stockLane, spd, dt, false)) s.leg = 1;
-          } else if (W.seek(s, at.x, at.y, spd, dt, false)) s.phase = 'unload';
+            if (W.walk(s, lane, P.stockLane, spd, dt)) s.leg = 1;
+          } else if (W.walk(s, at.x, at.y, spd, dt)) s.phase = 'unload';
           break;
         }
         case 'unload': {
@@ -631,15 +631,15 @@ window.MSM = window.MSM || {};
 
         switch (c.phase) {
           case 'toLane':
-            if (W.seek(c, c.lane, P.walkway, spd, dt, false)) c.phase = 'toShelfLane';
+            if (W.walk(c, c.lane, P.walkway, spd, dt)) c.phase = 'toShelfLane';
             break;
 
           case 'toShelfLane':
-            if (W.seek(c, c.lane, prod.browse.y, spd, dt, false)) c.phase = 'toShelf';
+            if (W.walk(c, c.lane, prod.browse.y, spd, dt)) c.phase = 'toShelf';
             break;
 
           case 'toShelf':
-            if (W.seek(c, prod.browse.x, prod.browse.y, spd, dt, false)) c.phase = 'browse';
+            if (W.walk(c, prod.browse.x, prod.browse.y, spd, dt)) c.phase = 'browse';
             break;
 
           /* The heart of it: they stand at the shelf wanting the thing and
@@ -677,7 +677,7 @@ window.MSM = window.MSM || {};
           /* Cross to the next item's lane at the current row, then walk the
              lane to its shelf — the same route a person would take. */
           case 'toNextLane':
-            if (W.seek(c, c.lane, c.y, spd, dt, false)) c.phase = 'toShelfLane';
+            if (W.walk(c, c.lane, c.y, spd, dt)) c.phase = 'toShelfLane';
             break;
 
           case 'toQueue': {
@@ -691,7 +691,7 @@ window.MSM = window.MSM || {};
               if (this.queue.length >= P.queue.length) {
                 const back = P.queue[P.queue.length - 1];
                 c.mood = 'wait';
-                W.seek(c, back.x, back.y + 0.85, spd, dt, false);
+                W.walk(c, back.x, back.y + 0.85, spd, dt);
                 c.qWait = (c.qWait || 0) + dt;
                 if (c.qWait > CFG.QUEUE_PATIENCE) E.abandon(c);
                 break;
@@ -701,18 +701,18 @@ window.MSM = window.MSM || {};
             }
             // back down the lane first, then across to the slot
             if (c.viaLane) {
-              if (W.seek(c, c.lane, P.walkway, spd, dt, false)) c.viaLane = false;
+              if (W.walk(c, c.lane, P.walkway, spd, dt)) c.viaLane = false;
               break;
             }
             const slot = P.queue[Math.max(0, this.queue.indexOf(c))];
-            if (W.seek(c, slot.x, slot.y, spd, dt, false)) c.phase = 'queue';
+            if (W.walk(c, slot.x, slot.y, spd, dt)) c.phase = 'queue';
             break;
           }
 
           case 'queue': {
             const slot = P.queue[Math.max(0, this.queue.indexOf(c))];
             c.moving = false;
-            W.seek(c, slot.x, slot.y, spd, dt, false);
+            W.walk(c, slot.x, slot.y, spd, dt);
             break;
           }
 

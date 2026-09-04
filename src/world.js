@@ -6,12 +6,14 @@ window.MSM = window.MSM || {};
 
   const W = MSM.world = {
     _solids: null,
+    _gen: 0,
 
     /** Call when the active store changes, or when anything is built. */
     invalidate() {
       CFG.usePlan(MSM.state.current);
       this._solids = null;
       this._grid = null;
+      this._gen++;                     // every route in flight is now stale
     },
 
     solids() {
@@ -92,6 +94,48 @@ window.MSM = window.MSM || {};
         const ny = e.y + dy;
         if (this.inBounds(e.x, ny) && (trapped || !this.blocked(e.x, ny))) e.y = ny;
       }
+    },
+
+    /* Searching for a route costs real time, so only a few bodies re-plan
+       in any one frame; the rest walk their straight line this frame and get
+       their route on the next. Reset from the game loop. */
+    _budget: 0,
+    frame() { this._budget = 3; },
+
+    /**
+     * Steer a body to a point the way a person would: straight there while
+     * the way is clear, around the furniture when it is not.
+     *
+     * Every NPC used to steer with seek(..., false) — a straight line with
+     * no collision test at all — so staff and customers walked clean through
+     * the counters. Simply turning collision on is not the fix: a body that
+     * slides into the shelf between it and its target grinds along the side
+     * of it forever, and a barista who never reaches the machine stops the
+     * shop earning. So route around it instead, and only pay for the search
+     * when the straight line is genuinely blocked, which is rare.
+     */
+    walk(e, tx, ty, speed, dt) {
+      if (e.rgen !== this._gen || e.rtx === undefined ||
+          Math.hypot(tx - e.rtx, ty - e.rty) > 0.4 || e.rwait) {
+        e.rgen = this._gen; e.rtx = tx; e.rty = ty; e.rwait = false;
+        if (this.clearLine(e, { x: tx, y: ty })) e.route = null;
+        else if (this._budget > 0) {
+          this._budget--;
+          const r = this.path(e.x, e.y, tx, ty);
+          e.route = r && r.length ? r : null;
+        } else e.rwait = true;         // out of budget — try again next frame
+      }
+      if (e.route) {
+        // A* only hands back legs it has already checked, so take them straight
+        const w = e.route[0];
+        if (this.seek(e, w.x, w.y, speed, dt, false)) {
+          e.route.shift();
+          if (!e.route.length) e.route = null;
+        }
+        e.moving = true;
+        return false;
+      }
+      return this.seek(e, tx, ty, speed, dt, false);
     },
 
     /** Step a body toward a target; true once it has arrived. */

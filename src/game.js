@@ -132,6 +132,7 @@ window.MSM = window.MSM || {};
       dt = U.clamp(dt, 0, 0.1);
 
       const dir = G.input();
+      MSM.world.frame();
       MSM.ent.restock(dt);
       MSM.ent.movePlayer(dt, dir.x, dir.y);
       MSM.ent.updateStockers(dt);

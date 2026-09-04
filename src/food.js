@@ -296,13 +296,13 @@ window.MSM = window.MSM || {};
         });
         const spec = best >= 0 ? P.machines[best] : P.machines[0];
         const b = spec.box;
-        W.seek(s, (b.x0 + b.x1) / 2, b.y1 + 0.6, spd, dt, false);
+        W.walk(s, (b.x0 + b.x1) / 2, b.y1 + 0.6, spd, dt);
         return;
       }
 
       // the packer lives at the assembly bench
       const a = P.assembly;
-      W.seek(s, (a.x0 + a.x1) / 2 + 1.1, a.y1 + 0.55, spd, dt, false);
+      W.walk(s, (a.x0 + a.x1) / 2 + 1.1, a.y1 + 0.55, spd, dt);
     },
 
     /* -------------------------------------------------------- customers */
@@ -364,7 +364,7 @@ window.MSM = window.MSM || {};
 
       switch (c.phase) {
         case 'in':
-          if (W.seek(c, P.queue[0].x, P.walkway, spd, dt, false)) c.phase = 'toQueue';
+          if (W.walk(c, P.queue[0].x, P.walkway, spd, dt)) c.phase = 'toQueue';
           break;
 
         case 'toQueue': {
@@ -373,20 +373,20 @@ window.MSM = window.MSM || {};
             MSM.ent.queue.push(c);
           }
           const slot = P.queue[Math.max(0, MSM.ent.queue.indexOf(c))];
-          if (W.seek(c, slot.x, slot.y, spd, dt, false)) c.phase = 'queue';
+          if (W.walk(c, slot.x, slot.y, spd, dt)) c.phase = 'queue';
           break;
         }
 
         case 'queue': {
           const slot = P.queue[Math.max(0, MSM.ent.queue.indexOf(c))];
-          W.seek(c, slot.x, slot.y, spd, dt, false);
+          W.walk(c, slot.x, slot.y, spd, dt);
           c.queueT += dt;
           break;
         }
 
         case 'toWait': {
           const s = P.waits[c.spotIndex] || P.waits[0];
-          if (W.seek(c, s.x, s.y, spd, dt, false)) c.phase = 'wait';
+          if (W.walk(c, s.x, s.y, spd, dt)) c.phase = 'wait';
           break;
         }
 
@@ -401,7 +401,7 @@ window.MSM = window.MSM || {};
         case 'toPickup': {
           const t = K.trayFor(c);
           if (!t) { c.phase = 'wait'; break; }
-          if (!W.seek(c, P.pickupStand.x + (k % 3 - 1) * 0.7, P.pickupStand.y, spd, dt, false)) break;
+          if (!W.walk(c, P.pickupStand.x + (k % 3 - 1) * 0.7, P.pickupStand.y, spd, dt)) break;
           K.handOver(c, t);
           break;
         }

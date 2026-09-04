@@ -179,12 +179,12 @@ window.MSM = window.MSM || {};
 
       const c = K.needsAdvice();
       if (!c) {
-        W.seek(s, P.serve.x - 1.6, P.serve.y - 0.7, spd, dt, false);
+        W.walk(s, P.serve.x - 1.6, P.serve.y - 0.7, spd, dt);
         return;
       }
       const d = Math.hypot(s.x - c.x, s.y - c.y);
       if (d <= T.ADVISE_REACH * 0.8) { s.moving = false; return; }
-      W.seek(s, c.x + 0.7, c.y + 0.4, spd, dt, false);
+      W.walk(s, c.x + 0.7, c.y + 0.4, spd, dt);
     },
 
     /* -------------------------------------------------------- customers */
@@ -254,15 +254,15 @@ window.MSM = window.MSM || {};
 
       switch (c.phase) {
         case 'in':
-          if (W.seek(c, prod.lane, P.walkway, spd, dt, false)) c.phase = 'toDisplay';
+          if (W.walk(c, prod.lane, P.walkway, spd, dt)) c.phase = 'toDisplay';
           break;
 
         case 'toLane':
-          if (W.seek(c, prod.lane, c.y, spd, dt, false)) c.phase = 'toDisplay';
+          if (W.walk(c, prod.lane, c.y, spd, dt)) c.phase = 'toDisplay';
           break;
 
         case 'toDisplay':
-          if (W.seek(c, prod.browse.x, prod.browse.y, spd, dt, false)) {
+          if (W.walk(c, prod.browse.x, prod.browse.y, spd, dt)) {
             c.phase = 'browse';
             c.browseT = 0;
           }
@@ -293,7 +293,7 @@ window.MSM = window.MSM || {};
         case 'toBench': {
           const stand = P.areas[prod.areaIndex].stand;
           const off = (k % 3) - 1;      // three can share a bench politely
-          if (W.seek(c, stand.x + off * 0.8, stand.y, spd, dt, false)) {
+          if (W.walk(c, stand.x + off * 0.8, stand.y, spd, dt)) {
             c.phase = 'demo';
             c.demoT = 0;
             c.demoDur = U.lerp(T.DEMO_TIME[0], T.DEMO_TIME[1], Math.random());
@@ -329,7 +329,7 @@ window.MSM = window.MSM || {};
            long as they are willing to, and a stocker can still save this. */
         case 'restock': {
           const pw = MSM.econ.prod(c.want);
-          W.seek(c, pw.browse.x, pw.browse.y, spd, dt, false);
+          W.walk(c, pw.browse.x, pw.browse.y, spd, dt);
           c.mood = 'wait';
           if (MSM.econ.pstate(c.want).shelf <= 0) break;
           K.takeBox(c);
@@ -341,19 +341,19 @@ window.MSM = window.MSM || {};
             if (MSM.ent.queue.length >= P.queue.length) {
               c.queueT += dt;
               const last = P.queue[P.queue.length - 1];
-              W.seek(c, last.x, last.y + 0.7, spd, dt, false);
+              W.walk(c, last.x, last.y + 0.7, spd, dt);
               break;
             }
             MSM.ent.queue.push(c);
           }
           const slot = P.queue[Math.max(0, MSM.ent.queue.indexOf(c))];
-          if (W.seek(c, slot.x, slot.y, spd, dt, false)) c.phase = 'queue';
+          if (W.walk(c, slot.x, slot.y, spd, dt)) c.phase = 'queue';
           break;
         }
 
         case 'queue': {
           const slot = P.queue[Math.max(0, MSM.ent.queue.indexOf(c))];
-          W.seek(c, slot.x, slot.y, spd, dt, false);
+          W.walk(c, slot.x, slot.y, spd, dt);
           c.queueT += dt;
           break;
         }

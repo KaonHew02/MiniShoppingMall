@@ -584,19 +584,21 @@ window.MSM = window.MSM || {};
   /* Stand on this to pay for the next level of that product. */
   function drawLevelPad(ctx, n) {
     const prod = MSM.econ.prod(n), ps = MSM.econ.pstate(n), b = prod.pad;
+    const maxed = MSM.econ.maxed(n);
     const cost = MSM.econ.upgradeCost(n, 1);
-    const pct = U.clamp((ps.pay || 0) / cost, 0, 1);
+    const pct = maxed ? 1 : U.clamp((ps.pay || 0) / cost, 0, 1);
 
     iso.tile(ctx, b.x0, b.y0, b.x1, b.y1, 0.01, '#FFFFFF');
     iso.tile(ctx, b.x0 + 0.06, b.y0 + 0.06, b.x1 - 0.06, b.y1 - 0.06, 0.012, '#E7EDF6');
     if (pct > 0) {
       iso.tile(ctx, b.x0 + 0.06, b.y0 + 0.06,
-               b.x0 + 0.06 + (b.x1 - b.x0 - 0.12) * pct, b.y1 - 0.06, 0.014, '#5FE08D');
+               b.x0 + 0.06 + (b.x1 - b.x0 - 0.12) * pct, b.y1 - 0.06, 0.014,
+               maxed ? '#C9D6E8' : '#5FE08D');
     }
     const c = iso.s((b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2, 0.02);
     const h = Math.max(26, iso.TW * 0.3);
     ctx.font = `800 ${h * 0.36}px 'Baloo 2','Nunito',system-ui,sans-serif`;
-    const label = '$' + U.money(cost);
+    const label = maxed ? MSM.t('btn.maxed') : '$' + U.money(cost);
     const w = Math.max(ctx.measureText(label).width + h * 0.7, h * 2);
     ctx.save();
     ctx.shadowColor = '#0b1c3d33'; ctx.shadowBlur = 6; ctx.shadowOffsetY = 2;
@@ -605,7 +607,7 @@ window.MSM = window.MSM || {};
     ctx.restore();
     text(ctx, MSM.t('world.lv') + ' ' + ps.level, c.x, c.y - h * 0.68 - 4, h * 0.32, '#8A95AB');
     text(ctx, label, c.x, c.y - h * 0.26 - 4, h * 0.36,
-         MSM.state.cash >= cost ? '#2CA85C' : '#98A6C4');
+         maxed ? '#8A95AB' : MSM.state.cash >= cost ? '#2CA85C' : '#98A6C4');
   }
 
   function drawShelf(ctx, n) {

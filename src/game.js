@@ -290,7 +290,7 @@ window.MSM = window.MSM || {};
       const p = MSM.ent.player;
       MSM.econ.store().products.forEach((prod, n) => {
         const ps = MSM.econ.pstate(n);
-        if (!ps.built) return;
+        if (!ps.built || MSM.econ.maxed(n)) return;
         if (U.boxDist(p.x, p.y, prod.pad) > 0.05) return;
 
         const cost = MSM.econ.upgradeCost(n, 1);
@@ -407,16 +407,15 @@ window.MSM = window.MSM || {};
     },
 
     /* -------------------------------------------------- store actions */
-    upgrade(n, mode) {
+    upgrade(n) {
       const ps = MSM.econ.pstate(n);
-      const count = mode === 'max' ? MSM.econ.maxBuy(n, MSM.state.cash) : mode;
-      if (count < 1) { MSM.ui.toast(MSM.t('toast.noCash')); return; }
-      const cost = MSM.econ.upgradeCost(n, count);
+      if (MSM.econ.maxed(n)) return;
+      const cost = MSM.econ.upgradeCost(n, 1);
       if (MSM.state.cash < cost) { MSM.ui.toast(MSM.t('toast.noCash')); return; }
 
       const before = MSM.econ.mults(ps.level);
       MSM.state.cash -= cost;
-      ps.level += count;
+      ps.level++;
       const after = MSM.econ.mults(ps.level);
       if (after.income > before.income || after.speed > before.speed) {
         MSM.ui.toast(MSM.t('toast.milestone', { name: MSM.econ.prod(n).name, n: ps.level }));
@@ -465,6 +464,7 @@ window.MSM = window.MSM || {};
     upgradeMachine(mi) {
       const cs = MSM.econ.cstate();
       if (!cs || !cs.machines[mi].built) return;
+      if (cs.machines[mi].level >= CFG.MAX_LEVEL) return;
       const cost = MSM.econ.machineCost(mi);
       if (MSM.state.cash < cost) { MSM.ui.toast(MSM.t('toast.noCash')); return; }
       MSM.state.cash -= cost;
@@ -540,6 +540,7 @@ window.MSM = window.MSM || {};
     upgradeStation(mi) {
       const fs = MSM.econ.fstate();
       if (!fs || !fs.stations[mi].built) return;
+      if (fs.stations[mi].level >= CFG.MAX_LEVEL) return;
       const cost = MSM.econ.stationCost(mi);
       if (MSM.state.cash < cost) { MSM.ui.toast(MSM.t('toast.noCash')); return; }
       MSM.state.cash -= cost;

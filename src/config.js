@@ -77,6 +77,12 @@ MSM.CFG = {
   /* Each extra stocker costs a good deal more than the last. One cannot keep
      eleven shelves and four feed stations going on their own. */
   MAX_STOCKERS: 4,
+
+  /* Levels stop at a hundred — where the last reachable milestone sits. The
+     ×10 and Max buttons are gone all the same: one tap is one level, and the
+     grind belongs on the level pad out on the shop floor, where you stand
+     and your cash pours into the next level on its own. */
+  MAX_LEVEL: 100,
   STOCKER_COST: (unlock, owned) =>
     Math.round(Math.max(1800, unlock * 0.7) * Math.pow(3.2, owned || 0)),
 
@@ -84,6 +90,9 @@ MSM.CFG = {
   GEMS_PER_LEVEL: 3,
   levelThreshold: (n) => 5 * n * (n + 1),
 
+  /* The Lv 200 row sits above MAX_LEVEL and can no longer be reached. It
+     stays so a save made before the cap keeps the multipliers it already
+     bought — capping levels should not quietly nerf someone's shop. */
   MILESTONES: [
     { lvl: 10,  income: 2 },
     { lvl: 25,  income: 2, speed: 2 },

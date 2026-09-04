@@ -23,7 +23,6 @@ window.MSM = window.MSM || {};
     'title.staff': 'Staff', 'title.map': 'Map', 'title.boost': 'Boost',
     'title.settings': 'Settings', 'title.offline': 'Welcome back!',
 
-    'buy.1': '×1', 'buy.10': '×10', 'buy.max': 'Max',
     'prod.build': 'Stand on its plot to build — {cost}',
     'prod.later': 'Unlocks later',
     'prod.after': 'Opens after {name} · {cost}',
@@ -35,7 +34,7 @@ window.MSM = window.MSM || {};
     'meter.shelf': 'Shelf', 'meter.crate': 'Crate',
     'prod.next': ' · next bonus Lv {n}',
     'prod.maxed': ' · maxed',
-    'btn.upgrade': 'Upgrade ×{n}',
+    'btn.upgrade': 'Upgrade', 'btn.maxed': 'MAX',
 
     'staff.hint': 'Staff for {store}. Hire both and it earns while you are elsewhere.',
     'staff.stockers': 'Stockers {a}/{b}',
@@ -333,7 +332,6 @@ window.MSM = window.MSM || {};
     'title.staff': '员工', 'title.map': '地图', 'title.boost': '加速',
     'title.settings': '设置', 'title.offline': '欢迎回来！',
 
-    'buy.max': '最大',
     'prod.build': '站到工地上建造 — {cost}',
     'prod.later': '稍后解锁',
     'prod.after': '在{name}之后开放 · {cost}',
@@ -344,7 +342,7 @@ window.MSM = window.MSM || {};
     'meter.shelf': '货架', 'meter.crate': '库存',
     'prod.next': ' · 下个奖励 Lv {n}',
     'prod.maxed': ' · 已满级',
-    'btn.upgrade': '升级 ×{n}',
+    'btn.upgrade': '升级', 'btn.maxed': '已满级',
 
     'staff.hint': '{store}的员工。两个都雇了，你不在时它也会赚钱。',
     'staff.stockers': '理货员 {a}/{b}',
@@ -710,7 +708,6 @@ window.MSM = window.MSM || {};
     'title.staff': '員工', 'title.map': '地圖', 'title.boost': '加速',
     'title.settings': '設定', 'title.offline': '歡迎回來！',
 
-    'buy.max': '最大',
     'prod.build': '站到工地上興建 — {cost}',
     'prod.later': '稍後解鎖',
     'prod.after': '在{name}之後開放 · {cost}',
@@ -721,7 +718,7 @@ window.MSM = window.MSM || {};
     'meter.shelf': '貨架', 'meter.crate': '庫存',
     'prod.next': ' · 下個獎勵 Lv {n}',
     'prod.maxed': ' · 已滿級',
-    'btn.upgrade': '升級 ×{n}',
+    'btn.upgrade': '升級', 'btn.maxed': '已滿級',
 
     'staff.hint': '{store}的員工。兩個都僱了，你不在時它也會賺錢。',
     'staff.stockers': '理貨員 {a}/{b}',
@@ -1087,7 +1084,6 @@ window.MSM = window.MSM || {};
     'title.staff': 'Pekerja', 'title.map': 'Peta', 'title.boost': 'Boost',
     'title.settings': 'Tetapan', 'title.offline': 'Selamat kembali!',
 
-    'buy.max': 'Maks',
     'prod.build': 'Berdiri di tapaknya untuk bina — {cost}',
     'prod.later': 'Terbuka kemudian',
     'prod.after': 'Terbuka selepas {name} · {cost}',
@@ -1098,7 +1094,7 @@ window.MSM = window.MSM || {};
     'meter.shelf': 'Rak', 'meter.crate': 'Stok',
     'prod.next': ' · bonus seterusnya Lv {n}',
     'prod.maxed': ' · penuh',
-    'btn.upgrade': 'Naik taraf ×{n}',
+    'btn.upgrade': 'Naik taraf', 'btn.maxed': 'MAKS',
 
     'staff.hint': 'Pekerja untuk {store}. Ambil kedua-duanya dan ia terus untung walaupun anda tiada.',
     'staff.stockers': 'Penyusun {a}/{b}',

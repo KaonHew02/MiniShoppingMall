@@ -111,7 +111,12 @@ window.MSM = window.MSM || {};
       return { income, speed };
     },
 
-    nextMilestone: (level) => CFG.MILESTONES.find((m) => level < m.lvl) || null,
+    /** True once a product has no levels left to buy. */
+    maxed(n, i) { return E.pstate(n, i).level >= CFG.MAX_LEVEL; },
+
+    /* Nothing past the ceiling is reachable, so nothing past it is promised. */
+    nextMilestone: (level) =>
+      (level >= CFG.MAX_LEVEL ? null : CFG.MILESTONES.find((m) => level < m.lvl) || null),
 
     /** The next product line to open — lowest unbuilt rank, or -1. */
     nextBuild(i) {
@@ -308,12 +313,6 @@ window.MSM = window.MSM || {};
       const ps = E.pstate(n, i);
       const first = E.prod(n, i).upgradeBase * Math.pow(GROWTH, ps.level - 1);
       return Math.ceil(first * (Math.pow(GROWTH, count) - 1) / (GROWTH - 1));
-    },
-
-    maxBuy(n, cash, i) {
-      const ps = E.pstate(n, i);
-      const first = E.prod(n, i).upgradeBase * Math.pow(GROWTH, ps.level - 1);
-      return Math.max(0, Math.floor(Math.log(1 + (cash * (GROWTH - 1)) / first) / Math.log(GROWTH)));
     },
 
     /** Cash per second a store earns unattended — needs a stocker AND a cashier. */

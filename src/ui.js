@@ -14,7 +14,6 @@ window.MSM = window.MSM || {};
   const UI = MSM.ui = {
     mode: null,
     arg: null,
-    buyMode: 1,
     _html: '',
     _touchedAt: 0,
 
@@ -65,7 +64,7 @@ window.MSM = window.MSM || {};
 
     action(act, i) {
       switch (act) {
-        case 'upgrade': MSM.game.upgrade(i, this.buyMode); break;
+        case 'upgrade': MSM.game.upgrade(i); break;
         case 'stocker': MSM.game.hireStocker(); break;
         case 'cashier': MSM.game.hireCashier(); break;
         case 'barista':
@@ -82,7 +81,6 @@ window.MSM = window.MSM || {};
         case 'unlock':  MSM.game.unlockStore(i); return;
         case 'travel':  MSM.game.travel(i); return;
         case 'boost':   MSM.game.boost(); break;
-        case 'buymode': this.buyMode = i === 2 ? 'max' : i === 1 ? 10 : 1; break;
         case 'close':   this.close(); return;
         case 'save':    MSM.save(); this.toast(t('toast.saved')); return;
         case 'export':  MSM.backup.exportFile(); return;
@@ -261,6 +259,14 @@ window.MSM = window.MSM || {};
     </div>`;
   }
 
+  /* One tap buys one level and levels stop at CFG.MAX_LEVEL, so every
+     upgrade row is either a price or a MAX badge — there is no multiplier
+     left to pick. */
+  const upBtn = (act, i, cost, cash, maxed) => (maxed
+    ? `<button class="btn" disabled>${t('btn.maxed')}</button>`
+    : `<button class="btn" data-act="${act}" data-i="${i}" ${cash >= cost ? '' : 'disabled'}>
+         ${t('btn.upgrade')}<small>$${U.money(cost)}</small></button>`);
+
   const meter = (kind, label, have, cap) =>
     `<div class="meter ${kind}"><i style="width:${Math.round(
       U.clamp(have / cap, 0, 1) * 100)}%"></i><span>${label} ${have}/${cap}</span></div>`;
@@ -272,12 +278,6 @@ window.MSM = window.MSM || {};
   function cafeProductsBody() {
     const store = MSM.econ.store(), ss = MSM.econ.sstate(), cs = ss.cafe;
     const cash = MSM.state.cash;
-
-    const seg = [t('buy.1'), t('buy.10'), t('buy.max')].map((l, k) => {
-      const on = (k === 0 && UI.buyMode === 1) || (k === 1 && UI.buyMode === 10) ||
-                 (k === 2 && UI.buyMode === 'max');
-      return `<button class="${on ? 'on' : ''}" data-act="buymode" data-i="${k}">${l}</button>`;
-    }).join('');
 
     const machines = store.plan.machines.map((spec, mi) => {
       const ms = cs.machines[mi];
@@ -298,8 +298,7 @@ window.MSM = window.MSM || {};
           <div class="row-sub">${t('cafe.machineSub', {
             cap: info.cap, sp: info.speed.toFixed(2) })}</div>
         </div>
-        <button class="btn" data-act="machine" data-i="${mi}" ${cash >= cost ? '' : 'disabled'}>
-          ${t('btn.upgrade', { n: 1 })}<small>$${U.money(cost)}</small></button>
+        ${upBtn('machine', mi, cost, cash, ms.level >= CFG.MAX_LEVEL)}
       </div>`;
     }).join('');
 
@@ -308,8 +307,7 @@ window.MSM = window.MSM || {};
       if (!ps.built) {
         return lockedRow(prod, n);
       }
-      const count = UI.buyMode === 'max' ? Math.max(1, MSM.econ.maxBuy(n, cash)) : UI.buyMode;
-      const cost = MSM.econ.upgradeCost(n, count);
+      const cost = MSM.econ.upgradeCost(n, 1);
 
       const line = prod.ingredient
         ? t('cafe.stock', { sec: MSM.econ.restock(n).toFixed(2) })
@@ -332,13 +330,12 @@ window.MSM = window.MSM || {};
           <div class="row-sub">${line}</div>
           ${detail}
         </div>
-        <button class="btn" data-act="upgrade" data-i="${n}" ${cash >= cost ? '' : 'disabled'}>
-          ${t('btn.upgrade', { n: count })}<small>$${U.money(cost)}</small></button>
+        ${upBtn('upgrade', n, cost, cash, MSM.econ.maxed(n))}
       </div>`;
     }).join('');
 
     return `<div class="hint">${t('cafe.hint')}</div>
-      <div class="seg">${seg}</div>${machines}${rows}`;
+      ${machines}${rows}`;
   }
 
   /* The sport outlet's list leads with the courts, because whether a line
@@ -346,12 +343,6 @@ window.MSM = window.MSM || {};
   function sportsProductsBody() {
     const store = MSM.econ.store(), ss = MSM.econ.sstate(), sp = ss.sports;
     const cash = MSM.state.cash;
-
-    const seg = [t('buy.1'), t('buy.10'), t('buy.max')].map((l, k) => {
-      const on = (k === 0 && UI.buyMode === 1) || (k === 1 && UI.buyMode === 10) ||
-                 (k === 2 && UI.buyMode === 'max');
-      return `<button class="${on ? 'on' : ''}" data-act="buymode" data-i="${k}">${l}</button>`;
-    }).join('');
 
     const courts = store.plan.areas.map((spec, ai) => {
       const as = sp.areas[ai];
@@ -370,8 +361,7 @@ window.MSM = window.MSM || {};
       if (!ps.built) {
         return lockedRow(prod, n);
       }
-      const count = UI.buyMode === 'max' ? Math.max(1, MSM.econ.maxBuy(n, cash)) : UI.buyMode;
-      const cost = MSM.econ.upgradeCost(n, count);
+      const cost = MSM.econ.upgradeCost(n, 1);
       const court = MSM.econ.court(n);
       return `<div class="row prod">${artChip(prod)}
         <div class="row-main">
@@ -386,13 +376,12 @@ window.MSM = window.MSM || {};
             ${meter('crate', t('meter.crate'), ps.out, CFG.CRATE_CAP)}
           </div>
         </div>
-        <button class="btn" data-act="upgrade" data-i="${n}" ${cash >= cost ? '' : 'disabled'}>
-          ${t('btn.upgrade', { n: count })}<small>$${U.money(cost)}</small></button>
+        ${upBtn('upgrade', n, cost, cash, MSM.econ.maxed(n))}
       </div>`;
     }).join('');
 
     return `<div class="hint">${t('sport.hint')}</div>
-      <div class="seg">${seg}</div>${courts}${rows}`;
+      ${courts}${rows}`;
   }
 
   /* The boutique's list leads with the cubicles, then gives every garment
@@ -402,12 +391,6 @@ window.MSM = window.MSM || {};
     const cash = MSM.state.cash;
     const B = CFG.BOUTIQUE;
     const rooms = MSM.econ.rooms();
-
-    const seg = [t('buy.1'), t('buy.10'), t('buy.max')].map((l, k) => {
-      const on = (k === 0 && UI.buyMode === 1) || (k === 1 && UI.buyMode === 10) ||
-                 (k === 2 && UI.buyMode === 'max');
-      return `<button class="${on ? 'on' : ''}" data-act="buymode" data-i="${k}">${l}</button>`;
-    }).join('');
 
     const cubicles = `<div class="row">${chip('🚪', '#FF7BA6')}
       <div class="row-main">
@@ -430,8 +413,7 @@ window.MSM = window.MSM || {};
       if (!ps.built) {
         return lockedRow(prod, n);
       }
-      const count = UI.buyMode === 'max' ? Math.max(1, MSM.econ.maxBuy(n, cash)) : UI.buyMode;
-      const cost = MSM.econ.upgradeCost(n, count);
+      const cost = MSM.econ.upgradeCost(n, 1);
 
       /* For a garment the useful line is not "8 on the rail" — it is which
          sizes those eight are. A zero here is somebody walking out. */
@@ -452,13 +434,12 @@ window.MSM = window.MSM || {};
             ${meter('crate', t('meter.crate'), ps.out, CFG.CRATE_CAP)}
           </div>
         </div>
-        <button class="btn" data-act="upgrade" data-i="${n}" ${cash >= cost ? '' : 'disabled'}>
-          ${t('btn.upgrade', { n: count })}<small>$${U.money(cost)}</small></button>
+        ${upBtn('upgrade', n, cost, cash, MSM.econ.maxed(n))}
       </div>`;
     }).join('');
 
     return `<div class="hint">${t('fit.hint')}</div>
-      <div class="seg">${seg}</div>${cubicles}${rows}`;
+      ${cubicles}${rows}`;
   }
 
   /* The techhub's list leads with the benches, then gives every product its
@@ -467,12 +448,6 @@ window.MSM = window.MSM || {};
     const store = MSM.econ.store(), ts = MSM.econ.sstate().tech;
     const cash = MSM.state.cash;
     const T = CFG.TECH;
-
-    const seg = [t('buy.1'), t('buy.10'), t('buy.max')].map((l, k) => {
-      const on = (k === 0 && UI.buyMode === 1) || (k === 1 && UI.buyMode === 10) ||
-                 (k === 2 && UI.buyMode === 'max');
-      return `<button class="${on ? 'on' : ''}" data-act="buymode" data-i="${k}">${l}</button>`;
-    }).join('');
 
     const benches = store.plan.areas.map((spec, ai) => {
       const as = ts.areas[ai];
@@ -491,8 +466,7 @@ window.MSM = window.MSM || {};
       if (!ps.built) {
         return lockedRow(prod, n);
       }
-      const count = UI.buyMode === 'max' ? Math.max(1, MSM.econ.maxBuy(n, cash)) : UI.buyMode;
-      const cost = MSM.econ.upgradeCost(n, count);
+      const cost = MSM.econ.upgradeCost(n, 1);
 
       const specs = Object.keys(prod.specs || {})
         .sort((a, z) => prod.specs[z] - prod.specs[a])
@@ -511,13 +485,12 @@ window.MSM = window.MSM || {};
             ${meter('crate', t('meter.crate'), ps.out, CFG.CRATE_CAP)}
           </div>
         </div>
-        <button class="btn" data-act="upgrade" data-i="${n}" ${cash >= cost ? '' : 'disabled'}>
-          ${t('btn.upgrade', { n: count })}<small>$${U.money(cost)}</small></button>
+        ${upBtn('upgrade', n, cost, cash, MSM.econ.maxed(n))}
       </div>`;
     }).join('');
 
     return `<div class="hint">${t('tech.hint')}</div>
-      <div class="seg">${seg}</div>${benches}${rows}`;
+      ${benches}${rows}`;
   }
 
   /* Fast food's list leads with the three stations and what each is
@@ -525,12 +498,6 @@ window.MSM = window.MSM || {};
   function foodProductsBody() {
     const store = MSM.econ.store(), ss = MSM.econ.sstate(), fs = ss.food;
     const cash = MSM.state.cash;
-
-    const seg = [t('buy.1'), t('buy.10'), t('buy.max')].map((l, k) => {
-      const on = (k === 0 && UI.buyMode === 1) || (k === 1 && UI.buyMode === 10) ||
-                 (k === 2 && UI.buyMode === 'max');
-      return `<button class="${on ? 'on' : ''}" data-act="buymode" data-i="${k}">${l}</button>`;
-    }).join('');
 
     // whichever station is carrying most is the one holding up every tray
     let worst = -1, load = 1;
@@ -562,8 +529,7 @@ window.MSM = window.MSM || {};
           <div class="row-sub" style="color:${mi === worst ? '#E0553F' : '#8A95AB'}">${
             mi === worst ? t('food.bottleneck', { n }) : t('food.waiting', { n })}</div>
         </div>
-        <button class="btn" data-act="station" data-i="${mi}" ${cash >= cost ? '' : 'disabled'}>
-          ${t('btn.upgrade', { n: 1 })}<small>$${U.money(cost)}</small></button>
+        ${upBtn('station', mi, cost, cash, st.level >= CFG.MAX_LEVEL)}
       </div>`;
     }).join('');
 
@@ -572,8 +538,7 @@ window.MSM = window.MSM || {};
       if (!ps.built) {
         return lockedRow(prod, n);
       }
-      const count = UI.buyMode === 'max' ? Math.max(1, MSM.econ.maxBuy(n, cash)) : UI.buyMode;
-      const cost = MSM.econ.upgradeCost(n, count);
+      const cost = MSM.econ.upgradeCost(n, 1);
       return `<div class="row prod">${artChip(prod)}
         <div class="row-main">
           <div class="row-name">${prod.name}<span class="lvl">${t('lv', { n: ps.level })}</span></div>
@@ -586,13 +551,12 @@ window.MSM = window.MSM || {};
             ${meter('crate', t('food.freezer'), ps.out, CFG.CRATE_CAP)}
           </div>
         </div>
-        <button class="btn" data-act="upgrade" data-i="${n}" ${cash >= cost ? '' : 'disabled'}>
-          ${t('btn.upgrade', { n: count })}<small>$${U.money(cost)}</small></button>
+        ${upBtn('upgrade', n, cost, cash, MSM.econ.maxed(n))}
       </div>`;
     }).join('');
 
     return `<div class="hint">${t('food.hint')}</div>
-      <div class="seg">${seg}</div>${stations}${rows}`;
+      ${stations}${rows}`;
   }
 
   function productsBody() {
@@ -601,18 +565,12 @@ window.MSM = window.MSM || {};
     if (MSM.sports.active()) return sportsProductsBody();
     if (MSM.boutique.active()) return boutiqueProductsBody();
     if (MSM.tech.active()) return techProductsBody();
-    const seg = [t('buy.1'), t('buy.10'), t('buy.max')].map((l, k) => {
-      const on = (k === 0 && UI.buyMode === 1) || (k === 1 && UI.buyMode === 10) || (k === 2 && UI.buyMode === 'max');
-      return `<button class="${on ? 'on' : ''}" data-act="buymode" data-i="${k}">${l}</button>`;
-    }).join('');
-
     const rows = MSM.econ.store().products.map((prod, n) => {
       const ps = MSM.econ.pstate(n), cash = MSM.state.cash;
       if (!ps.built) {
         return lockedRow(prod, n);
       }
-      const count = UI.buyMode === 'max' ? Math.max(1, MSM.econ.maxBuy(n, cash)) : UI.buyMode;
-      const cost = MSM.econ.upgradeCost(n, count);
+      const cost = MSM.econ.upgradeCost(n, 1);
       const ms = MSM.econ.nextMilestone(ps.level);
       return `<div class="row prod">${artChip(prod)}
         <div class="row-main">
@@ -625,13 +583,12 @@ window.MSM = window.MSM || {};
             ${meter('crate', t('meter.crate'), ps.out, CFG.CRATE_CAP)}
           </div>
         </div>
-        <button class="btn" data-act="upgrade" data-i="${n}" ${cash >= cost ? '' : 'disabled'}>
-          ${t('btn.upgrade', { n: count })}<small>$${U.money(cost)}</small></button>
+        ${upBtn('upgrade', n, cost, cash, MSM.econ.maxed(n))}
       </div>`;
     }).join('');
 
     return `<div class="hint">${t('prod.howto')}</div>
-      <div class="seg">${seg}</div>${rows}`;
+      ${rows}`;
   }
 
   function staffBody() {

@@ -313,19 +313,28 @@ window.MSM = window.MSM || {};
       });
     },
 
-    /** The next OTHER store you own, wrapping round the list. -1 if there is
-        none — `k < n` stops the wrap landing back on the shop you are
-        standing in, which used to make the escalator advertise a trip to
-        itself and, once customers started riding it, send them off to
-        nowhere. */
-    nextStore() {
+    /** The next OTHER store you own `dir` steps round the ring, skipping the
+        ones still locked. -1 if there is none — `k < n` stops the wrap
+        landing back on the shop you are standing in, which used to make the
+        escalator advertise a trip to itself and, once customers started
+        riding it, send them off to nowhere. */
+    ringStore(dir) {
       const n = MSM.state.stores.length;
       for (let k = 1; k < n; k++) {
-        const i = (MSM.state.current + k) % n;
+        const i = ((MSM.state.current + dir * k) % n + n) % n;
         if (MSM.state.stores[i].owned) return i;
       }
       return -1;
     },
+
+    /* It is drawn as a TWIN escalator and now it works like one. The UP run
+       carries you on round the ring; the DOWN run — the one the shop's own
+       customers ride in on — takes you back the way you came. Forward-only
+       meant that from Burger Rush, with the next three shops still locked,
+       the only ride out was the long way round to the Grocery Store while
+       the Coffee Shop sat one step behind you. */
+    nextStore() { return G.ringStore(1); },
+    prevStore() { return G.ringStore(-1); },
 
     /** The first store still locked — the doorway advertises it as a teaser. */
     teaseStore() {
@@ -336,13 +345,18 @@ window.MSM = window.MSM || {};
     },
 
     doorHold: 0,
+    doorUp: true,                    // which of the two runs is being charged
 
-    /* Stand on the escalator for a moment and it carries you to the next
-       store. Held rather than instant so brushing past it does not fire. */
+    /* Stand on one of the two runs for a moment and it carries you off.
+       Held rather than instant so brushing past it does not fire, and the
+       hold resets when you step across to the other run — otherwise half a
+       charge on the up side would finish the trip down. */
     doors(dt) {
-      const p = MSM.ent.player;
-      const to = G.nextStore();
-      if (to < 0 || U.boxDist(p.x, p.y, P.door) > 0.05) { G.doorHold = 0; return; }
+      const p = MSM.ent.player, d = P.door;
+      const up = p.x < (d.x0 + d.x1) / 2;
+      const to = up ? G.nextStore() : G.prevStore();
+      if (to < 0 || U.boxDist(p.x, p.y, d) > 0.05) { G.doorHold = 0; return; }
+      if (up !== G.doorUp) { G.doorUp = up; G.doorHold = 0; }
       G.doorHold += dt;
       if (G.doorHold < CFG.DOOR_HOLD) return;
       G.doorHold = 0;

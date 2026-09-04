@@ -674,10 +674,13 @@ window.MSM = window.MSM || {};
     iso.box(ctx, d.x0 - 0.12, yB - 0.10, d.x1 + 0.12, yF + 0.40, 0, 0.12,
             open ? '#C9A227' : '#9AA5B5');
     iso.tile(ctx, d.x0, yF + 0.04, d.x1, yF + 0.34, 0.124, '#E7EDF6');
+    /* The charge fills only the half you are standing on, so the plate says
+       which of the two runs is about to take you. */
     const hold = MSM.game.doorHold || 0;
     if (open && hold > 0) {
       const pct = U.clamp(hold / CFG.DOOR_HOLD, 0, 1);
-      iso.tile(ctx, d.x0, yF + 0.04, d.x0 + (d.x1 - d.x0) * pct, yF + 0.34, 0.126, '#5FE08D');
+      const a = MSM.game.doorUp ? d.x0 : mid, b = MSM.game.doorUp ? mid : d.x1;
+      iso.tile(ctx, a, yF + 0.04, a + (b - a) * pct, yF + 0.34, 0.126, '#5FE08D');
     }
 
     /* Back to front, because larger x is nearer the eye in this projection:
@@ -699,13 +702,25 @@ window.MSM = window.MSM || {};
     }
 
     if (!store) return;
-    const c = iso.s((d.x0 + d.x1) / 2, yB, topZ + 0.90);
+    /* Two runs, two destinations — unless you only own two shops, when back
+       and on round the ring are the same place and one line says it all. */
+    const back = open ? MSM.game.prevStore() : -1;
+    const other = back >= 0 && back !== to ? CFG.STORES[back] : null;
+    const c = iso.s(mid, yB, topZ + 0.90);
     const w = Math.max(112, iso.TW * 1.35), h = Math.max(40, iso.TW * 0.46);
+    const H = other ? h * 1.34 : h;
     ctx.save();
     ctx.shadowColor = '#0b1c3d40'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 3;
-    rrect(ctx, c.x - w / 2, c.y - h, w, h, h * 0.3);
+    rrect(ctx, c.x - w / 2, c.y - H, w, H, h * 0.3);
     ctx.fillStyle = '#FFFFFF'; ctx.fill();
     ctx.restore();
+    if (other) {
+      text(ctx, '↑  ' + store.glyph + '  ' + store.name,
+           c.x, c.y - H + h * 0.40, h * 0.29, '#16295C');
+      text(ctx, '↓  ' + other.glyph + '  ' + other.name,
+           c.x, c.y - H + h * 0.96, h * 0.29, '#16295C');
+      return;
+    }
     text(ctx, MSM.t(open ? 'world.goto' : 'world.locked'), c.x, c.y - h * 0.68, h * 0.27, '#8A95AB');
     text(ctx, store.glyph + '  ' + store.name, c.x, c.y - h * 0.28, h * 0.3,
          open ? '#16295C' : '#98A6C4');

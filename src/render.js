@@ -472,55 +472,66 @@ window.MSM = window.MSM || {};
     });
   }
 
-  /* A pig, side on: barrel body, snout with two nostrils, a floppy ear,
-     trotters and a curly tail. */
+  /* A pig, side on: a round head nearly as big as the barrel, two flopped
+     ears, a snub snout and a curly tail. Head-heavy on purpose — the first
+     pass hung a small square head off the corner of a long body and read as
+     a lump of pink rather than an animal. */
   function drawPig(ctx, gx, gy) {
     const u = (iso.TW / 64) * 1.2;
     const s = iso.s(gx, gy, 0);
     const X = (n) => s.x + n * u, Y = (n) => s.y + n * u;
-    const PINK = '#F2A0B4', DARK = '#D97F97';
+    const PINK = '#F7A9BD', DARK = '#DA8AA2', LIT = '#FFC7D6',
+          SNOUT = '#EF95AE', HOOF = '#8A5A66';
 
-    shadow(ctx, gx, gy, 0.78);
+    shadow(ctx, gx, gy, 0.82);
 
-    [-9, 8].forEach((lx) => {                                  // far trotters
-      rrect(ctx, X(lx), Y(-13), 5.5 * u, 13 * u, 2.6 * u);
+    [-7, 8].forEach((lx) => {                                  // far trotters
+      rrect(ctx, X(lx), Y(-13), 6 * u, 13 * u, 3 * u);
       ctx.fillStyle = DARK; ctx.fill();
     });
 
     ctx.beginPath();                                           // curly tail
-    ctx.arc(X(15), Y(-27), 3.4 * u, Math.PI * 0.6, Math.PI * 2.1);
-    ctx.strokeStyle = DARK; ctx.lineWidth = 2.4 * u; ctx.lineCap = 'round'; ctx.stroke();
+    ctx.arc(X(19), Y(-28), 4 * u, Math.PI * 0.75, Math.PI * 2.2);
+    ctx.strokeStyle = DARK; ctx.lineWidth = 2.8 * u; ctx.lineCap = 'round';
+    ctx.stroke();
 
-    rrect(ctx, X(-16), Y(-34), 32 * u, 22 * u, 10 * u);         // barrel
+    rrect(ctx, X(-13), Y(-34), 31 * u, 22 * u, 11 * u);        // stubby barrel
     ctx.fillStyle = PINK; ctx.fill();
-    ell2(ctx, X(-4), Y(-30), 9 * u, 5 * u, U.shade(PINK, 0.3));
+    ell2(ctx, X(4), Y(-19), 11 * u, 5 * u, LIT);               // lit belly
 
-    [-13, 5].forEach((lx) => {                                 // near trotters
-      rrect(ctx, X(lx), Y(-15), 6 * u, 15 * u, 2.8 * u);
+    [-11, 4].forEach((lx) => {                                 // near trotters
+      rrect(ctx, X(lx), Y(-15), 6.5 * u, 15 * u, 3.2 * u);
       ctx.fillStyle = PINK; ctx.fill();
-      rrect(ctx, X(lx), Y(-4), 6 * u, 4 * u, 1.8 * u);
-      ctx.fillStyle = '#8A5A66'; ctx.fill();
+      rrect(ctx, X(lx), Y(-4.5), 6.5 * u, 4.5 * u, 2 * u);
+      ctx.fillStyle = HOOF; ctx.fill();
     });
 
-    const hx = -24, hy = -29;
-    ctx.beginPath();                                           // floppy ear
-    ctx.moveTo(X(hx + 6), Y(hy - 7));
-    ctx.lineTo(X(hx + 13), Y(hy - 11));
-    ctx.lineTo(X(hx + 12), Y(hy - 1));
-    ctx.closePath();
-    ctx.fillStyle = DARK; ctx.fill();
+    const hx = -21, hy = -30, hr = 12;
 
-    rrect(ctx, X(hx - 3), Y(hy - 7), 17 * u, 16 * u, 6 * u);    // head
+    // far ear, the head, then the near ear flopped forward over it
+    ell2(ctx, X(hx + 2), Y(hy - hr * 0.82), 5 * u, 6.5 * u, DARK);
+    ctx.beginPath(); ctx.arc(X(hx), Y(hy), hr * u, 0, TAU2);
     ctx.fillStyle = PINK; ctx.fill();
-    ell2(ctx, X(hx - 3), Y(hy + 4), 6.5 * u, 5 * u, DARK);      // snout
+    ctx.save();
+    ctx.translate(X(hx - 7), Y(hy - hr * 0.78));
+    ctx.rotate(-0.35);
+    ctx.beginPath(); ctx.ellipse(0, 0, 5 * u, 7 * u, 0, 0, TAU2);
+    ctx.fillStyle = DARK; ctx.fill();
+    ctx.beginPath(); ctx.ellipse(0, 1 * u, 2.4 * u, 3.6 * u, 0, 0, TAU2);
+    ctx.fillStyle = SNOUT; ctx.fill();
+    ctx.restore();
+
+    ell2(ctx, X(hx - 9), Y(hy + 3), 6.5 * u, 5.4 * u, SNOUT);  // snub snout
     ctx.fillStyle = '#9C5E70';
-    [[-5, 3], [-1, 3.4]].forEach(([dx, dy]) => {
+    [[-11, 2], [-7, 3.4]].forEach(([dx, dy]) => {
       ctx.beginPath();
-      ctx.ellipse(X(hx + dx), Y(hy + dy), 1.3 * u, 1.6 * u, 0, 0, TAU2);
+      ctx.ellipse(X(hx + dx), Y(hy + dy), 1.3 * u, 1.7 * u, 0, 0, TAU2);
       ctx.fill();
     });
-    ctx.fillStyle = '#33383F';
-    ctx.beginPath(); ctx.arc(X(hx + 4), Y(hy - 2), 1.8 * u, 0, TAU2); ctx.fill();
+
+    ell2(ctx, X(hx - 2.5), Y(hy + 4.5), 3 * u, 1.9 * u, '#F97A9C');   // blush
+    ell2(ctx, X(hx + 1), Y(hy - 3), 2.6 * u, 3 * u, '#33383F');       // eye
+    ell2(ctx, X(hx + 1.9), Y(hy - 4.3), 1 * u, 1.2 * u, '#FFFFFF');
   }
 
   /* A plump hen: body, folded wing, comb, wattle, beak and tail feathers. */
@@ -988,6 +999,40 @@ window.MSM = window.MSM || {};
     return { x: s.x, y: hy - hr - (look.cap ? hr * 0.35 : 0) };
   }
 
+  /* ------------------------------------------------- where a body sorts */
+  /* One number per drawable only sorts correctly while everything is the
+     same size. A shelf is 1.45 across and keys on its NEAR corner
+     (x1 + y1), so a body standing at the left-hand end of its front edge
+     has the smaller key and the shelf paints straight over them. That is
+     why the character kept disappearing into the counter and the customers
+     looked like they were sitting inside the furniture.
+
+     Bodies are the only things that move, so correct them and leave the
+     fixtures alone: clamp the key against every solid box with the real
+     isometric test — one box is in front of another when it clears it
+     entirely on an axis. Two boxes that only miss each other diagonally
+     pass BOTH tests, never overlap on screen, and so get no say. */
+  function bodyDepth(e, base) {
+    // riders on the escalator ramp are above the floor and sort on their own
+    if (e.z) return base;
+    const r = CFG.BODY_R;
+    let lo = -Infinity, hi = Infinity;
+    const solids = MSM.world.solids();
+    for (let k = 0; k < solids.length; k++) {
+      const b = solids[k];
+      if (!b) continue;
+      const front = e.y - r >= b.y1 || e.x - r >= b.x1;
+      const back = e.y + r <= b.y0 || e.x + r <= b.x0;
+      if (front === back) continue;      // diagonal miss, or standing inside it
+      if (front) lo = Math.max(lo, b.x1 + b.y1 + 0.02);
+      else hi = Math.min(hi, b.x0 + b.y0 - 0.02);
+    }
+    /* Boxed in on both sides by fixtures that disagree: being swallowed by
+       the thing you are standing in FRONT of is the worse of the two. */
+    if (lo > hi) return lo;
+    return U.clamp(base, lo, hi);
+  }
+
   /** A customer with something in their basket — or, once they have paid,
       the packed paper bag they carry out of the store. */
   function drawBasket(ctx, c) {
@@ -1170,7 +1215,7 @@ window.MSM = window.MSM || {};
     items.push({ d: P.sign.x1 + P.sign.y1 - 1.6, fn: () => drawSign(ctx) });
     MSM.ent.cash.forEach((c) => items.push({ d: c.x + c.y, fn: () => drawCash(ctx, c) }));
     MSM.ent.customers.forEach((c) => items.push({
-      d: c.x + c.y + 0.3,
+      d: bodyDepth(c, c.x + c.y + 0.3),
       fn: () => {
         // behind the curtain: the cubicle draws the progress, not them
         if (c.hidden) return;
@@ -1189,37 +1234,37 @@ window.MSM = window.MSM || {};
     const CREW = ['#FF2E9C', '#F2A03D', '#B45CE0', '#12B4A6'];
     if (MSM.ent.cashier) {
       const k = MSM.ent.cashier;
-      items.push({ d: k.x + k.y + 0.3,
+      items.push({ d: bodyDepth(k, k.x + k.y + 0.3),
                    fn: () => drawBody(ctx, k,
                      { body: '#00B368', cap: '#FFFFFF', accent: '#00B368' }) });
     }
     MSM.ent.stockers.forEach((st, i) => {
-      items.push({ d: st.x + st.y + 0.3,
+      items.push({ d: bodyDepth(st, st.x + st.y + 0.3),
                    fn: () => drawBody(ctx, st,
                      { body: CREW[i % CREW.length], cap: '#FFFFFF', accent: CREW[i % CREW.length] }) });
     });
     MSM.cafe.crew.forEach((s) => {
-      items.push({ d: s.x + s.y + 0.3,
+      items.push({ d: bodyDepth(s, s.x + s.y + 0.3),
                    fn: () => drawBody(ctx, s, { body: s.color, cap: '#FFFFFF', accent: s.color }) });
     });
     MSM.sports.crew.forEach((s) => {
-      items.push({ d: s.x + s.y + 0.3,
+      items.push({ d: bodyDepth(s, s.x + s.y + 0.3),
                    fn: () => drawBody(ctx, s, { body: s.color, cap: '#FFFFFF', accent: s.color }) });
     });
     MSM.boutique.crew.forEach((s) => {
-      items.push({ d: s.x + s.y + 0.3,
+      items.push({ d: bodyDepth(s, s.x + s.y + 0.3),
                    fn: () => drawBody(ctx, s, { body: s.color, cap: '#FFFFFF', accent: s.color }) });
     });
     MSM.tech.crew.forEach((s) => {
-      items.push({ d: s.x + s.y + 0.3,
+      items.push({ d: bodyDepth(s, s.x + s.y + 0.3),
                    fn: () => drawBody(ctx, s, { body: s.color, cap: '#FFFFFF', accent: s.color }) });
     });
     MSM.food.crew.forEach((s) => {
-      items.push({ d: s.x + s.y + 0.3,
+      items.push({ d: bodyDepth(s, s.x + s.y + 0.3),
                    fn: () => drawBody(ctx, s, { body: s.color, cap: '#FFFFFF', accent: s.color }) });
     });
     const p = MSM.ent.player;
-    items.push({ d: p.x + p.y + 0.35,
+    items.push({ d: bodyDepth(p, p.x + p.y + 0.35),
                  fn: () => drawBody(ctx, p, { body: '#29A9F2', cap: '#FFFFFF', accent: '#29A9F2' }) });
 
     items.sort((a, b) => a.d - b.d).forEach((it) => it.fn());

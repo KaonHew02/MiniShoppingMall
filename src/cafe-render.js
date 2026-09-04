@@ -266,6 +266,16 @@ window.MSM = window.MSM || {};
   }
 
   /* -------------------------------------------------------------- tables */
+  /* A stool. It is its own entry in the painter's sort rather than part of
+     drawTable, because the seats stand 0.62 clear of the table on either
+     side: drawn with the table they took the TABLE's corner as their depth,
+     and anyone standing beside the near stool was painted straight over it. */
+  function drawChair(ctx, sx, cy) {
+    iso.box(ctx, sx - 0.2, cy - 0.2, sx + 0.2, cy + 0.2, 0, 0.4, '#A8763F');
+    iso.tile(ctx, sx - 0.18, cy - 0.18, sx + 0.18, cy + 0.18, 0.402, '#C79154');
+    iso.box(ctx, sx - 0.2, cy + 0.14, sx + 0.2, cy + 0.2, 0.4, 0.86, '#8A5A2B');
+  }
+
   function drawTable(ctx, ti) {
     const spec = P.tables[ti], ts = MSM.econ.cstate().tables[ti], b = spec.box;
     const { tag, shadow } = fx();
@@ -277,14 +287,6 @@ window.MSM = window.MSM || {};
 
     const cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2;
     shadow(ctx, cx, cy, 0.8);
-
-    // two chairs, one either side, then the table between them
-    [-1, 1].forEach((d) => {
-      const sx = d < 0 ? b.x0 - 0.62 : b.x1 + 0.62;
-      iso.box(ctx, sx - 0.2, cy - 0.2, sx + 0.2, cy + 0.2, 0, 0.4, '#A8763F');
-      iso.tile(ctx, sx - 0.18, cy - 0.18, sx + 0.18, cy + 0.18, 0.402, '#C79154');
-      iso.box(ctx, sx - 0.2, cy + 0.14, sx + 0.2, cy + 0.2, 0.4, 0.86, '#8A5A2B');
-    });
 
     iso.box(ctx, cx - 0.09, cy - 0.09, cx + 0.09, cy + 0.09, 0, 0.62, '#7A6A5A');
     iso.box(ctx, b.x0 + 0.1, b.y0 + 0.1, b.x1 - 0.1, b.y1 - 0.1, 0.62, 0.72,
@@ -319,7 +321,12 @@ window.MSM = window.MSM || {};
       items.push({ d: spec.pad.x1 + spec.pad.y1 - 0.5, fn: () => drawMachinePad(ctx, mi) });
     });
     P.tables.forEach((spec, ti) => {
-      items.push({ d: spec.box.x1 + spec.box.y1, fn: () => drawTable(ctx, ti) });
+      const b = spec.box, cy = (b.y0 + b.y1) / 2;
+      items.push({ d: b.x1 + b.y1, fn: () => drawTable(ctx, ti) });
+      if (!cs.tables[ti].built) return;
+      [b.x0 - 0.62, b.x1 + 0.62].forEach((sx) => {
+        items.push({ d: sx + cy + 0.4, fn: () => drawChair(ctx, sx, cy) });
+      });
     });
   };
 

@@ -200,7 +200,7 @@ window.MSM = window.MSM || {};
     iso.box(ctx, b.x1 - 1.05, b.y0 + 0.18, b.x1 - 0.25, b.y1 - 0.20, 0.70, 0.86, '#E8552F');
 
     const tk = K.nextTray();
-    const t = iso.s((b.x0 + b.x1) / 2, b.y0 + 0.1, 1.30);
+    const t = iso.s((b.x0 + b.x1) / 2, b.y0 + 0.1, 1.62);
     if (tk && K.buildT > 0) {
       const w = Math.max(50, iso.TW * 0.68), h = Math.max(8, iso.TW * 0.10);
       rrect(ctx, t.x - w / 2, t.y - h / 2, w, h, h / 2);
@@ -235,7 +235,7 @@ window.MSM = window.MSM || {};
       fx().tag(ctx, nt.x, nt.y, '#' + tray.no, '#DFF5E6');
     });
 
-    const t = iso.s((b.x0 + b.x1) / 2, b.y0 + 0.1, 1.55);
+    const t = iso.s((b.x0 + b.x1) / 2, b.y0 + 0.1, 1.85);
     tag(ctx, t.x, t.y,
         K.trays.length ? MSM.t('food.pickup') + ' ' + K.trays.length : MSM.t('food.pickup'),
         K.trays.length ? '#DFF5E6' : '#FFFFFF');
@@ -245,15 +245,19 @@ window.MSM = window.MSM || {};
   function drawOrderSign(ctx) {
     const b = P.till;
     if (!MSM.econ.sstate().till) return;
-    const { rrect, text } = fx();
-    const c = iso.s((b.x0 + b.x1) / 2, b.y0 + 0.1, 1.45);
+    const { rrect, text, late } = fx();
+    /* High enough to clear the cashier's head, and queued with the other
+       words so nobody standing at the counter can stand in front of it. */
+    const c = iso.s((b.x0 + b.x1) / 2, b.y0 + 0.1, 1.80);
     const w = Math.max(96, iso.TW * 1.2), h = Math.max(24, iso.TW * 0.3);
-    ctx.save();
-    ctx.shadowColor = '#0b1c3d40'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 3;
-    rrect(ctx, c.x - w / 2, c.y - h, w, h, h * 0.3);
-    ctx.fillStyle = '#E8552F'; ctx.fill();
-    ctx.restore();
-    text(ctx, MSM.t('food.order'), c.x, c.y - h * 0.5, h * 0.46, '#FFF0C4');
+    late(() => {
+      ctx.save();
+      ctx.shadowColor = '#0b1c3d40'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 3;
+      rrect(ctx, c.x - w / 2, c.y - h, w, h, h * 0.3);
+      ctx.fillStyle = '#E8552F'; ctx.fill();
+      ctx.restore();
+      text(ctx, MSM.t('food.order'), c.x, c.y - h * 0.5, h * 0.46, '#FFF0C4');
+    });
   }
 
   /* ---------------------------------------------------------- the frame */

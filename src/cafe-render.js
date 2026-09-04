@@ -254,15 +254,19 @@ window.MSM = window.MSM || {};
   function drawOrderSign(ctx) {
     const b = P.till;
     if (!MSM.econ.sstate().till) return;
-    const { rrect, text } = fx();
-    const c = iso.s((b.x0 + b.x1) / 2, b.y0 + 0.1, 1.45);
+    const { rrect, text, late } = fx();
+    /* High enough to clear the cashier's head, and queued with the other
+       words so nobody standing at the counter can stand in front of it. */
+    const c = iso.s((b.x0 + b.x1) / 2, b.y0 + 0.1, 1.80);
     const w = Math.max(96, iso.TW * 1.2), h = Math.max(24, iso.TW * 0.3);
-    ctx.save();
-    ctx.shadowColor = '#0b1c3d40'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 3;
-    rrect(ctx, c.x - w / 2, c.y - h, w, h, h * 0.3);
-    ctx.fillStyle = '#4A3527'; ctx.fill();
-    ctx.restore();
-    text(ctx, MSM.t('cafe.order'), c.x, c.y - h * 0.5, h * 0.46, '#FFE9AE');
+    late(() => {
+      ctx.save();
+      ctx.shadowColor = '#0b1c3d40'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 3;
+      rrect(ctx, c.x - w / 2, c.y - h, w, h, h * 0.3);
+      ctx.fillStyle = '#4A3527'; ctx.fill();
+      ctx.restore();
+      text(ctx, MSM.t('cafe.order'), c.x, c.y - h * 0.5, h * 0.46, '#FFE9AE');
+    });
   }
 
   /* -------------------------------------------------------------- tables */

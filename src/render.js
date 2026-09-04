@@ -56,6 +56,18 @@ window.MSM = window.MSM || {};
   const box = (ctx, b, z0, z1, c) => iso.box(ctx, b.x0, b.y0, b.x1, b.y1, z0, z1, c);
   const TAU2 = Math.PI * 2;
 
+  /* Words come off the depth sort.
+
+     A pill floats a good two units over the fixture it belongs to, but it is
+     sorted by that fixture's footprint on the floor — so the kitchen line
+     standing three tiles BEHIND the pickup counter still painted straight
+     through the word PICKUP, and a chef parked in front of a station wore
+     its label like a hat. Anything readable is queued here instead and
+     flushed once the floor is finished: the shop is 3D, the labels on it are
+     not. Outside a frame the queue is null and everything paints at once. */
+  let lateQ = null;
+  function late(fn) { if (lateQ) lateQ.push(fn); else fn(); }
+
   function shadow(ctx, x, y, r) {
     const s = iso.s(x, y, 0);
     ctx.fillStyle = '#16295C22';
@@ -634,6 +646,10 @@ window.MSM = window.MSM || {};
 
   /** Small floating label over a fixture. */
   function tag(ctx, x, y, label, bg) {
+    late(() => paintTag(ctx, x, y, label, bg));
+  }
+
+  function paintTag(ctx, x, y, label, bg) {
     const h = Math.max(20, iso.TW * 0.24);
     ctx.font = `800 ${h * 0.52}px 'Baloo 2','Nunito',system-ui,sans-serif`;
     const w = ctx.measureText(label).width + h * 0.8;
@@ -951,26 +967,50 @@ window.MSM = window.MSM || {};
     const bodyTop = bodyBot - bh;
     const hy = bodyTop - hr * 0.68;
 
-    // stubby legs that scissor
-    [-1, 1].forEach((d) => {
-      const lift = e.moving ? Math.max(0, phase * d) * 2.6 * u : 0;
-      rrect(ctx, s.x + d * 3.6 * u - 2.4 * u, bodyBot - 2.5 * u - lift, 4.8 * u, 6.5 * u + lift, 2.4 * u);
-      ctx.fillStyle = dark; ctx.fill();
-    });
+    /* The figure is painted twice: fattened and flat white, then again in
+       colour on top. That first pass is a sticker rim, and it is the only
+       thing keeping a chef at a dark grill — or anyone leaning on a counter
+       — from melting into it. Fattening the whole silhouette beats stroking
+       each piece, which would draw seams between the body's own parts. */
+    const figure = (g, flat) => {
+      // stubby legs that scissor
+      [-1, 1].forEach((d) => {
+        const lift = e.moving ? Math.max(0, phase * d) * 2.6 * u : 0;
+        rrect(ctx, s.x + d * 3.6 * u - 2.4 * u - g, bodyBot - 2.5 * u - lift - g,
+              4.8 * u + 2 * g, 6.5 * u + lift + 2 * g, 2.4 * u + g);
+        ctx.fillStyle = flat || dark; ctx.fill();
+      });
 
-    // far arm, then torso, then near arm
-    rrect(ctx, s.x - bw / 2 - 2.6 * u, bodyTop + 3 * u - phase * 2.4 * u, 4.8 * u, 10 * u, 2.4 * u);
-    ctx.fillStyle = dark; ctx.fill();
+      // far arm, then torso, then near arm
+      rrect(ctx, s.x - bw / 2 - 2.6 * u - g, bodyTop + 3 * u - phase * 2.4 * u - g,
+            4.8 * u + 2 * g, 10 * u + 2 * g, 2.4 * u + g);
+      ctx.fillStyle = flat || dark; ctx.fill();
 
-    rrect(ctx, s.x - bw / 2, bodyTop, bw, bh + 2.5 * u, bw * 0.5);
-    ctx.fillStyle = col; ctx.fill();
+      rrect(ctx, s.x - bw / 2 - g, bodyTop - g, bw + 2 * g, bh + 2.5 * u + 2 * g, bw * 0.5 + g);
+      ctx.fillStyle = flat || col; ctx.fill();
 
-    rrect(ctx, s.x + bw / 2 - 2.2 * u, bodyTop + 3 * u + phase * 2.4 * u, 4.8 * u, 10 * u, 2.4 * u);
-    ctx.fillStyle = col; ctx.fill();
+      rrect(ctx, s.x + bw / 2 - 2.2 * u - g, bodyTop + 3 * u + phase * 2.4 * u - g,
+            4.8 * u + 2 * g, 10 * u + 2 * g, 2.4 * u + g);
+      ctx.fillStyle = flat || col; ctx.fill();
 
-    // the head IS the colour — no face, like the reference
-    ctx.beginPath(); ctx.arc(s.x, hy, hr, 0, TAU2);
-    ctx.fillStyle = col; ctx.fill();
+      // the head IS the colour — no face, like the reference
+      ctx.beginPath(); ctx.arc(s.x, hy, hr + g, 0, TAU2);
+      ctx.fillStyle = flat || col; ctx.fill();
+
+      // the cap sits proud of the head, so the rim has to follow it round
+      if (g && look.cap) {
+        ctx.beginPath();
+        ctx.arc(s.x, hy - hr * 0.12, hr * 0.99 + g, Math.PI, 0);
+        ctx.closePath();
+        ctx.fillStyle = flat; ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(s.x - hr * 0.72, hy - hr * 0.3, hr * 0.52 + g, hr * 0.24 + g, -0.3, 0, TAU2);
+        ctx.fillStyle = flat; ctx.fill();
+      }
+    };
+    figure(2.4 * u, '#FFFFFF');
+    figure(0, null);
+
     ctx.beginPath();
     ctx.ellipse(s.x - hr * 0.34, hy - hr * 0.34, hr * 0.3, hr * 0.2, -0.6, 0, TAU2);
     ctx.fillStyle = U.shade(col, 0.32); ctx.fill();
@@ -1151,7 +1191,7 @@ window.MSM = window.MSM || {};
 
   /* The painting kit src/cafe-render.js works from — the cafe draws its own
      fixtures, but there is no reason for it to reinvent a rounded rectangle. */
-  R.fx = { rrect, text, tag, shadow, item, box, onFace, ell2, stroke2,
+  R.fx = { rrect, text, tag, late, shadow, item, box, onFace, ell2, stroke2,
            buildPlot, drawPaperBag, drawBody };
 
   /* ------------------------------------------------------- what paints first */
@@ -1207,6 +1247,7 @@ window.MSM = window.MSM || {};
     const ctx = this.ctx;
     ctx.clearRect(0, 0, this.w, this.h);
     drawFloor(ctx);
+    lateQ = [];
 
     const cafe = MSM.cafe.active(), sports = MSM.sports.active();
     const boutique = MSM.boutique.active(), tech = MSM.tech.active();
@@ -1301,6 +1342,8 @@ window.MSM = window.MSM || {};
                  fn: () => drawBody(ctx, p, { body: '#29A9F2', cap: '#FFFFFF', accent: '#29A9F2' }) });
 
     paint(items).forEach((it) => it.fn());
+    const words = lateQ; lateQ = null;
+    words.forEach((fn) => fn());
     drawPops(ctx, dt);
     drawTutArrow(ctx, dt);
     drawStick(ctx);

@@ -48,7 +48,7 @@ window.MSM = window.MSM || {};
     'mart.convSub': '{n} rung up · {w} gave up in the queue',
     'btn.hired': 'Hired ✓', 'btn.hire': 'Hire',
 
-    'map.hint': 'The mall is a ring — each shop escalators to the next. Tap one to go.',
+    'map.hint': 'The mall is a ring — a shop’s escalator reaches the units either side of it. Tap one to go.',
     'map.mall': 'THE MALL',
     'map.open': 'open',
     'map.products': '{n} products',
@@ -356,7 +356,7 @@ window.MSM = window.MSM || {};
     'mart.convSub': '已结账 {n} 单 · {w} 人排到放弃',
     'btn.hired': '已雇用 ✓', 'btn.hire': '雇用',
 
-    'map.hint': '商场是一个环 — 每家店都有手扶梯通往下一家。点一下就过去。',
+    'map.hint': '商场是一个环 — 手扶梯只通往左右相邻的两家店。点一下就过去。',
     'map.mall': '整座商场',
     'map.open': '已开',
     'map.products': '{n} 种商品',
@@ -732,7 +732,7 @@ window.MSM = window.MSM || {};
     'mart.convSub': '已結帳 {n} 單 · {w} 人排到放棄',
     'btn.hired': '已僱用 ✓', 'btn.hire': '僱用',
 
-    'map.hint': '商場是一個環 — 每家店都有手扶梯通往下一家。點一下就過去。',
+    'map.hint': '商場是一個環 — 手扶梯只通往左右相鄰的兩家店。點一下就過去。',
     'map.mall': '整座商場',
     'map.open': '已開',
     'map.products': '{n} 種商品',
@@ -1108,7 +1108,7 @@ window.MSM = window.MSM || {};
     'mart.convSub': '{n} dibayar · {w} putus asa dalam barisan',
     'btn.hired': 'Diambil ✓', 'btn.hire': 'Ambil',
 
-    'map.hint': 'Mal ini satu gelung — setiap kedai ada eskalator ke kedai seterusnya.',
+    'map.hint': 'Mal ini satu gelung — eskalator sesebuah kedai sampai ke kedai di kiri dan kanannya.',
     'map.mall': 'MAL INI',
     'map.open': 'dibuka',
     'map.products': '{n} produk',

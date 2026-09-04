@@ -313,18 +313,16 @@ window.MSM = window.MSM || {};
       });
     },
 
-    /** The next OTHER store you own `dir` steps round the ring, skipping the
-        ones still locked. -1 if there is none — `k < n` stops the wrap
-        landing back on the shop you are standing in, which used to make the
-        escalator advertise a trip to itself and, once customers started
-        riding it, send them off to nowhere. */
+    /** The shop one step round the ring in `dir`, and only if you own it —
+        -1 otherwise. An escalator joins the units either SIDE of it, so it
+        does not reach over the ones you have not bought yet: with Sport
+        Outlet still locked, Burger Rush's up run goes nowhere rather than
+        making the long trip round to the Grocery Store. Nothing is stranded
+        by that — the Map travels to any shop you own. */
     ringStore(dir) {
       const n = MSM.state.stores.length;
-      for (let k = 1; k < n; k++) {
-        const i = ((MSM.state.current + dir * k) % n + n) % n;
-        if (MSM.state.stores[i].owned) return i;
-      }
-      return -1;
+      const i = ((MSM.state.current + dir) % n + n) % n;
+      return i !== MSM.state.current && MSM.state.stores[i].owned ? i : -1;
     },
 
     /* It is drawn as a TWIN escalator and now it works like one. The UP run
@@ -354,7 +352,10 @@ window.MSM = window.MSM || {};
     doors(dt) {
       const p = MSM.ent.player, d = P.door;
       const up = p.x < (d.x0 + d.x1) / 2;
-      const to = up ? G.nextStore() : G.prevStore();
+      const next = G.nextStore(), back = G.prevStore();
+      /* Only one run going anywhere and you stood on the other: take them
+         anyway. A tread that quietly does nothing reads as broken. */
+      const to = up ? (next >= 0 ? next : back) : (back >= 0 ? back : next);
       if (to < 0 || U.boxDist(p.x, p.y, d) > 0.05) { G.doorHold = 0; return; }
       if (up !== G.doorUp) { G.doorUp = up; G.doorHold = 0; }
       G.doorHold += dt;

@@ -661,10 +661,9 @@ window.MSM = window.MSM || {};
      CUSTOMERS, walking on under their own steam — see MSM.ent.rideStep. */
   function drawDoor(ctx) {
     const d = P.door;
-    const to = MSM.game.nextStore();
-    const tease = to < 0 ? MSM.game.teaseStore() : -1;
-    const store = CFG.STORES[to >= 0 ? to : tease] || null;
-    const open = to >= 0;
+    const to = MSM.game.nextStore(), back = MSM.game.prevStore();
+    const open = to >= 0 || back >= 0;
+    const store = open ? null : (CFG.STORES[MSM.game.teaseStore()] || null);
 
     const yF = d.y1, yB = d.y0;                    // front foot, back top
     const topZ = CFG.ESC.TOP_Z;
@@ -701,29 +700,31 @@ window.MSM = window.MSM || {};
       iso.faceL(ctx, yB + 0.02, d.x0 + 0.16, d.x1 - 0.16, topZ + 0.50, topZ + 0.60, '#FFE9AE');
     }
 
-    if (!store) return;
-    /* Two runs, two destinations — unless you only own two shops, when back
-       and on round the ring are the same place and one line says it all. */
-    const back = open ? MSM.game.prevStore() : -1;
-    const other = back >= 0 && back !== to ? CFG.STORES[back] : null;
+    /* One line per run that goes anywhere, and the arrow is the point of
+       it: the two treads land in different shops, so the sign has to say
+       which side to stand on. Joined to nothing yet — advertise whatever is
+       next to buy instead. */
+    const lines = [];
+    if (to >= 0) lines.push('↑  ' + CFG.STORES[to].glyph + '  ' + CFG.STORES[to].name);
+    if (back >= 0) lines.push('↓  ' + CFG.STORES[back].glyph + '  ' + CFG.STORES[back].name);
+    if (!lines.length && !store) return;
+
     const c = iso.s(mid, yB, topZ + 0.90);
     const w = Math.max(112, iso.TW * 1.35), h = Math.max(40, iso.TW * 0.46);
-    const H = other ? h * 1.34 : h;
+    const H = lines.length > 1 ? h * 1.34 : h;
     ctx.save();
     ctx.shadowColor = '#0b1c3d40'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 3;
     rrect(ctx, c.x - w / 2, c.y - H, w, H, h * 0.3);
     ctx.fillStyle = '#FFFFFF'; ctx.fill();
     ctx.restore();
-    if (other) {
-      text(ctx, '↑  ' + store.glyph + '  ' + store.name,
-           c.x, c.y - H + h * 0.40, h * 0.29, '#16295C');
-      text(ctx, '↓  ' + other.glyph + '  ' + other.name,
-           c.x, c.y - H + h * 0.96, h * 0.29, '#16295C');
+
+    if (!lines.length) {
+      text(ctx, MSM.t('world.locked'), c.x, c.y - h * 0.68, h * 0.27, '#8A95AB');
+      text(ctx, store.glyph + '  ' + store.name, c.x, c.y - h * 0.28, h * 0.3, '#98A6C4');
       return;
     }
-    text(ctx, MSM.t(open ? 'world.goto' : 'world.locked'), c.x, c.y - h * 0.68, h * 0.27, '#8A95AB');
-    text(ctx, store.glyph + '  ' + store.name, c.x, c.y - h * 0.28, h * 0.3,
-         open ? '#16295C' : '#98A6C4');
+    lines.forEach((line, k) => text(ctx, line, c.x,
+      c.y - H + h * (lines.length > 1 ? 0.40 + k * 0.56 : 0.50), h * 0.29, '#16295C'));
   }
 
   /** One solid pale side panel following the slope, capped in gold. */

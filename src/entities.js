@@ -108,8 +108,11 @@ window.MSM = window.MSM || {};
       });
     },
 
-    /** Is there anywhere else to go? No second shop, no escalator traffic. */
-    escOpen: () => MSM.game.nextStore() >= 0,
+    /* Is the escalator joined to anything? Either run counts. The traffic
+       riding it is the MALL's, not yours — it does not care which of the two
+       neighbours you happen to have bought, so the treads stay busy even in
+       a shop whose up run has nowhere for YOU to go yet. */
+    escOpen: () => MSM.game.nextStore() >= 0 || MSM.game.prevStore() >= 0,
 
     /** Coin-flip, weighted, for whether this customer uses it at all. */
     escPick: () => E.escOpen() && Math.random() < CFG.ESC.SHARE,

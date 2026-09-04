@@ -19,7 +19,13 @@ window.MSM = window.MSM || {};
     solids() {
       if (this._solids) return this._solids;
       // an unbuilt counter is an open construction plot you stand on to pay
-      const list = MSM.econ.sstate().till ? [CFG.PLAN.till, CFG.PLAN.bin] : [CFG.PLAN.bin];
+      /* The escalator is a machine, not a doorway. It was the one fixture
+         nobody collided with — because you used to travel by standing ON it
+         — so you could walk into the middle of the structure and stand there
+         wearing it. You ride it from the plate in FRONT of it now (see
+         game.js doors), which leaves it free to be as solid as it looks. */
+      const D = CFG.PLAN;
+      const list = MSM.econ.sstate().till ? [D.till, D.bin, D.door] : [D.bin, D.door];
       // wheat and other inputs have no shelf — only sellable goods do
       // a line you have not built yet is empty floor
       const ps = MSM.econ.sstate().products;

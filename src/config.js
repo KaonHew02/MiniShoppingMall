@@ -55,6 +55,7 @@ MSM.CFG = {
     DECK: 0.14,            // the tread just off the floor
     RAIL: 0.86,            // balustrade height above the tread
     RIDE: 2.6,             // seconds a customer takes to ride it end to end
+    BOARD: 0.45,           // how close you stand IN FRONT of it to ride
     /* Once another shop is open, this share of customers come and go by
        escalator instead of the street door — they are shopping the mall,
        not just this one unit. */
@@ -856,7 +857,11 @@ MSM.CFG.PLANS.food = {
   ],
 
   /* Where a finished order becomes a tray, and where the tray waits. */
-  assembly: { x0: 3.60,  y0: 9.60, x1: 8.00,  y1: 10.40 },
+  /* The bench STOPS clear of the order counter at 7.60. They used to run
+     into each other by four tenths of a tile, and since the bench stands
+     0.70 to the till's 0.55 it swallowed the register whole — all you saw of
+     it was a navy corner poking out of the end of the bench. */
+  assembly: { x0: 3.60,  y0: 9.60, x1: 6.90,  y1: 10.40 },
   pickup:   { x0: 12.40, y0: 9.60, x1: 16.80, y1: 10.40 },
   pickupStand: { x: 14.60, y: 11.00 },
 

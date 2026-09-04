@@ -967,50 +967,54 @@ window.MSM = window.MSM || {};
     const bodyTop = bodyBot - bh;
     const hy = bodyTop - hr * 0.68;
 
-    /* The figure is painted twice: fattened and flat white, then again in
-       colour on top. That first pass is a sticker rim, and it is the only
-       thing keeping a chef at a dark grill — or anyone leaning on a counter
-       — from melting into it. Fattening the whole silhouette beats stroking
-       each piece, which would draw seams between the body's own parts. */
-    const figure = (g, flat) => {
-      // stubby legs that scissor
-      [-1, 1].forEach((d) => {
-        const lift = e.moving ? Math.max(0, phase * d) * 2.6 * u : 0;
-        rrect(ctx, s.x + d * 3.6 * u - 2.4 * u - g, bodyBot - 2.5 * u - lift - g,
-              4.8 * u + 2 * g, 6.5 * u + lift + 2 * g, 2.4 * u + g);
-        ctx.fillStyle = flat || dark; ctx.fill();
-      });
+    /* A white rim behind the whole figure — without it a chef at a dark
+       grill, or anyone leaning on a counter, melts straight into it.
 
-      // far arm, then torso, then near arm
+       It is its own simplified silhouette, NOT the body parts fattened one
+       by one: fattening the two legs separately scalloped the bottom edge
+       into a splat of white lobes. Torso and legs go down as a single bean
+       (the legs never reach past the torso's own width), so the outline
+       stays one smooth shape however the walk cycle is posed. */
+    const rim = (g) => {
+      ctx.fillStyle = '#FFFFFF';
       rrect(ctx, s.x - bw / 2 - 2.6 * u - g, bodyTop + 3 * u - phase * 2.4 * u - g,
-            4.8 * u + 2 * g, 10 * u + 2 * g, 2.4 * u + g);
-      ctx.fillStyle = flat || dark; ctx.fill();
-
-      rrect(ctx, s.x - bw / 2 - g, bodyTop - g, bw + 2 * g, bh + 2.5 * u + 2 * g, bw * 0.5 + g);
-      ctx.fillStyle = flat || col; ctx.fill();
-
+            4.8 * u + 2 * g, 10 * u + 2 * g, 2.4 * u + g); ctx.fill();
       rrect(ctx, s.x + bw / 2 - 2.2 * u - g, bodyTop + 3 * u + phase * 2.4 * u - g,
-            4.8 * u + 2 * g, 10 * u + 2 * g, 2.4 * u + g);
-      ctx.fillStyle = flat || col; ctx.fill();
-
-      // the head IS the colour — no face, like the reference
-      ctx.beginPath(); ctx.arc(s.x, hy, hr + g, 0, TAU2);
-      ctx.fillStyle = flat || col; ctx.fill();
-
-      // the cap sits proud of the head, so the rim has to follow it round
-      if (g && look.cap) {
+            4.8 * u + 2 * g, 10 * u + 2 * g, 2.4 * u + g); ctx.fill();
+      rrect(ctx, s.x - bw / 2 - g, bodyTop - g,
+            bw + 2 * g, bodyBot + 4 * u - bodyTop + 2 * g, bw * 0.5 + g); ctx.fill();
+      ctx.beginPath(); ctx.arc(s.x, hy, hr + g, 0, TAU2); ctx.fill();
+      if (look.cap) {
         ctx.beginPath();
         ctx.arc(s.x, hy - hr * 0.12, hr * 0.99 + g, Math.PI, 0);
-        ctx.closePath();
-        ctx.fillStyle = flat; ctx.fill();
+        ctx.closePath(); ctx.fill();
         ctx.beginPath();
         ctx.ellipse(s.x - hr * 0.72, hy - hr * 0.3, hr * 0.52 + g, hr * 0.24 + g, -0.3, 0, TAU2);
-        ctx.fillStyle = flat; ctx.fill();
+        ctx.fill();
       }
     };
-    figure(2.4 * u, '#FFFFFF');
-    figure(0, null);
+    rim(1.15 * u);
 
+    // stubby legs that scissor
+    [-1, 1].forEach((d) => {
+      const lift = e.moving ? Math.max(0, phase * d) * 2.6 * u : 0;
+      rrect(ctx, s.x + d * 3.6 * u - 2.4 * u, bodyBot - 2.5 * u - lift, 4.8 * u, 6.5 * u + lift, 2.4 * u);
+      ctx.fillStyle = dark; ctx.fill();
+    });
+
+    // far arm, then torso, then near arm
+    rrect(ctx, s.x - bw / 2 - 2.6 * u, bodyTop + 3 * u - phase * 2.4 * u, 4.8 * u, 10 * u, 2.4 * u);
+    ctx.fillStyle = dark; ctx.fill();
+
+    rrect(ctx, s.x - bw / 2, bodyTop, bw, bh + 2.5 * u, bw * 0.5);
+    ctx.fillStyle = col; ctx.fill();
+
+    rrect(ctx, s.x + bw / 2 - 2.2 * u, bodyTop + 3 * u + phase * 2.4 * u, 4.8 * u, 10 * u, 2.4 * u);
+    ctx.fillStyle = col; ctx.fill();
+
+    // the head IS the colour — no face, like the reference
+    ctx.beginPath(); ctx.arc(s.x, hy, hr, 0, TAU2);
+    ctx.fillStyle = col; ctx.fill();
     ctx.beginPath();
     ctx.ellipse(s.x - hr * 0.34, hy - hr * 0.34, hr * 0.3, hr * 0.2, -0.6, 0, TAU2);
     ctx.fillStyle = U.shade(col, 0.32); ctx.fill();
@@ -1220,7 +1224,23 @@ window.MSM = window.MSM || {};
       for (let j = 0; j < n; j++) {
         const B = j === i ? null : items[j].b;
         if (!B) continue;
-        if (B.x1 <= A.x0 || B.y1 <= A.y0) (deps[i] || (deps[i] = [])).push(j);
+        /* Only a pair that could actually cover each other is allowed to
+           constrain the order — that is, one that still overlaps on the
+           OTHER axis. Testing both axes unconditionally read every box in
+           the top-left of the room as being "in front of" anyone standing
+           at the bottom-left, because they clear each other on x AND on y
+           at the same time, in opposite directions.
+
+           Those pairs are nowhere near each other on screen, so the order
+           between them does not matter — but the false edge does not stay
+           put. It chains: player -> assembly bench -> escalator, and the
+           escalator then painted over the player standing at its own comb
+           plate, which is what made you vanish into the machine. */
+        const overX = B.x0 < A.x1 && A.x0 < B.x1;
+        const overY = B.y0 < A.y1 && A.y0 < B.y1;
+        if ((overY && B.x1 <= A.x0) || (overX && B.y1 <= A.y0)) {
+          (deps[i] || (deps[i] = [])).push(j);
+        }
       }
     }
     const mark = new Uint8Array(n), out = [];

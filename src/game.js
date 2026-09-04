@@ -153,6 +153,8 @@ window.MSM = window.MSM || {};
         if (MSM.tech.active()) MSM.tech.update(dt);
         G.serve(dt);
       }
+      // last, once everyone has moved: no two bodies left standing in one spot
+      MSM.ent.separate();
       G.tillPad(dt);
       G.buildPads(dt);
       G.signPost(dt);
@@ -356,7 +358,8 @@ window.MSM = window.MSM || {};
       /* Only one run going anywhere and you stood on the other: take them
          anyway. A tread that quietly does nothing reads as broken. */
       const to = up ? (next >= 0 ? next : back) : (back >= 0 ? back : next);
-      if (to < 0 || U.boxDist(p.x, p.y, d) > 0.05) { G.doorHold = 0; return; }
+      // stand at the foot of a run, not inside it — the escalator is solid
+      if (to < 0 || U.boxDist(p.x, p.y, d) > CFG.ESC.BOARD) { G.doorHold = 0; return; }
       if (up !== G.doorUp) { G.doorUp = up; G.doorHold = 0; }
       G.doorHold += dt;
       if (G.doorHold < CFG.DOOR_HOLD) return;

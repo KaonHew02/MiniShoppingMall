@@ -121,7 +121,8 @@ window.MSM = window.MSM || {};
     escFoot(up) {
       const d = P.door, mid = (d.x0 + d.x1) / 2;
       const x = up ? (d.x0 + mid) / 2 : (mid + d.x1) / 2;
-      return { x, y: d.y1 + 0.30 };
+      // clear of the escalator's own footprint, which is solid now
+      return { x, y: d.y1 + 0.55 };
     },
 
     /** Put a customer on the escalator, coming down into the shop. */
@@ -158,9 +159,12 @@ window.MSM = window.MSM || {};
       c.walk += dt * 2;
       c.moving = true;
       if (!done) return false;
+      const down = c.riding === -1;
       c.riding = 0;
       c.rideT = 0;
       c.z = 0;
+      // step off the tread onto the floor rather than into the machine
+      if (down) c.y = d.y1 + 0.55;
       return true;
     },
 
@@ -409,6 +413,62 @@ window.MSM = window.MSM || {};
       }
     },
 
+    /* ------------------------------------------------------------- crowd */
+    /** Everyone standing on this floor right now, staff and shoppers alike. */
+    bodies() {
+      const out = [this.player];
+      if (this.cashier) out.push(this.cashier);
+      this.stockers.forEach((s) => out.push(s));
+      this.customers.forEach((c) => out.push(c));
+      [MSM.cafe, MSM.sports, MSM.boutique, MSM.tech, MSM.food].forEach((m) => {
+        (m && m.crew || []).forEach((s) => out.push(s));
+      });
+      return out;
+    },
+
+    /* Nobody stands inside anybody else.
+
+       Bodies have always collided with the counters, but never with each
+       other: a shopper walking to a shelf someone was already at parked in
+       the same square and the pair came out as one four-armed customer with
+       two heads. Same at the pickup counter, where you drive the player
+       straight through whoever is working it.
+
+       So overlapping pairs shove each other apart, half the depth each, and
+       the shove goes through W.move — a push can never post someone into a
+       counter or through the wall. Anyone off the floor (riding the
+       escalator) or behind a fitting room curtain is not in the crowd. */
+    separate() {
+      const list = this.bodies();
+      const R = CFG.BODY_R * 1.9;              // shoulder to shoulder
+      for (let i = 0; i < list.length; i++) {
+        const a = list[i];
+        if (!a || a.z || a.hidden) continue;
+        for (let j = i + 1; j < list.length; j++) {
+          const b = list[j];
+          if (!b || b.z || b.hidden) continue;
+          const dx = b.x - a.x, dy = b.y - a.y;
+          const d = Math.hypot(dx, dy);
+          if (d >= R) continue;
+          /* Dead centre on each other — spawned on the same spot, or walked
+             in from opposite sides. Any direction will do, as long as it is
+             the SAME one every frame, or the pair jitters in place. */
+          const ux = d > 1e-3 ? dx / d : Math.cos(i * 2.4);
+          const uy = d > 1e-3 ? dy / d : Math.sin(i * 2.4);
+          /* You are the one thing the crowd cannot move: shoppers used to
+             walk the player off a build pad mid-payment. Everyone else
+             gives half the overlap each. */
+          const push = R - d;
+          if (a === this.player) W.move(b, ux * push, uy * push);
+          else if (b === this.player) W.move(a, -ux * push, -uy * push);
+          else {
+            W.move(a, -ux * push / 2, -uy * push / 2);
+            W.move(b, ux * push / 2, uy * push / 2);
+          }
+        }
+      }
+    },
+
     /* ----------------------------------------------------------- stocker */
     updateStockers(dt) {
       this.stockers.forEach((s) => E.stepStocker(s, dt));
@@ -642,7 +702,11 @@ window.MSM = window.MSM || {};
             break;
 
           case 'toShelf':
-            if (W.walk(c, prod.browse.x, prod.browse.y, spd, dt)) c.phase = 'browse';
+            /* Their own place at the shelf. Everyone aiming at the exact
+               middle of it meant everyone shoving for the same square —
+               the crowd rule would have them shuffling there all day. */
+            if (c.side === undefined) c.side = Math.random() * 0.9 - 0.45;
+            if (W.walk(c, prod.browse.x + c.side, prod.browse.y, spd, dt)) c.phase = 'browse';
             break;
 
           /* The heart of it: they stand at the shelf wanting the thing and

@@ -5,11 +5,13 @@
   "description": "Mini Shopping Mall - idle mall tycoon game",
   "type": "module",
   "scripts": {
+    "build": "node tools/build.mjs",
     "logo": "node tools/build-logo.mjs",
     "logo:png": "node tools/build-logo.mjs --png",
     "start": "node tools/dev-server.mjs 8788"
   },
   "devDependencies": {
-    "@resvg/resvg-js": "^2.6.2"
+    "@resvg/resvg-js": "^2.6.2",
+    "esbuild": "^0.25.12"
   }
 }

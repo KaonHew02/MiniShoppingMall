@@ -47,8 +47,14 @@ window.MSM = window.MSM || {};
       if (data.format !== FORMAT) return MSM.t('err.notMSM');
       if (!data.stores || typeof data.stores !== 'object') return MSM.t('err.noData');
       const main = data.stores[MSM.CFG.SAVE_KEY];
-      if (!main || !Array.isArray(main.stores)) return MSM.t('err.oldSave');
-      return null;
+      if (!main || typeof main !== 'object') return MSM.t('err.oldSave');
+      /* The save inside must still carry an unbroken seal (see state.js).
+         A file from before the seal is read only until the same cutoff as
+         an old local save; after it, it is exactly what a hand-edited one
+         would look like. MSM.load checks again after the reload, so
+         skipping this check gets nothing. */
+      if (MSM.seal.open(main) || MSM.seal.legacy(main)) return null;
+      return MSM.t(main.format === 'msm.sealed' ? 'err.tampered' : 'err.oldSave');
     },
 
     /**

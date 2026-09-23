@@ -18,8 +18,19 @@ the next store.
 npm start
 ```
 
-Then open http://127.0.0.1:8788. There is no build step — `index.html` also
-works if you just double-click it.
+Then open http://127.0.0.1:8788. There is no build step for development —
+`index.html` also works if you just double-click it.
+
+The copy players get is built:
+
+```bash
+npm run build        # -> dist/, previewed at http://127.0.0.1:8788/dist/
+```
+
+`dist/` is the whole game as one minified script inside a closure, so nothing
+it owns can be reached from the browser console. Pushing to `main` publishes
+it to GitHub Pages through `.github/workflows/pages.yml` (one-time switch:
+Settings → Pages → Source: **GitHub Actions**). See [Security](#security).
 
 ## Controls
 
@@ -338,6 +349,8 @@ number that belongs to the whole mall rather than any single shop: what the
 place earns while you are away.
 
 Progress autosaves to `localStorage` every 10 seconds and when you leave.
+The save is sealed with a hash; one edited by hand, in DevTools or in an
+exported file, is refused and the game starts fresh (see [Security](#security)).
 
 ## Backing up
 
@@ -378,11 +391,47 @@ src/game.js        loop, input, the till, unlocking and travelling
 src/backup.js      export / import the save file
 src/drive.js       the Google Drive copy (config in src/drive-config.js)
 tools/dev-server.mjs  static server for `npm start`
+tools/build.mjs    the protected production build in dist/
 tools/build-logo.mjs  generates every file in assets/logo
 ```
 
 Scripts load as plain `<script>` tags into one `MSM` namespace — no bundler, no
 modules, so the file:// path keeps working.
+
+## Security
+
+This is a single-player game with no server, so everything runs in the
+player's own browser and a determined programmer with a debugger can always
+change their own copy. What the game does is make that much harder than
+pasting a snippet into the console, and make sure nothing they do reaches
+anyone else:
+
+| Attack | What stops it |
+| --- | --- |
+| `MSM.state.cash = 1e12` in the console | The built game has no globals — every module is a local inside one strict-mode closure (`tools/build.mjs`) |
+| Reaching into the closure through a built-in: a getter or `toJSON` planted on `Object.prototype`, a replaced `Array.prototype.forEach`, a `requestAnimationFrame` that lies about the time | The built game keeps its own copies of the built-ins it calls and freezes the shared prototypes before any console code can run |
+| Reading the code from the live site | Only one minified file is served, no `src/`, no source map |
+| Editing the save in Application → Local Storage, or an exported `.json` | The save is sealed (`MSM.seal` in `src/state.js`); a broken seal is refused on load and on import |
+| `Infinity`, `NaN`, negative or impossible numbers in a save | Every loaded number is clamped to what the game itself could produce, and cash already paid into a pad stays below its price |
+| Rewriting a button in Elements, or re-enabling a disabled one | A click only runs if the sheet actually offered that button; every action then re-checks the index, ownership, cost and whether the line is built (`src/ui.js`, `src/game.js`) |
+| Winding the clock back to replay a boost | The boost counts down in game time, not by the wall clock |
+| Injected `<script>` / XSS | A Content-Security-Policy in `index.html` allows only this site's scripts and Google sign-in |
+
+What it cannot stop, and does not pretend to:
+
+- **The DevTools debugger.** Anyone can pause the game on a breakpoint and
+  edit a variable by hand. Only a game server could stop that. It only ever
+  changes their own copy — there is no leaderboard and nothing is shared.
+- **Someone who reads the source.** The seal's pepper ships in the game, and
+  the repository is public, so a reader can forge a seal. Hiding the source
+  means making the repository private.
+- **Old saves until 1 November 2026.** Saves and backup files from before the
+  seal are still read until then, so nobody's progress is lost when it
+  ships; until that date an unsealed save is accepted.
+
+A save the game refuses is never destroyed: it is set aside under
+`msm.save.v12.rejected`, and Drive auto-backup stays off for that session so
+the fresh game cannot overwrite the cloud copy.
 
 ## Not built yet
 

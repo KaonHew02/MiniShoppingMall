@@ -210,6 +210,9 @@ window.MSM = window.MSM || {};
      */
     touch() {
       if (!D.auto() || !D.configured() || silentOff) return;
+      /* This session started over because the save was refused — pushing
+         now would put an empty game over the only good copy left. */
+      if (MSM.tampered) return;
       if (pending) return;
       pending = setTimeout(() => {
         pending = null;

@@ -15,6 +15,8 @@ window.MSM = window.MSM || {};
     mode: null,
     arg: null,
     _html: '',
+    _offered: new Set(),
+    _watch: null,
     _touchedAt: 0,
 
     init() {
@@ -29,8 +31,20 @@ window.MSM = window.MSM || {};
       const body = $('sheet-body');
       body.addEventListener('click', (e) => {
         const el = e.target.closest('[data-act]');
-        if (!el) return;
-        UI.action(el.dataset.act, el.dataset.i !== undefined ? +el.dataset.i : null);
+        if (!el || el.disabled) return;
+        const act = el.dataset.act, i = el.dataset.i;
+        // only what this sheet actually offered — see offered() below
+        if (!UI._offered.has(act + '|' + (i ?? ''))) return;
+        UI.action(act, i !== undefined ? +i : null);
+      });
+      /* A button rewritten in DevTools' Elements panel is put back on the
+         next frame. Only the attributes that decide what a click does are
+         watched: text is just a picture of the game, and dark-mode and
+         translation extensions rewrite text and styles all the time — a
+         redraw for each would have them fighting the sheet forever. */
+      UI._watch = new MutationObserver(() => { UI._html = ''; });
+      UI._watch.observe(body, {
+        subtree: true, attributes: true, attributeFilter: ['data-act', 'data-i', 'disabled'],
       });
       const touched = () => { UI._touchedAt = performance.now(); };
       body.addEventListener('pointerdown', touched);
@@ -156,7 +170,7 @@ window.MSM = window.MSM || {};
       const banner = $('boost-banner');
       if (MSM.econ.boosting()) {
         banner.hidden = false;
-        $('boost-time').textContent = Math.ceil((s.boostUntil - Date.now()) / 1000) + 's';
+        $('boost-time').textContent = Math.ceil(s.boostLeft) + 's';
       } else banner.hidden = true;
 
       if (this.mode) this.body(false);
@@ -175,10 +189,28 @@ window.MSM = window.MSM || {};
       const el = $('sheet-body');
       const keep = el.scrollTop;
       this._html = html;
+      this._offered = offered(html);
       el.innerHTML = html;
       el.scrollTop = keep;
+      if (this._watch) this._watch.takeRecords();   // our own write is not tampering
     },
   };
+
+  /* The actions a sheet offers, read from the HTML string we just generated
+     — never from the page, which anyone can edit. A click whose data-act /
+     data-i pair is not in here does nothing: a button someone rewrote to
+     point somewhere else, or a disabled one someone switched back on. The
+     action itself still re-checks cost and ownership in game.js. */
+  function offered(html) {
+    const ok = new Set();
+    for (const [tag] of html.matchAll(/<[^>]*\sdata-act="[^"]*"[^>]*>/g)) {
+      if (/\sdisabled[\s>=]/.test(tag)) continue;
+      const act = tag.match(/\sdata-act="([^"]*)"/)[1];
+      const i = (tag.match(/\sdata-i="([^"]*)"/) || [])[1];
+      ok.add(act + '|' + (i ?? ''));
+    }
+    return ok;
+  }
 
   function badge(id, n) {
     const el = document.getElementById(id);
@@ -857,7 +889,7 @@ window.MSM = window.MSM || {};
         <div class="row-main">
           <div class="row-name">${t('boost.name', { n: b.mult })}</div>
           <div class="row-sub">${on
-            ? t('boost.active', { n: Math.ceil((s.boostUntil - Date.now()) / 1000) })
+            ? t('boost.active', { n: Math.ceil(s.boostLeft) })
             : t('boost.sub', { n: b.seconds })}</div>
         </div>
         <button class="btn gem" data-act="boost" ${s.gems >= b.gems && !on ? '' : 'disabled'}>

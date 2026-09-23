@@ -1319,6 +1319,9 @@ MSM.CFG.usePlan(0);
 /* ------------------------------------------------------------- helpers */
 MSM.util = {
   clamp: (v, a, b) => (v < a ? a : v > b ? b : v),
+
+  /** Is i a real index into arr? Anything from the DOM has to pass this. */
+  slot: (i, arr) => Number.isInteger(i) && i >= 0 && !!arr && i < arr.length,
   lerp: (a, b, t) => a + (b - a) * t,
 
   shade(hex, t) {

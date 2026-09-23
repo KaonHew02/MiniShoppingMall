@@ -3,6 +3,8 @@ window.MSM = window.MSM || {};
 
 (function () {
   const U = MSM.util, CFG = MSM.CFG, P = MSM.CFG.PLAN;
+  const CAFE_JOBS = ['barista', 'chef', 'server', 'cleaner'];
+  const FOOD_JOBS = ['cook', 'packer'];
 
   const G = MSM.game = {
     last: 0,
@@ -27,6 +29,7 @@ window.MSM = window.MSM || {};
       addEventListener('visibilitychange', () => { if (document.hidden) MSM.save(); });
       addEventListener('pagehide', () => MSM.save());
 
+      if (MSM.tampered) MSM.ui.toast(MSM.t('toast.tampered'));
       if (offline) MSM.ui.open('offline', offline);
       else if ((MSM.state.stores[0].tut || 0) >= 99) {
         setTimeout(() => MSM.ui.toast(MSM.t('toast.tip')), 800);
@@ -130,6 +133,7 @@ window.MSM = window.MSM || {};
       G.last = ts;
       if (dt > 1.5) { G.catchUp(dt); dt = 0.05; }
       dt = U.clamp(dt, 0, 0.1);
+      if (MSM.state.boostLeft > 0) MSM.state.boostLeft = Math.max(0, MSM.state.boostLeft - dt);
 
       const dir = G.input();
       MSM.world.frame();
@@ -380,6 +384,8 @@ window.MSM = window.MSM || {};
     },
 
     catchUp(sec) {
+      // time away burns the boost too, or hiding the tab would bank it
+      MSM.state.boostLeft = Math.max(0, MSM.state.boostLeft - sec);
       const capped = Math.min(sec, CFG.OFFLINE_CAP_H * 3600);
       const amount = MSM.econ.idleRate() * capped * CFG.OFFLINE_RATE;
       if (amount <= 0) return;
@@ -398,7 +404,11 @@ window.MSM = window.MSM || {};
     },
 
     /* ---------------------------------------------------- map actions */
+    /* Every index below can arrive from a button's data-i, which anyone can
+       rewrite in DevTools. So each action checks it is a real slot, and
+       re-checks every rule the button's being there was supposed to imply. */
     unlockStore(i) {
+      if (!U.slot(i, CFG.STORES)) return;
       const store = CFG.STORES[i], ss = MSM.state.stores[i];
       if (ss.owned || MSM.state.cash < store.unlock) return;
       MSM.state.cash -= store.unlock;
@@ -409,6 +419,7 @@ window.MSM = window.MSM || {};
     },
 
     travel(i) {
+      if (!U.slot(i, MSM.state.stores)) return;
       if (!MSM.state.stores[i].owned || i === MSM.state.current) return;
       MSM.state.current = i;
       MSM.world.invalidate();          // also swaps in the new store's floor plan
@@ -427,8 +438,9 @@ window.MSM = window.MSM || {};
 
     /* -------------------------------------------------- store actions */
     upgrade(n) {
+      if (!U.slot(n, MSM.econ.store().products)) return;
       const ps = MSM.econ.pstate(n);
-      if (MSM.econ.maxed(n)) return;
+      if (!ps.built || MSM.econ.maxed(n)) return;
       const cost = MSM.econ.upgradeCost(n, 1);
       if (MSM.state.cash < cost) { MSM.ui.toast(MSM.t('toast.noCash')); return; }
 
@@ -467,8 +479,8 @@ window.MSM = window.MSM || {};
        server carries it all out and a cleaner clears the tables — the four
        jobs stage 2 adds. */
     hireCafe(job) {
-      const store = MSM.econ.store(), cs = MSM.econ.cstate();
-      if (!cs || cs[job]) return;
+      const cs = MSM.econ.cstate();
+      if (!CAFE_JOBS.includes(job) || !cs || cs[job]) return;
       const cost = G.cafeCost(job);
       if (MSM.state.cash < cost) return;
       MSM.state.cash -= cost;
@@ -482,7 +494,7 @@ window.MSM = window.MSM || {};
        on its pad in the world, exactly like a product's. */
     upgradeMachine(mi) {
       const cs = MSM.econ.cstate();
-      if (!cs || !cs.machines[mi].built) return;
+      if (!cs || !U.slot(mi, cs.machines) || !cs.machines[mi].built) return;
       if (cs.machines[mi].level >= CFG.MAX_LEVEL) return;
       const cost = MSM.econ.machineCost(mi);
       if (MSM.state.cash < cost) { MSM.ui.toast(MSM.t('toast.noCash')); return; }
@@ -541,7 +553,7 @@ window.MSM = window.MSM || {};
     /* Fast food's two hires, either side of the bottleneck. */
     hireFood(job) {
       const fs = MSM.econ.fstate();
-      if (!fs || fs[job]) return;
+      if (!FOOD_JOBS.includes(job) || !fs || fs[job]) return;
       const cost = G.foodCost(job);
       if (MSM.state.cash < cost) return;
       MSM.state.cash -= cost;
@@ -558,7 +570,7 @@ window.MSM = window.MSM || {};
        pad in the world, exactly like a cafe machine's. */
     upgradeStation(mi) {
       const fs = MSM.econ.fstate();
-      if (!fs || !fs.stations[mi].built) return;
+      if (!fs || !U.slot(mi, fs.stations) || !fs.stations[mi].built) return;
       if (fs.stations[mi].level >= CFG.MAX_LEVEL) return;
       const cost = MSM.econ.stationCost(mi);
       if (MSM.state.cash < cost) { MSM.ui.toast(MSM.t('toast.noCash')); return; }
@@ -579,7 +591,7 @@ window.MSM = window.MSM || {};
       const b = CFG.BOOST;
       if (MSM.econ.boosting() || MSM.state.gems < b.gems) return;
       MSM.state.gems -= b.gems;
-      MSM.state.boostUntil = Date.now() + b.seconds * 1000;
+      MSM.state.boostLeft = b.seconds;
       MSM.ui.toast(MSM.t('toast.boost', { n: b.mult }));
     },
   };

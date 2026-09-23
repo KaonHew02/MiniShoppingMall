@@ -7,7 +7,7 @@
  */
 import { createServer } from 'node:http';
 import { readFile, writeFile } from 'node:fs/promises';
-import { extname, join, normalize, dirname, resolve } from 'node:path';
+import { extname, join, normalize, dirname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -23,29 +23,60 @@ const TYPES = {
   '.ico': 'image/x-icon',
 };
 
+const HEADERS = {
+  'Cache-Control': 'no-store',
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+};
+
+/* Never served, even though they sit under ROOT: the git history, the
+   installed packages, and any other dotfile. */
+const HIDDEN = /(^|[/\\])(\.[^/\\]*|node_modules)([/\\]|$)/i;   // Windows paths ignore case
+const SNAP_MAX = 16 * 1024 * 1024;
+
 const handler = async (req, res) => {
   if (req.method === 'POST' && req.url === '/__snap') {
     const chunks = [];
-    for await (const c of req) chunks.push(c);
+    let size = 0;
+    for await (const c of req) {
+      size += c.length;
+      if (size > SNAP_MAX) { res.writeHead(413).end('too large'); req.destroy(); return; }
+      chunks.push(c);
+    }
     const url = Buffer.concat(chunks).toString();
     const b64 = url.slice(url.indexOf(',') + 1);
     await writeFile(join(ROOT, 'tools', '.snap.png'), Buffer.from(b64, 'base64'));
     res.writeHead(204).end();
     return;
   }
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    res.writeHead(405, { Allow: 'GET, HEAD' }).end();
+    return;
+  }
 
-  const path = decodeURIComponent((req.url || '/').split('?')[0]);
-  const rel = normalize(path === '/' ? '/index.html' : path).replace(/^([/\\])+/, '');
+  // a malformed %-escape throws, and a throw in here took the whole server down
+  let path;
+  try { path = decodeURIComponent((req.url || '/').split('?')[0]); }
+  catch { res.writeHead(400).end('bad request'); return; }
+
+  // a folder means its index.html — /dist/ previews the production build
+  const rel = normalize(path.endsWith('/') ? path + 'index.html' : path).replace(/^([/\\])+/, '');
   const file = join(ROOT, rel);
-  if (!file.startsWith(ROOT)) { res.writeHead(403).end('forbidden'); return; }
+  // ROOT + sep: a bare startsWith(ROOT) also lets through a sibling folder
+  // whose name merely begins the same way
+  if (!file.startsWith(ROOT + sep) || HIDDEN.test(rel)) {
+    res.writeHead(404, { 'Content-Type': 'text/plain' }).end('not found');
+    return;
+  }
 
   try {
     const buf = await readFile(file);
     res.writeHead(200, {
+      ...HEADERS,
       'Content-Type': TYPES[extname(file)] || 'application/octet-stream',
-      'Cache-Control': 'no-store',
     });
-    res.end(buf);
+    res.end(req.method === 'HEAD' ? undefined : buf);
   } catch {
     res.writeHead(404, { 'Content-Type': 'text/plain' }).end('not found');
   }
@@ -59,7 +90,9 @@ const handler = async (req, res) => {
 const HOSTS = ['127.0.0.1', '::1'];
 let live = 0;
 HOSTS.forEach((host) => {
-  const server = createServer(handler);
+  const server = createServer((req, res) => {
+    handler(req, res).catch(() => { if (!res.headersSent) res.writeHead(500); res.end(); });
+  });
   server.on('error', (err) => {
     // ::1 is absent on some machines — that is fine, 127.0.0.1 still serves
     if (err.code !== 'EADDRINUSE' && err.code !== 'EADDRNOTAVAIL') throw err;

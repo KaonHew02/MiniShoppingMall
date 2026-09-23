@@ -107,6 +107,8 @@ window.MSM = window.MSM || {};
     'err.notMSM': 'That file is not a Mini Shopping Mall save.',
     'err.noData': 'That save has no data in it.',
     'err.oldSave': 'That save is from an older version and cannot be read.',
+    'err.tampered': 'That save was edited outside the game, so it cannot be loaded.',
+    'toast.tampered': 'Your save was edited outside the game and could not be loaded. Starting fresh.',
 
     'toast.tip': 'Customers show what they want — keep those shelves full',
     'pop.counter': '✨ Counter built!',
@@ -414,6 +416,8 @@ window.MSM = window.MSM || {};
     'err.notMSM': '这不是 Mini Shopping Mall 的存档。',
     'err.noData': '这个存档里没有数据。',
     'err.oldSave': '这个存档来自旧版本，无法读取。',
+    'err.tampered': '这个存档在游戏外被修改过，无法载入。',
+    'toast.tampered': '存档在游戏外被修改过，无法载入。已重新开始。',
 
     'toast.tip': '顾客会显示他们想要什么 — 把货架补满',
     'pop.counter': '✨ 收银台建好了！',
@@ -790,6 +794,8 @@ window.MSM = window.MSM || {};
     'err.notMSM': '這不是 Mini Shopping Mall 的存檔。',
     'err.noData': '這個存檔裡沒有資料。',
     'err.oldSave': '這個存檔來自舊版本，無法讀取。',
+    'err.tampered': '這個存檔在遊戲外被修改過，無法載入。',
+    'toast.tampered': '存檔在遊戲外被修改過，無法載入。已重新開始。',
 
     'toast.tip': '顧客會顯示他們想要什麼 — 把貨架補滿',
     'pop.counter': '✨ 收銀檯建好了！',
@@ -1166,6 +1172,8 @@ window.MSM = window.MSM || {};
     'err.notMSM': 'Fail itu bukan simpanan Mini Shopping Mall.',
     'err.noData': 'Simpanan itu tiada data.',
     'err.oldSave': 'Simpanan itu dari versi lama dan tidak boleh dibaca.',
+    'err.tampered': 'Simpanan itu telah diubah di luar permainan, jadi ia tidak boleh dimuatkan.',
+    'toast.tampered': 'Simpanan anda telah diubah di luar permainan dan tidak boleh dimuatkan. Bermula semula.',
 
     'toast.tip': 'Pelanggan tunjuk apa yang mereka mahu — pastikan rak penuh',
     'pop.counter': '✨ Kaunter siap!',
@@ -1546,7 +1554,7 @@ window.MSM = window.MSM || {};
     },
 
     setLang(id) {
-      if (!PACKS[id] || id === I.lang) return;
+      if (!Object.prototype.hasOwnProperty.call(PACKS, id) || id === I.lang) return;
       I.lang = id;
       try { localStorage.setItem(KEY, id); } catch (e) { /* private mode */ }
       I.localizeConfig();
@@ -1557,7 +1565,7 @@ window.MSM = window.MSM || {};
     init() {
       let saved = null;
       try { saved = localStorage.getItem(KEY); } catch (e) { /* private mode */ }
-      I.lang = (saved && PACKS[saved]) ? saved : detect();
+      I.lang = (saved && Object.prototype.hasOwnProperty.call(PACKS, saved)) ? saved : detect();
       I.localizeConfig();
       I.applyDom();
     },

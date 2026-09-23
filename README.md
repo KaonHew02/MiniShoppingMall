@@ -393,6 +393,7 @@ src/drive.js       the Google Drive copy (config in src/drive-config.js)
 tools/dev-server.mjs  static server for `npm start`
 tools/build.mjs    the protected production build in dist/
 tools/build-logo.mjs  generates every file in assets/logo
+tools/build-proposal.mjs  docs/PROPOSAL.md -> the Word and PDF proposal
 ```
 
 Scripts load as plain `<script>` tags into one `MSM` namespace — no bundler, no
@@ -458,6 +459,18 @@ retail systems its design sketches: **delivery** for the big boxes, a
 **service desk** with warranty, repairs and a technician, **trade-ins**,
 setup/installation, storage-and-colour variants, product **launch events**
 with queues round the block, or a supplier tier system.
+
+## Project proposal
+
+The full game design and project proposal — gameplay, the rules, every shop,
+the interface, architecture, security, the plan and the budget — is
+[`docs/PROPOSAL.md`](docs/PROPOSAL.md), with formatted
+[Word](docs/MiniShoppingMall-Project-Proposal.docx) and
+[PDF](docs/MiniShoppingMall-Project-Proposal.pdf) editions beside it.
+
+```bash
+npm run proposal     # regenerate both from the Markdown (the PDF step needs Microsoft Word)
+```
 
 ## Brand
 

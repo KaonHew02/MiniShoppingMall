@@ -8,10 +8,12 @@
     "build": "node tools/build.mjs",
     "logo": "node tools/build-logo.mjs",
     "logo:png": "node tools/build-logo.mjs --png",
-    "start": "node tools/dev-server.mjs 8788"
+    "start": "node tools/dev-server.mjs 8788",
+    "proposal": "node tools/build-proposal.mjs"
   },
   "devDependencies": {
     "@resvg/resvg-js": "^2.6.2",
+    "docx": "^9.7.1",
     "esbuild": "^0.25.12"
   }
 }

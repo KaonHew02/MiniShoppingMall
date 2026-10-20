@@ -492,6 +492,8 @@ window.MSM = window.MSM || {};
     // a lastSeen in the future is a clock that was wound forward
     s.lastSeen = num(data.lastSeen, 0, Date.now(), Date.now());
     s.current = int(data.current, 0, s.stores.length - 1, 0);
+    // a Rush Hour still running when the tab closed; the time away burns it below
+    s.boostLeft = num(data.boostLeft, 0, CFG.BOOST.seconds, 0);
     // merge by index so adding stores or products never breaks an old save
     data.stores.forEach((old, i) => {
       if (!s.stores[i] || !old || typeof old !== 'object') return;
@@ -648,6 +650,9 @@ window.MSM = window.MSM || {};
     MSM.state = s;
 
     const elapsed = Math.max(0, (Date.now() - s.lastSeen) / 1000);
+    /* Same rule as game.catchUp: time away counts the boost down, and it is
+       burned BEFORE the payout, or the whole absence would be paid at x2. */
+    s.boostLeft = Math.max(0, s.boostLeft - elapsed);
     const capped = Math.min(elapsed, CFG.OFFLINE_CAP_H * 3600);
     if (capped < 60) return null;
 
